@@ -1,0 +1,104 @@
+/**
+ * Session Timeout Warning Styles
+ */
+
+.session-warning {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: 999;
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    border-radius: var(--md-sys-shape-corner-large);
+    box-shadow: var(--md-sys-elevation-4);
+    animation: slideInRight var(--md-sys-motion-duration-medium-3) var(--md-sys-motion-easing-emphasized);
+    max-width: 400px;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.warning-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+}
+
+.warning-content svg {
+    flex-shrink: 0;
+    color: var(--md-sys-color-error);
+}
+
+.warning-text {
+    flex: 1;
+}
+
+.warning-text strong {
+    display: block;
+    font-size: var(--md-sys-typescale-title-small-size);
+    font-weight: var(--md-sys-typescale-title-small-weight);
+    margin-bottom: 4px;
+}
+
+.warning-text p {
+    font-size: var(--md-sys-typescale-body-medium-size);
+    margin: 0;
+}
+
+.dismiss-button {
+    padding: 10px 16px;
+    background: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
+    font-size: var(--md-sys-typescale-label-medium-size);
+    font-weight: var(--md-sys-typescale-label-medium-weight);
+    border-radius: var(--md-sys-shape-corner-medium);
+    white-space: nowrap;
+    transition: all var(--md-sys-motion-duration-short-3) var(--md-sys-motion-easing-standard);
+}
+
+.dismiss-button:hover {
+    box-shadow: var(--md-sys-elevation-2);
+    transform: scale(1.05);
+}
+
+.dismiss-button:active {
+    transform: scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .session-warning {
+        left: var(--spacing-md);
+        right: var(--spacing-md);
+        max-width: none;
+    }
+
+    .warning-content {
+        flex-wrap: wrap;
+    }
+
+    .dismiss-button {
+        width: 100%;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .session-warning {
+        animation: none;
+    }
+
+    .dismiss-button:hover {
+        transform: none;
+    }
+}

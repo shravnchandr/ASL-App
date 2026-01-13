@@ -1,0 +1,61 @@
+/**
+ * High Contrast Theme Styles
+ * WCAG AAA compliant high contrast theme
+ */
+
+[data-theme="high-contrast"] {
+    /* High contrast colors */
+    --md-sys-color-primary: hsl(205, 100%, 50%);
+    --md-sys-color-primary-container: hsl(0, 0%, 100%);
+    --md-sys-color-on-primary: hsl(0, 0%, 0%);
+    --md-sys-color-on-primary-container: hsl(0, 0%, 0%);
+
+    --md-sys-color-secondary: hsl(174, 100%, 40%);
+    --md-sys-color-secondary-container: hsl(0, 0%, 100%);
+    --md-sys-color-on-secondary: hsl(0, 0%, 0%);
+    --md-sys-color-on-secondary-container: hsl(0, 0%, 0%);
+
+    --md-sys-color-surface: hsl(0, 0%, 0%);
+    --md-sys-color-surface-variant: hsl(0, 0%, 10%);
+    --md-sys-color-surface-container: hsl(0, 0%, 5%);
+    --md-sys-color-surface-container-high: hsl(0, 0%, 8%);
+    --md-sys-color-surface-container-highest: hsl(0, 0%, 12%);
+    --md-sys-color-on-surface: hsl(0, 0%, 100%);
+    --md-sys-color-on-surface-variant: hsl(0, 0%, 100%);
+
+    --md-sys-color-background: hsl(0, 0%, 0%);
+    --md-sys-color-on-background: hsl(0, 0%, 100%);
+
+    --md-sys-color-error: hsl(0, 100%, 60%);
+    --md-sys-color-error-container: hsl(0, 0%, 100%);
+    --md-sys-color-on-error: hsl(0, 0%, 0%);
+    --md-sys-color-on-error-container: hsl(0, 0%, 0%);
+
+    --md-sys-color-outline: hsl(0, 0%, 100%);
+    --md-sys-color-outline-variant: hsl(0, 0%, 80%);
+
+    /* Higher contrast shadows */
+    --md-sys-elevation-1: 0 2px 4px rgba(255, 255, 255, 0.2);
+    --md-sys-elevation-2: 0 4px 8px rgba(255, 255, 255, 0.25);
+    --md-sys-elevation-3: 0 6px 12px rgba(255, 255, 255, 0.3);
+    --md-sys-elevation-4: 0 8px 16px rgba(255, 255, 255, 0.35);
+    --md-sys-elevation-5: 0 12px 24px rgba(255, 255, 255, 0.4);
+}
+
+/* Text size variations */
+[data-text-size="large"] {
+    font-size: 112.5%;
+    /* 18px base */
+}
+
+[data-text-size="x-large"] {
+    font-size: 125%;
+    /* 20px base */
+}
+
+/* Ensure minimum touch target sizes */
+[data-text-size="large"] button,
+[data-text-size="x-large"] button {
+    min-height: 48px;
+    min-width: 48px;
+}

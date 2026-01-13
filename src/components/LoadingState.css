@@ -1,0 +1,90 @@
+/**
+ * LoadingState Styles
+ * Fluid wave animation with Ocean Blue/Teal colors
+ */
+
+.loading-state {
+    text-align: center;
+    padding: var(--spacing-4xl) var(--spacing-lg);
+}
+
+.loading-animation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--spacing-xl);
+}
+
+.wave {
+    width: 16px;
+    height: 60px;
+    border-radius: var(--md-sys-shape-corner-pill);
+    animation: wave 1.2s ease-in-out infinite;
+}
+
+.wave-1 {
+    background: var(--md-sys-color-primary);
+    animation-delay: 0s;
+}
+
+.wave-2 {
+    background: var(--md-sys-color-secondary);
+    animation-delay: 0.2s;
+}
+
+.wave-3 {
+    background: var(--md-sys-color-tertiary);
+    animation-delay: 0.4s;
+}
+
+@keyframes wave {
+
+    0%,
+    100% {
+        transform: scaleY(0.5);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+}
+
+.loading-text {
+    font-size: var(--md-sys-typescale-title-large-size);
+    font-weight: var(--md-sys-typescale-title-large-weight);
+    color: var(--md-sys-color-on-surface);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .wave,
+    .loading-text {
+        animation: none;
+    }
+
+    .wave {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+
+    .loading-text {
+        opacity: 1;
+    }
+}

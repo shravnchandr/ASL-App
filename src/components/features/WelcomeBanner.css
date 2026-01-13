@@ -1,0 +1,123 @@
+/**
+ * Welcome Banner Styles
+ */
+
+.welcome-banner {
+    max-width: 840px;
+    margin: 0 auto var(--spacing-2xl);
+    background: var(--glass-bg-light);
+    backdrop-filter: var(--glass-blur-medium);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--shape-asymmetric-3);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-secondary), var(--md-sys-elevation-2);
+    animation: slideDown var(--md-sys-motion-duration-medium-3) var(--md-sys-motion-easing-emphasized);
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--gradient-shimmer);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.banner-content {
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+
+.banner-icon {
+    font-size: 3rem;
+    flex-shrink: 0;
+}
+
+.banner-text {
+    flex: 1;
+}
+
+.banner-title {
+    font-size: var(--md-sys-typescale-title-large-size);
+    font-weight: var(--md-sys-typescale-title-large-weight);
+    color: var(--md-sys-color-on-primary-container);
+    margin-bottom: var(--spacing-sm);
+}
+
+.banner-message {
+    font-size: var(--md-sys-typescale-body-medium-size);
+    color: var(--md-sys-color-on-primary-container);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.banner-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+.banner-button {
+    padding: 12px 20px;
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: var(--md-sys-typescale-label-large-weight);
+    border-radius: var(--md-sys-shape-corner-medium);
+    cursor: pointer;
+    transition: all var(--md-sys-motion-duration-short-3) var(--md-sys-motion-easing-standard);
+    white-space: nowrap;
+}
+
+.banner-button.primary {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+}
+
+.banner-button.primary:hover {
+    box-shadow: var(--md-sys-elevation-2);
+    transform: translateY(-2px);
+}
+
+.banner-button.secondary {
+    background: transparent;
+    color: var(--md-sys-color-on-primary-container);
+    border: 2px solid var(--md-sys-color-outline);
+}
+
+.banner-button.secondary:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .banner-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .banner-actions {
+        width: 100%;
+    }
+
+    .banner-button {
+        width: 100%;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .welcome-banner {
+        animation: none;
+    }
+
+    .banner-button:hover {
+        transform: none;
+    }
+}

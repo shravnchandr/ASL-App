@@ -1,0 +1,147 @@
+/**
+ * FeedbackWidget Styles
+ * Expressive button design with animations
+ */
+
+.feedback-widget {
+    margin-top: var(--spacing-2xl);
+    padding: var(--spacing-xl);
+    background: var(--md-sys-color-surface-container-high);
+    border-radius: var(--md-sys-shape-corner-extra-large);
+    text-align: center;
+}
+
+.feedback-prompt {
+    font-size: var(--md-sys-typescale-title-medium-size);
+    font-weight: var(--md-sys-typescale-title-medium-weight);
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: var(--spacing-lg);
+}
+
+.feedback-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.feedback-button {
+    padding: 16px 32px;
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+    border: 2px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-large);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: var(--md-sys-typescale-label-large-weight);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    transition: all var(--md-sys-motion-duration-short-4) var(--md-sys-motion-easing-emphasized);
+    cursor: pointer;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.feedback-button:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--md-sys-elevation-2);
+}
+
+.feedback-button:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
+
+.feedback-button.thumbs-up:hover:not(:disabled) {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.feedback-button.thumbs-down:hover:not(:disabled) {
+    border-color: var(--md-sys-color-error);
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+}
+
+.feedback-button.selected.thumbs-up {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+    animation: bounce var(--md-sys-motion-duration-medium-2) var(--md-sys-motion-easing-emphasized);
+}
+
+.feedback-button.selected.thumbs-down {
+    background: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
+    border-color: var(--md-sys-color-error);
+    animation: bounce var(--md-sys-motion-duration-medium-2) var(--md-sys-motion-easing-emphasized);
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.feedback-button svg {
+    transition: transform var(--md-sys-motion-duration-short-3) var(--md-sys-motion-easing-standard);
+}
+
+.feedback-button:hover:not(:disabled) svg {
+    transform: scale(1.2);
+}
+
+.feedback-button.selected svg {
+    animation: wiggle var(--md-sys-motion-duration-medium-3) var(--md-sys-motion-easing-emphasized);
+}
+
+@keyframes wiggle {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(-10deg);
+    }
+
+    75% {
+        transform: rotate(10deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .feedback-buttons {
+        flex-direction: column;
+    }
+
+    .feedback-button {
+        width: 100%;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .feedback-button,
+    .feedback-button svg {
+        transition: none;
+    }
+
+    .feedback-button.selected,
+    .feedback-button.selected svg {
+        animation: none;
+    }
+
+    .feedback-button:hover:not(:disabled) {
+        transform: none;
+    }
+}

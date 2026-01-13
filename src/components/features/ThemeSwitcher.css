@@ -1,0 +1,53 @@
+/**
+ * Theme Switcher Styles
+ */
+
+.theme-switcher {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.theme-button,
+.text-size-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+    border-radius: var(--md-sys-shape-corner-pill);
+    transition: all var(--md-sys-motion-duration-short-3) var(--md-sys-motion-easing-standard);
+    cursor: pointer;
+}
+
+.theme-button:hover:not(:disabled),
+.text-size-button:hover:not(:disabled) {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    transform: scale(1.05);
+}
+
+.theme-button:active:not(:disabled),
+.text-size-button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.text-size-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.text-size-button:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .theme-button:hover:not(:disabled),
+    .text-size-button:hover:not(:disabled) {
+        transform: none;
+    }
+}

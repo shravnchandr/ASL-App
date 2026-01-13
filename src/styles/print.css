@@ -1,0 +1,123 @@
+/**
+ * Print Styles
+ * Optimized for printing ASL sign descriptions
+ */
+
+@media print {
+
+    /* Hide non-essential elements */
+    .app-header,
+    .search-section,
+    .feedback-widget,
+    .app-footer,
+    .action-buttons,
+    .theme-switcher,
+    .session-warning,
+    .skip-link {
+        display: none !important;
+    }
+
+    /* Optimize layout for print */
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    .app {
+        background: white !important;
+    }
+
+    .app-main {
+        padding: 0 !important;
+    }
+
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+
+    /* Print header */
+    .results-section::before {
+        content: "ASL Dictionary - Printed on " attr(data-print-date);
+        display: block;
+        font-size: 12pt;
+        color: #666;
+        margin-bottom: 20pt;
+        padding-bottom: 10pt;
+        border-bottom: 1pt solid #ccc;
+    }
+
+    /* Optimize sign cards for print */
+    .signs-grid {
+        display: block !important;
+    }
+
+    .sign-card {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 20pt;
+        border: 1pt solid #ccc !important;
+        box-shadow: none !important;
+        background: white !important;
+        color: black !important;
+    }
+
+    .sign-word {
+        color: #000 !important;
+        font-size: 18pt;
+    }
+
+    .sign-number {
+        background: #000 !important;
+        color: #fff !important;
+    }
+
+    .detail-icon {
+        background: #f0f0f0 !important;
+        color: #000 !important;
+    }
+
+    .detail-label {
+        color: #666 !important;
+        font-size: 10pt;
+    }
+
+    .detail-value {
+        color: #000 !important;
+        font-size: 11pt;
+    }
+
+    /* ASL Note */
+    .asl-note {
+        page-break-inside: avoid;
+        background: #f9f9f9 !important;
+        color: #000 !important;
+        border: 1pt solid #ccc !important;
+    }
+
+    .note-title {
+        color: #000 !important;
+    }
+
+    .note-text {
+        color: #333 !important;
+    }
+
+    /* Remove animations and transitions */
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    /* Ensure links are visible */
+    a {
+        text-decoration: underline;
+        color: #000 !important;
+    }
+
+    a[href]::after {
+        content: " (" attr(href) ")";
+        font-size: 9pt;
+        color: #666;
+    }
+}

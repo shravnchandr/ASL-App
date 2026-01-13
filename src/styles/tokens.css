@@ -1,0 +1,280 @@
+/**
+ * Material 3 Design Tokens
+ * Ocean Blue and Teal Color Palette with Expressive Design System
+ */
+
+:root {
+  /* ===== COLOR SYSTEM ===== */
+
+  /* Primary - Ocean Blue */
+  --md-sys-color-primary: hsl(205, 87%, 45%);
+  --md-sys-color-primary-container: hsl(205, 87%, 90%);
+  --md-sys-color-on-primary: hsl(0, 0%, 100%);
+  --md-sys-color-on-primary-container: hsl(205, 87%, 15%);
+
+  /* Secondary - Teal */
+  --md-sys-color-secondary: hsl(174, 62%, 47%);
+  --md-sys-color-secondary-container: hsl(174, 62%, 90%);
+  --md-sys-color-on-secondary: hsl(0, 0%, 100%);
+  --md-sys-color-on-secondary-container: hsl(174, 62%, 15%);
+
+  /* Tertiary - Deep Ocean */
+  --md-sys-color-tertiary: hsl(220, 70%, 35%);
+  --md-sys-color-tertiary-container: hsl(220, 70%, 85%);
+  --md-sys-color-on-tertiary: hsl(0, 0%, 100%);
+  --md-sys-color-on-tertiary-container: hsl(220, 70%, 10%);
+
+  /* Surface Tones */
+  --md-sys-color-surface: hsl(210, 30%, 98%);
+  --md-sys-color-surface-variant: hsl(210, 20%, 95%);
+  --md-sys-color-surface-container: hsl(210, 25%, 96%);
+  --md-sys-color-surface-container-high: hsl(210, 25%, 94%);
+  --md-sys-color-surface-container-highest: hsl(210, 25%, 92%);
+  --md-sys-color-on-surface: hsl(210, 15%, 15%);
+  --md-sys-color-on-surface-variant: hsl(210, 10%, 35%);
+
+  /* Background */
+  --md-sys-color-background: hsl(210, 30%, 99%);
+  --md-sys-color-on-background: hsl(210, 15%, 10%);
+
+  /* Error */
+  --md-sys-color-error: hsl(0, 72%, 51%);
+  --md-sys-color-error-container: hsl(0, 72%, 90%);
+  --md-sys-color-on-error: hsl(0, 0%, 100%);
+  --md-sys-color-on-error-container: hsl(0, 72%, 15%);
+
+  /* Outline */
+  --md-sys-color-outline: hsl(210, 10%, 60%);
+  --md-sys-color-outline-variant: hsl(210, 15%, 80%);
+
+  /* Expressive Gradients */
+  --gradient-ocean: linear-gradient(135deg, var(--md-sys-color-primary) 0%, var(--md-sys-color-secondary) 100%);
+  --gradient-ocean-radial: radial-gradient(circle at top right, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  --gradient-surface: linear-gradient(180deg, var(--md-sys-color-surface) 0%, var(--md-sys-color-surface-container) 100%);
+
+  /* ===== TYPOGRAPHY ===== */
+
+  /* Font Families */
+  --md-sys-typescale-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --md-sys-typescale-font-family-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Display - Large, expressive headlines */
+  --md-sys-typescale-display-large-size: 4.5rem;
+  /* Larger */
+  --md-sys-typescale-display-large-weight: 800;
+  /* Bolder */
+  --md-sys-typescale-display-large-line-height: 1.1;
+  --md-sys-typescale-display-large-letter-spacing: -0.04em;
+  /* Tighter */
+
+  --md-sys-typescale-display-medium-size: 3.5rem;
+  --md-sys-typescale-display-medium-weight: 800;
+  --md-sys-typescale-display-medium-line-height: 1.15;
+  --md-sys-typescale-display-medium-letter-spacing: -0.03em;
+
+  --md-sys-typescale-display-small-size: 2.5rem;
+  --md-sys-typescale-display-small-weight: 700;
+  --md-sys-typescale-display-small-line-height: 1.2;
+  --md-sys-typescale-display-small-letter-spacing: -0.02em;
+
+  /* Headline */
+  --md-sys-typescale-headline-large-size: 2.25rem;
+  --md-sys-typescale-headline-large-weight: 700;
+  --md-sys-typescale-headline-large-line-height: 1.2;
+  --md-sys-typescale-headline-large-letter-spacing: -0.02em;
+
+  --md-sys-typescale-headline-medium-size: 1.75rem;
+  --md-sys-typescale-headline-medium-weight: 600;
+  --md-sys-typescale-headline-medium-line-height: 1.3;
+
+  --md-sys-typescale-headline-small-size: 1.5rem;
+  --md-sys-typescale-headline-small-weight: 600;
+  --md-sys-typescale-headline-small-line-height: 1.35;
+
+  /* Title */
+  --md-sys-typescale-title-large-size: 1.375rem;
+  --md-sys-typescale-title-large-weight: 600;
+  /* Slightly bolder */
+  --md-sys-typescale-title-large-line-height: 1.4;
+
+  --md-sys-typescale-title-medium-size: 1.125rem;
+  --md-sys-typescale-title-medium-weight: 600;
+  --md-sys-typescale-title-medium-line-height: 1.45;
+
+  --md-sys-typescale-title-small-size: 1rem;
+  --md-sys-typescale-title-small-weight: 600;
+  --md-sys-typescale-title-small-line-height: 1.5;
+
+  /* Body */
+  --md-sys-typescale-body-large-size: 1.125rem;
+  --md-sys-typescale-body-large-weight: 400;
+  --md-sys-typescale-body-large-line-height: 1.6;
+
+  --md-sys-typescale-body-medium-size: 1rem;
+  --md-sys-typescale-body-medium-weight: 400;
+  --md-sys-typescale-body-medium-line-height: 1.6;
+
+  --md-sys-typescale-body-small-size: 0.875rem;
+  --md-sys-typescale-body-small-weight: 400;
+  --md-sys-typescale-body-small-line-height: 1.6;
+
+  /* Label */
+  --md-sys-typescale-label-large-size: 1rem;
+  --md-sys-typescale-label-large-weight: 500;
+  --md-sys-typescale-label-large-line-height: 1.4;
+
+  --md-sys-typescale-label-medium-size: 0.875rem;
+  --md-sys-typescale-label-medium-weight: 500;
+  --md-sys-typescale-label-medium-line-height: 1.4;
+
+  --md-sys-typescale-label-small-size: 0.75rem;
+  --md-sys-typescale-label-small-weight: 500;
+  --md-sys-typescale-label-small-line-height: 1.4;
+
+  /* ===== SHAPE SYSTEM ===== */
+
+  /* Expressive corner radii - varied for visual interest */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 16px;
+  --md-sys-shape-corner-large: 28px;
+  --md-sys-shape-corner-extra-large: 36px;
+  --md-sys-shape-corner-pill: 999px;
+
+  /* Asymmetric shapes for expressive design */
+  --shape-asymmetric-1: 16px 36px 16px 36px;
+  --shape-asymmetric-2: 8px 28px 8px 28px;
+  --shape-asymmetric-3: 28px 8px 28px 8px;
+  --shape-card: 20px 20px 28px 28px;
+
+  /* ===== ELEVATION (SHADOWS) ===== */
+
+  --md-sys-elevation-0: none;
+  --md-sys-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --md-sys-elevation-2: 0 2px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.14);
+  --md-sys-elevation-3: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.16);
+  --md-sys-elevation-4: 0 8px 24px rgba(0, 0, 0, 0.14), 0 4px 8px rgba(0, 0, 0, 0.18);
+  --md-sys-elevation-5: 0 16px 48px rgba(0, 0, 0, 0.16), 0 8px 16px rgba(0, 0, 0, 0.2);
+
+  /* Colored shadows for expressive design */
+  --shadow-ocean: 0 8px 32px hsla(205, 87%, 45%, 0.2);
+  --shadow-teal: 0 8px 32px hsla(174, 62%, 47%, 0.2);
+
+  /* ===== MOTION ===== */
+
+  /* Easing curves */
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+
+  /* Duration */
+  --md-sys-motion-duration-short-1: 50ms;
+  --md-sys-motion-duration-short-2: 100ms;
+  --md-sys-motion-duration-short-3: 150ms;
+  --md-sys-motion-duration-short-4: 200ms;
+  --md-sys-motion-duration-medium-1: 250ms;
+  --md-sys-motion-duration-medium-2: 300ms;
+  --md-sys-motion-duration-medium-3: 350ms;
+  --md-sys-motion-duration-medium-4: 400ms;
+  --md-sys-motion-duration-long-1: 450ms;
+  --md-sys-motion-duration-long-2: 500ms;
+  --md-sys-motion-duration-long-3: 550ms;
+  --md-sys-motion-duration-long-4: 600ms;
+
+  /* ===== SPACING ===== */
+
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --spacing-4xl: 6rem;
+
+  /* ===== GLASSMORPHISM ===== */
+
+  --glass-blur-light: blur(20px);
+  --glass-blur-medium: blur(40px);
+  --glass-blur-heavy: blur(60px);
+  --glass-bg-light: rgba(255, 255, 255, 0.7);
+  --glass-bg-medium: rgba(255, 255, 255, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.3);
+
+  /* ===== ENHANCED EFFECTS ===== */
+
+  /* Gradient overlays */
+  --gradient-glow: radial-gradient(circle at 50% 0%, hsla(205, 87%, 45%, 0.15) 0%, transparent 70%);
+  --gradient-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+
+  /* Enhanced shadows with color */
+  --shadow-primary: 0 4px 16px hsla(205, 87%, 45%, 0.2);
+  --shadow-secondary: 0 8px 24px hsla(187, 71%, 42%, 0.15);
+  /* ===== INVERSE COLORS ===== */
+  --md-sys-color-inverse-surface: hsl(210, 15%, 20%);
+  --md-sys-color-inverse-on-surface: hsl(210, 20%, 95%);
+  --md-sys-color-inverse-primary: hsl(205, 87%, 80%);
+
+}
+
+/* ===== DARK MODE ===== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Primary - Ocean Blue (High Vibrancy for Dark Mode) */
+    --md-sys-color-primary: hsl(205, 90%, 70%);
+    --md-sys-color-primary-container: hsl(205, 90%, 20%);
+    --md-sys-color-on-primary: hsl(205, 90%, 10%);
+    --md-sys-color-on-primary-container: hsl(205, 90%, 95%);
+
+    /* Secondary - Teal (High Vibrancy) */
+    --md-sys-color-secondary: hsl(174, 70%, 65%);
+    --md-sys-color-secondary-container: hsl(174, 70%, 20%);
+    --md-sys-color-on-secondary: hsl(174, 70%, 10%);
+    --md-sys-color-on-secondary-container: hsl(174, 70%, 95%);
+
+    /* Tertiary */
+    --md-sys-color-tertiary: hsl(220, 80%, 75%);
+    --md-sys-color-tertiary-container: hsl(220, 80%, 20%);
+    --md-sys-color-on-tertiary: hsl(220, 80%, 10%);
+    --md-sys-color-on-tertiary-container: hsl(220, 80%, 95%);
+
+    /* Surface Tones - Deep Ocean Tint (not plain grey) */
+    --md-sys-color-surface: hsl(215, 25%, 10%);
+    --md-sys-color-surface-variant: hsl(215, 20%, 18%);
+    --md-sys-color-surface-container: hsl(215, 25%, 12%);
+    --md-sys-color-surface-container-high: hsl(215, 25%, 15%);
+    --md-sys-color-surface-container-highest: hsl(215, 25%, 18%);
+    --md-sys-color-on-surface: hsl(215, 20%, 95%);
+    --md-sys-color-on-surface-variant: hsl(215, 15%, 80%);
+
+    /* Background */
+    --md-sys-color-background: hsl(215, 30%, 8%);
+    --md-sys-color-on-background: hsl(215, 20%, 95%);
+
+    /* Error */
+    --md-sys-color-error: hsl(0, 80%, 70%);
+    --md-sys-color-error-container: hsl(0, 80%, 20%);
+    --md-sys-color-on-error: hsl(0, 80%, 10%);
+    --md-sys-color-on-error-container: hsl(0, 80%, 95%);
+
+    /* Outline */
+    --md-sys-color-outline: hsl(215, 15%, 50%);
+    --md-sys-color-outline-variant: hsl(215, 15%, 35%);
+
+    /* Gradients */
+    --gradient-surface: linear-gradient(180deg, var(--md-sys-color-surface) 0%, var(--md-sys-color-surface-container-high) 100%);
+
+    /* Shadows - slightly lighter to show on dark bg */
+    --shadow-primary: 0 4px 20px hsla(205, 90%, 60%, 0.15);
+    --shadow-secondary: 0 8px 32px hsla(174, 70%, 50%, 0.1);
+
+    /* Glssmorphism - Adjusted for Dark Mode */
+    --glass-bg-light: rgba(10, 25, 40, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+  }
+}

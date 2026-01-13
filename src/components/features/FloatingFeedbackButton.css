@@ -1,0 +1,91 @@
+/**
+ * Floating Feedback Button Styles
+ */
+
+.floating-feedback-container {
+    position: fixed;
+    bottom: var(--spacing-2xl);
+    right: var(--spacing-2xl);
+    z-index: 998;
+}
+
+.floating-feedback-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--md-sys-color-primary) 0%, var(--md-sys-color-primary-container) 100%);
+    color: white;
+    /* Ensure high contrast on the gradient */
+    border-radius: 50%;
+    box-shadow: var(--md-sys-elevation-4);
+    cursor: pointer;
+    transition: all var(--md-sys-motion-duration-short-4) var(--md-sys-motion-easing-emphasized);
+}
+
+.floating-feedback-button:hover {
+    transform: scale(1.1);
+    box-shadow: var(--md-sys-elevation-5);
+}
+
+.floating-feedback-button:active {
+    transform: scale(1.05);
+}
+
+.fab-tooltip {
+    position: absolute;
+    right: 100%;
+    margin-right: var(--spacing-md);
+    padding: 8px 12px;
+    background: var(--md-sys-color-inverse-surface);
+    color: var(--md-sys-color-inverse-on-surface);
+    font-size: var(--md-sys-typescale-body-small-size);
+    white-space: nowrap;
+    border-radius: var(--md-sys-shape-corner-small);
+    box-shadow: var(--md-sys-elevation-2);
+    animation: fadeIn var(--md-sys-motion-duration-short-2) var(--md-sys-motion-easing-standard);
+    pointer-events: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .floating-feedback-container {
+        bottom: var(--spacing-lg);
+        right: var(--spacing-lg);
+    }
+
+    .floating-feedback-button {
+        width: 48px;
+        height: 48px;
+    }
+
+    .fab-tooltip {
+        display: none;
+        /* Hide tooltip on mobile */
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .floating-feedback-button:hover {
+        transform: none;
+    }
+
+    .fab-tooltip {
+        animation: none;
+    }
+}

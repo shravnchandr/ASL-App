@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Backend service (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PORT=8000
+      - RATE_LIMIT=10/minute
+    volumes:
+      - ./app.py:/app/app.py
+      - ./config.py:/app/config.py
+      - ./logger.py:/app/logger.py
+      - ./database.py:/app/database.py
+      - ./python_code:/app/python_code
+      - ./logs:/app/logs
+      - ./asl_feedback.db:/app/asl_feedback.db
+    command: python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - asl-network
+
+  # Frontend service (Vite dev server) - for development only
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.app.json:/app/tsconfig.app.json
+      - ./tsconfig.node.json:/app/tsconfig.node.json
+      - ./node_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+    networks:
+      - asl-network
+    depends_on:
+      - backend
+
+networks:
+  asl-network:
+    driver: bridge
