@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     if environment == "production":
         cors_origins.extend([
             # Add your production domain here
-            # "https://yourdomain.com"
+            "https://asl-dictionary.onrender.com",
         ])
     
     # Database
