@@ -7,8 +7,8 @@ WORKDIR /app/frontend
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY src ./src
@@ -16,8 +16,12 @@ COPY public ./public
 COPY index.html ./
 COPY tsconfig*.json ./
 COPY vite.config.ts ./
+COPY eslint.config.js ./
 
-# Build frontend
+# Set NODE_ENV to production for optimizations
+ENV NODE_ENV=production
+
+# Build frontend with production optimizations
 RUN npm run build
 
 # Stage 2: Python runtime with FastAPI

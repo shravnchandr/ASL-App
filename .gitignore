@@ -28,3 +28,26 @@ dist-ssr
 
 # Environment Files
 .env
+.env.local
+.env.production
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
+# Logs
+logs/
+*.log

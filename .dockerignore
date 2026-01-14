@@ -46,10 +46,23 @@ logs/
 .git/
 .gitignore
 
-# Documentation
+# Documentation (not needed in container)
 README.md
 DEPLOYMENT.md
+RENDER_DEPLOYMENT.md
+PRODUCTION_READY.md
+LICENSE
 
 # CI/CD
 .github/
 .gitlab-ci.yml
+render.yaml
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Development files
+.gemini/
+*.md
