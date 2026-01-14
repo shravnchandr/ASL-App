@@ -320,22 +320,32 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
 # Serve frontend in production
 if settings.environment == "production":
-    # Mount static files
+    # Mount static files FIRST (order matters!)
     static_path = os.path.join(os.path.dirname(__file__), "dist")
     if os.path.exists(static_path):
+        # Mount static assets - this must be BEFORE the catch-all route
         app.mount("/assets", StaticFiles(directory=os.path.join(static_path, "assets")), name="assets")
-        
+
         @app.get("/")
         async def serve_frontend():
             """Serve the React frontend"""
             return FileResponse(os.path.join(static_path, "index.html"))
-        
+
+        # Catch-all route for SPA (must be last!)
+        # This will NOT match /assets/* or /api/* routes
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str):
-            """Serve SPA - return index.html for all non-API routes"""
+            """Serve SPA - return index.html for all non-API, non-asset routes"""
+            # Don't interfere with API or assets routes
+            if full_path.startswith("api/") or full_path.startswith("assets/"):
+                raise HTTPException(status_code=404, detail="Not found")
+
+            # Try to serve the file if it exists
             file_path = os.path.join(static_path, full_path)
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 return FileResponse(file_path)
+
+            # Otherwise return index.html for client-side routing
             return FileResponse(os.path.join(static_path, "index.html"))
 
 
