@@ -51,10 +51,6 @@ services:
     # Auto-deploy on push to main branch
     autoDeploy: true
 
-    # Enable PR preview environments
-    previewsEnabled: true
-    previewsExpireAfterDays: 7  # PR previews auto-delete after 7 days
-
 # Optional: Add PostgreSQL database for production
 # Uncomment the section below to use PostgreSQL instead of SQLite
 # databases:
