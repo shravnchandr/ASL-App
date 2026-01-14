@@ -1,58 +1,100 @@
 # 🤟 ASL Dictionary Web Application
 
-A production-ready web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. Built with Material 3 Expressive design featuring an Ocean Blue and Teal color palette.
+A modern, production-ready web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. Built with Material 3 Expressive design featuring an Ocean Blue and Teal color palette.
 
-![ASL Dictionary](https://img.shields.io/badge/Material%203-Expressive-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)
-![React](https://img.shields.io/badge/React-18.3+-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue)
+[![Material 3](https://img.shields.io/badge/Material%203-Expressive-blue)](https://m3.material.io/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.3+-blue)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Production Ready](https://img.shields.io/badge/Production-Ready-success)](PRODUCTION_READY.md)
 
 ---
 
 ## ✨ Features
 
-- 🎨 **Material 3 Expressive UI** - Stunning Ocean Blue & Teal design with fluid animations
-- 🔤 **ASL Translation** - Detailed sign descriptions including hand shapes, locations, movements, and facial expressions
-- 📚 **Search History & Favorites** - Save and quickly access frequently used phrases
+### Core Functionality
+- 🔤 **ASL Translation** - Detailed sign descriptions including hand shapes, locations, movements, and facial expressions powered by Google Gemini AI
+- 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
 - 🔗 **Share & Print** - Share translations via Web Share API or print-optimized views
-- 🔑 **Custom API Key** - Use your own free Google Gemini API key
-- ♿ **Accessibility** - WCAG AAA compliant with high-contrast mode, text resizing, and full keyboard navigation
-- 💾 **Feedback System** - Rate translations and provide feedback stored in SQLite database
-- 🌙 **Dark Mode** - Light, Dark, and High Contrast themes
-- ⚡ **Production Ready** - Rate limiting, structured logging, Docker support
+- 💾 **Feedback System** - Rate translations and provide feedback stored in database
+
+### User Experience
+- 🎨 **Material 3 Expressive UI** - Stunning Ocean Blue & Teal design with fluid animations and micro-interactions
+- 🌙 **Multiple Themes** - Light, Dark, and High Contrast modes for all lighting conditions
+- 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
+- ⚡ **Fast & Optimized** - Production-optimized builds with code splitting and lazy loading
+
+### Security & Privacy
+- 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally)
+- 🔒 **Security Headers** - Comprehensive security headers (CSP, HSTS, X-Frame-Options)
+- 🚫 **No Data Collection** - All data stays in your browser or your own database
+- 🛡️ **Rate Limiting** - Built-in API rate limiting to prevent abuse
+
+### Accessibility
+- ♿ **WCAG AAA Compliant** - Full keyboard navigation and screen reader support
+- 🔍 **Text Resizing** - Support for browser zoom and text resizing
+- 🎯 **High Contrast Mode** - Enhanced contrast for visual accessibility
+- ⌨️ **Keyboard Shortcuts** - Quick access to all features via keyboard
+
+### Developer Features
+- 🐳 **Docker Support** - Multi-stage Docker build for easy deployment
+- 📊 **Structured Logging** - JSON logging for production monitoring
+- 🔄 **Auto-Deploy** - Render.com integration with PR previews
+- 🧪 **TypeScript** - Full type safety across frontend and backend
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: Deploy to Render.com (Recommended)
+
+**Fastest way to get your app online:**
+
+1. **Push to GitHub** (if not already done)
+2. **Go to [Render.com](https://dashboard.render.com)**
+3. **New** → **Blueprint**
+4. **Connect your GitHub repo**
+5. **Set `GOOGLE_API_KEY`** in environment variables
+6. **Deploy!**
+
+Your app will be live in 5-10 minutes with automatic HTTPS, deployments, and PR previews!
+
+📖 **Full Guide:** [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md)
+
+---
+
+### Option 2: Local Development
+
+#### Prerequisites
 
 - **Node.js** 20+ and npm
 - **Python** 3.11+
 - **Google Gemini API Key** - [Get one free here](https://makersuite.google.com/app/apikey)
 
-### Installation
+#### Installation
 
-1. **Clone and navigate to the project**:
+1. **Clone the repository**:
    ```bash
-   cd /Users/shravnchandr/Projects/asl-app
+   git clone https://github.com/shravnchandr/ASL-App.git
+   cd ASL-App
    ```
 
 2. **Install dependencies**:
    ```bash
    # Frontend
    npm install
-   
-   # Backend (using your existing .venv)
-   source .venv/bin/activate
-   # Dependencies should already be installed in your .venv
+
+   # Backend
+   pip install -r requirements.txt
+   # Or use uv for faster installs: uv pip install -r requirements.txt
    ```
 
 3. **Configure environment**:
    ```bash
    cp .env.example .env
    ```
-   
+
    Edit `.env` and add your Google Gemini API key:
    ```env
    GOOGLE_API_KEY=your_actual_api_key_here
@@ -60,24 +102,38 @@ A production-ready web application that translates English phrases into detailed
    PORT=8000
    ```
 
-### Running the Application
+#### Running the Application
 
-**⚠️ IMPORTANT: You need to run BOTH the backend and frontend!**
+**⚠️ IMPORTANT: Run BOTH services simultaneously**
 
-#### Terminal 1 - Backend (FastAPI)
+**Terminal 1 - Backend (FastAPI):**
 ```bash
-source .venv/bin/activate
 python app.py
 ```
-✅ Backend will start on http://localhost:8000
+✅ Backend starts on http://localhost:8000
 
-#### Terminal 2 - Frontend (React + Vite)
+**Terminal 2 - Frontend (React + Vite):**
 ```bash
 npm run dev
 ```
-✅ Frontend will start on http://localhost:5173
+✅ Frontend starts on http://localhost:5173
 
-**Then visit**: http://localhost:5173
+**Open:** http://localhost:5173
+
+---
+
+### Option 3: Docker
+
+```bash
+# Build and run with Docker Compose
+docker-compose up
+
+# Or build manually
+docker build -t asl-dictionary .
+docker run -p 8000:8000 -e GOOGLE_API_KEY=your_key asl-dictionary
+```
+
+Visit: http://localhost:8000
 
 ---
 
@@ -94,25 +150,151 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 
 ---
 
-## 🆘 Troubleshooting
+## 🛠️ Tech Stack
 
-### Backend not connecting
-**Error**: `ECONNREFUSED` when trying to translate
+### Frontend
+- **React 18.3** - UI library
+- **TypeScript 5.9** - Type safety
+- **Vite 7** - Build tool with HMR
+- **Material 3 Design** - Design system
+- **Axios** - HTTP client
 
-**Solution**: Make sure the backend is running:
-```bash
-source .venv/bin/activate
-python app.py
-```
+### Backend
+- **FastAPI** - Modern Python web framework
+- **Python 3.11+** - Programming language
+- **Google Gemini AI** - LLM for ASL translation
+- **LangGraph** - Agentic workflow orchestration
+- **SQLAlchemy** - ORM with async support
+- **SQLite/PostgreSQL** - Database
 
-### API key not working
-**Error**: Translation fails even with API key
-
-**Solutions**:
-1. Verify your API key is correct
-2. Check that Gemini API is enabled in Google Cloud Console
-3. Ensure you haven't exceeded the free tier quota
+### DevOps
+- **Docker** - Containerization
+- **Render.com** - Cloud hosting with auto-deploy
+- **GitHub Actions** - CI/CD ready
+- **ESLint** - Code linting
+- **Terser** - Production minification
 
 ---
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for full documentation.
+## 📦 Production Optimizations
+
+This app is production-ready with:
+
+- ✅ **Security Headers** - CSP, HSTS, X-Frame-Options, XSS Protection
+- ✅ **Code Minification** - Terser minification with console removal
+- ✅ **Code Splitting** - Separate vendor and API bundles
+- ✅ **Gzip Compression** - ~270KB total bundle size
+- ✅ **Rate Limiting** - 100 requests/minute in production
+- ✅ **Error Handling** - Comprehensive error handling and logging
+- ✅ **Health Checks** - `/health` endpoint for monitoring
+- ✅ **Docker Optimized** - Multi-stage builds for small images
+
+**Bundle Size:**
+```
+dist/index.html           0.58 kB │ gzip: 0.33 kB
+dist/assets/index.css    54.00 kB │ gzip: 8.13 kB
+dist/assets/api.js       35.79 kB │ gzip: 14.00 kB
+dist/assets/index.js     40.84 kB │ gzip: 11.44 kB
+dist/assets/vendor.js   138.94 kB │ gzip: 44.85 kB
+```
+
+---
+
+## 📚 Documentation
+
+- **[RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md)** - Complete Render.com deployment guide
+- **[PRODUCTION_READY.md](./PRODUCTION_READY.md)** - Production checklist and security report
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - General deployment options (Railway, Fly.io, etc.)
+
+---
+
+## 🆘 Troubleshooting
+
+### Backend Not Connecting
+**Error:** `ECONNREFUSED` when trying to translate
+
+**Solution:**
+1. Ensure backend is running on http://localhost:8000
+   ```bash
+   python app.py
+   ```
+2. Check backend logs for errors
+3. Verify port 8000 is not in use by another service
+
+### API Key Issues
+**Error:** Translation fails even with API key
+
+**Solutions:**
+1. Verify your API key is correct (no extra spaces)
+2. Check that Gemini API is enabled at [Google AI Studio](https://makersuite.google.com/app/apikey)
+3. Ensure you haven't exceeded free tier quota
+4. Try regenerating a new API key
+5. Clear browser cache and re-enter the key
+
+### CORS Errors in Production
+**Error:** CORS policy blocking requests
+
+**Solution:**
+1. Update `CORS_ORIGINS` environment variable with your domain
+2. Or edit `config.py` to add your production URL
+3. Redeploy the application
+
+### Build Fails
+**Error:** TypeScript or build errors
+
+**Solution:**
+```bash
+# Clean install
+rm -rf node_modules package-lock.json
+npm install
+
+# Try building
+npm run build
+```
+
+### Docker Issues
+**Error:** Container fails to start
+
+**Solution:**
+1. Ensure `GOOGLE_API_KEY` is set in environment
+2. Check logs: `docker logs <container_id>`
+3. Verify ports are available: `docker ps`
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Google Gemini** - AI-powered ASL translation
+- **Material 3** - Beautiful design system
+- **FastAPI** - Modern Python web framework
+- **React Team** - Excellent UI library
+- **LangGraph** - Agentic workflow orchestration
+
+---
+
+## 📧 Contact & Support
+
+- **Issues:** [GitHub Issues](https://github.com/shravnchandr/ASL-App/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/shravnchandr/ASL-App/discussions)
+
+---
+
+**Built with ❤️ for the ASL community**
