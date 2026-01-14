@@ -51,3 +51,18 @@ ENV/
 # Logs
 logs/
 *.log
+
+# Testing
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+*.cover
+*.py,cover
+coverage.xml
+*.mo
+*.pot
+
+# Miscellaneous Files
+misc/
