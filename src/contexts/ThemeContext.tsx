@@ -43,8 +43,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     const toggleTheme = () => {
         setThemeState(prev => {
-            // Toggle between light and dark only (high-contrast can be set separately)
             if (prev === 'light') return 'dark';
+            if (prev === 'dark') return 'high-contrast';
             return 'light';
         });
     };

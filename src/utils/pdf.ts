@@ -20,13 +20,16 @@ export const pdf = {
 
             // Create a temporary container for PDF content
             const container = document.createElement('div');
-            container.style.position = 'absolute';
-            container.style.left = '-9999px';
+            container.style.position = 'fixed';
+            container.style.left = '0';
             container.style.top = '0';
             container.style.width = '800px';
+            container.style.minHeight = '100vh';
             container.style.padding = '40px';
             container.style.backgroundColor = '#ffffff';
             container.style.fontFamily = 'Arial, sans-serif';
+            container.style.zIndex = '99999';
+            container.style.overflow = 'visible';
             document.body.appendChild(container);
 
             // Clone the results content
@@ -44,65 +47,117 @@ export const pdf = {
                 feedbackWidget.remove();
             }
 
-            // Recursively force all text to black and backgrounds to white
-            const forceReadableColors = (element: HTMLElement) => {
-                // Force this element's styles
-                element.style.color = '#000000';
-                element.style.backgroundColor = '#ffffff';
+            // Aggressively force all text and backgrounds to be readable
+            const forceReadableStyles = (element: HTMLElement) => {
+                // Get all elements including the root
+                const allElements = [element, ...Array.from(element.querySelectorAll('*'))] as HTMLElement[];
 
-                // Remove any problematic styles
-                element.style.opacity = '1';
-                element.style.filter = 'none';
+                allElements.forEach((el) => {
+                    // Force black text by default
+                    el.style.setProperty('color', '#000000', 'important');
+                    el.style.setProperty('opacity', '1', 'important');
+                    el.style.setProperty('filter', 'none', 'important');
 
-                // Recursively apply to all children
-                const allElements = element.querySelectorAll('*');
-                allElements.forEach((el: Element) => {
-                    const htmlEl = el as HTMLElement;
-                    htmlEl.style.color = '#000000';
+                    // Handle specific element types
+                    const tag = el.tagName.toLowerCase();
+                    const classes = el.className;
 
-                    // Set appropriate backgrounds
-                    if (htmlEl.classList.contains('sign-card')) {
-                        htmlEl.style.backgroundColor = '#ffffff';
-                        htmlEl.style.border = '1px solid #cccccc';
-                    } else if (htmlEl.classList.contains('detail-icon') ||
-                               htmlEl.classList.contains('sign-number')) {
-                        htmlEl.style.backgroundColor = '#f0f0f0';
-                        htmlEl.style.color = '#000000';
-                    } else if (htmlEl.classList.contains('asl-note')) {
-                        htmlEl.style.backgroundColor = '#f9f9f9';
-                        htmlEl.style.border = '1px solid #cccccc';
-                    } else {
-                        // Default to white or transparent
-                        if (window.getComputedStyle(htmlEl).backgroundColor !== 'rgba(0, 0, 0, 0)') {
-                            htmlEl.style.backgroundColor = '#ffffff';
-                        }
+                    // Headings - bold and black
+                    if (tag.match(/^h[1-6]$/)) {
+                        el.style.setProperty('color', '#000000', 'important');
+                        el.style.setProperty('font-weight', 'bold', 'important');
+                        el.style.setProperty('background-color', 'transparent', 'important');
                     }
 
-                    // Force headings to be bold and black
-                    if (htmlEl.tagName.match(/^H[1-6]$/)) {
-                        htmlEl.style.fontWeight = 'bold';
-                        htmlEl.style.color = '#000000';
+                    // Sign cards - white background with border
+                    if (classes.includes('sign-card')) {
+                        el.style.setProperty('background-color', '#ffffff', 'important');
+                        el.style.setProperty('border', '2px solid #cccccc', 'important');
+                        el.style.setProperty('box-shadow', 'none', 'important');
+                        el.style.setProperty('display', 'block', 'important');
+                        el.style.setProperty('margin-bottom', '20px', 'important');
+                        el.style.setProperty('padding', '20px', 'important');
                     }
 
-                    // Force labels to be slightly gray but readable
-                    if (htmlEl.classList.contains('detail-label')) {
-                        htmlEl.style.color = '#666666';
-                        htmlEl.style.fontSize = '12px';
+                    // Sign word - large and bold
+                    if (classes.includes('sign-word')) {
+                        el.style.setProperty('color', '#000000', 'important');
+                        el.style.setProperty('font-size', '24px', 'important');
+                        el.style.setProperty('font-weight', 'bold', 'important');
                     }
 
-                    // Force values to be black
-                    if (htmlEl.classList.contains('detail-value')) {
-                        htmlEl.style.color = '#000000';
-                        htmlEl.style.fontSize = '14px';
-                        htmlEl.style.fontWeight = '500';
+                    // Sign number badge
+                    if (classes.includes('sign-number')) {
+                        el.style.setProperty('background-color', '#333333', 'important');
+                        el.style.setProperty('color', '#ffffff', 'important');
+                        el.style.setProperty('padding', '4px 12px', 'important');
+                        el.style.setProperty('border-radius', '12px', 'important');
                     }
 
-                    htmlEl.style.opacity = '1';
-                    htmlEl.style.filter = 'none';
+                    // Detail icons
+                    if (classes.includes('detail-icon')) {
+                        el.style.setProperty('background-color', '#f0f0f0', 'important');
+                        el.style.setProperty('color', '#000000', 'important');
+                        el.style.setProperty('border-radius', '8px', 'important');
+                        el.style.setProperty('padding', '8px', 'important');
+                    }
+
+                    // Detail labels - dark gray
+                    if (classes.includes('detail-label')) {
+                        el.style.setProperty('color', '#666666', 'important');
+                        el.style.setProperty('font-size', '11px', 'important');
+                        el.style.setProperty('font-weight', '600', 'important');
+                        el.style.setProperty('text-transform', 'uppercase', 'important');
+                    }
+
+                    // Detail values - black and bold
+                    if (classes.includes('detail-value')) {
+                        el.style.setProperty('color', '#000000', 'important');
+                        el.style.setProperty('font-size', '14px', 'important');
+                        el.style.setProperty('font-weight', '500', 'important');
+                        el.style.setProperty('line-height', '1.5', 'important');
+                    }
+
+                    // ASL note - light background with dark text
+                    if (classes.includes('asl-note')) {
+                        el.style.setProperty('background-color', '#f9f9f9', 'important');
+                        el.style.setProperty('border', '2px solid #cccccc', 'important');
+                        el.style.setProperty('padding', '20px', 'important');
+                        el.style.setProperty('margin-top', '20px', 'important');
+                    }
+
+                    if (classes.includes('note-title')) {
+                        el.style.setProperty('color', '#000000', 'important');
+                        el.style.setProperty('font-weight', 'bold', 'important');
+                        el.style.setProperty('font-size', '16px', 'important');
+                    }
+
+                    if (classes.includes('note-text')) {
+                        el.style.setProperty('color', '#000000', 'important');
+                        el.style.setProperty('font-size', '14px', 'important');
+                        el.style.setProperty('line-height', '1.6', 'important');
+                    }
+
+                    // Results header
+                    if (classes.includes('results-title')) {
+                        el.style.setProperty('color', '#cccccc', 'important');
+                        el.style.setProperty('font-size', '28px', 'important');
+                        el.style.setProperty('font-weight', 'normal', 'important');
+                    }
+
+                    if (classes.includes('results-count')) {
+                        el.style.setProperty('color', '#cccccc', 'important');
+                    }
+
+                    // Signs grid - make it a vertical list
+                    if (classes.includes('signs-grid')) {
+                        el.style.setProperty('display', 'block', 'important');
+                        el.style.setProperty('width', '100%', 'important');
+                    }
                 });
             };
 
-            forceReadableColors(resultsClone);
+            forceReadableStyles(resultsClone);
 
             // Add header with title and date
             const header = document.createElement('div');
@@ -110,21 +165,29 @@ export const pdf = {
             header.style.borderBottom = '2px solid #333';
             header.style.paddingBottom = '20px';
             header.innerHTML = `
-                <h1 style="margin: 0 0 10px 0; font-size: 28px; color: #333;">ASL Dictionary Translation</h1>
-                <p style="margin: 0; color: #666; font-size: 14px;">Generated on ${this.getFormattedDate()}</p>
+                <h1 style="margin: 0 0 10px 0; font-size: 28px; color: #000000; font-weight: bold;">ASL Dictionary Translation</h1>
+                <p style="margin: 0; color: #666666; font-size: 14px;">Generated on ${this.getFormattedDate()}</p>
             `;
 
             container.appendChild(header);
             container.appendChild(resultsClone);
 
+            // Wait for layout to settle
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Get actual rendered height
+            const actualHeight = container.scrollHeight;
+
             // Capture the container as canvas
             const canvas = await html2canvas(container, {
-                scale: 1.5, // Reduced from 2 to make smaller PDFs
+                scale: 2,
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff',
+                width: 800,
+                height: actualHeight,
                 windowWidth: 800,
-                windowHeight: container.scrollHeight,
+                windowHeight: actualHeight,
             });
 
             // Remove temporary container
@@ -132,6 +195,7 @@ export const pdf = {
 
             // Calculate PDF dimensions
             const imgWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             // Create PDF
@@ -142,14 +206,16 @@ export const pdf = {
             let heightLeft = imgHeight;
             let position = 0;
 
+            // Add first page
             doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= 297; // A4 height in mm
+            heightLeft -= pageHeight;
 
+            // Add additional pages if needed
             while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
+                position = -pageHeight * Math.floor((imgHeight - heightLeft) / pageHeight);
                 doc.addPage();
                 doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= 297;
+                heightLeft -= pageHeight;
             }
 
             // Download PDF
