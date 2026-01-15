@@ -37,3 +37,27 @@ export interface FeedbackStats {
 export interface APIError {
     detail: string;
 }
+
+export interface FeedbackItem {
+    id: number;
+    query: string | null;
+    rating: string | null;
+    feedback_text: string | null;
+    timestamp: string;
+    feedback_type: string;
+    category: string | null;
+    email: string | null;
+}
+
+export interface PaginatedFeedback {
+    items: FeedbackItem[];
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+}
+
+export interface AdminStats extends FeedbackStats {
+    by_type: Record<string, number>;
+    by_category: Record<string, number>;
+}

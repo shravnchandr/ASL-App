@@ -40,7 +40,14 @@ class Settings(BaseSettings):
     # Google Gemini API
     google_api_key: str = os.getenv("GOOGLE_API_KEY", "")
     model_name: str = "gemini-2.5-flash"
-    
+
+    # Admin Access
+    admin_password: str = os.getenv("ADMIN_PASSWORD", "")
+
+    # Redis Cache (optional)
+    redis_url: str = os.getenv("REDIS_URL", "")
+    cache_ttl: int = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour default
+
     # Logging
     log_level: str = "INFO" if environment == "production" else "DEBUG"
     log_format: str = "json" if environment == "production" else "pretty"

@@ -138,7 +138,39 @@ async def get_feedback_stats(session: AsyncSession) -> dict:
 async def get_recent_feedback(session: AsyncSession, limit: int = 10) -> List[Feedback]:
     """Get recent feedback entries (for admin/analytics)"""
     from sqlalchemy import select
-    
+
     query = select(Feedback).order_by(Feedback.timestamp.desc()).limit(limit)
     result = await session.execute(query)
     return result.scalars().all()
+
+
+async def get_paginated_feedback(
+    session: AsyncSession,
+    page: int = 1,
+    limit: int = 50,
+    feedback_type: Optional[str] = None
+) -> tuple[List[Feedback], int]:
+    """Get paginated feedback with optional filtering"""
+    from sqlalchemy import select, func
+
+    # Build base query
+    query = select(Feedback)
+    count_query = select(func.count(Feedback.id))
+
+    # Apply filter if specified
+    if feedback_type:
+        query = query.where(Feedback.feedback_type == feedback_type)
+        count_query = count_query.where(Feedback.feedback_type == feedback_type)
+
+    # Get total count
+    total_result = await session.execute(count_query)
+    total = total_result.scalar()
+
+    # Apply pagination
+    offset = (page - 1) * limit
+    query = query.order_by(Feedback.timestamp.desc()).offset(offset).limit(limit)
+
+    result = await session.execute(query)
+    items = result.scalars().all()
+
+    return items, total
