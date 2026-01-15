@@ -4,6 +4,7 @@ Handles environment-based settings for development and production
 """
 import os
 from typing import List
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -13,12 +14,18 @@ class Settings(BaseSettings):
     
     # Application
     app_name: str = "ASL Dictionary API"
-    environment: str = os.getenv("ENVIRONMENT", "development")
-    debug: bool = environment == "development"
-    
+    environment: str = "development"
+    debug: bool = False
+
     # API Configuration
     api_prefix: str = "/api"
-    rate_limit: str = os.getenv("RATE_LIMIT", "10/minute")
+    rate_limit: str = "10/minute"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Set debug based on environment after initialization
+        if self.environment == "development":
+            object.__setattr__(self, 'debug', True)
     
     # CORS Settings
     cors_origins: List[str] = [
@@ -35,30 +42,36 @@ class Settings(BaseSettings):
         ])
     
     # Database
-    database_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./asl_feedback.db")
+    database_url: str = "sqlite+aiosqlite:///./asl_feedback.db"
 
-    # Fix Render's postgres:// URL to use asyncpg driver
-    if database_url and database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    @field_validator('database_url')
+    @classmethod
+    def fix_postgres_url(cls, v: str) -> str:
+        """Convert postgres:// to postgresql+asyncpg:// for Render compatibility"""
+        if v and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v and v.startswith("postgresql://") and "+asyncpg" not in v:
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
     
     # Google Gemini API
-    google_api_key: str = os.getenv("GOOGLE_API_KEY", "")
+    google_api_key: str = ""
     model_name: str = "gemini-2.5-flash"
 
     # Admin Access
-    admin_password: str = os.getenv("ADMIN_PASSWORD", "")
+    admin_password: str = ""
 
     # Redis Cache (optional)
-    redis_url: str = os.getenv("REDIS_URL", "")
-    cache_ttl: int = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour default
+    redis_url: str = ""
+    cache_ttl: int = 3600  # 1 hour default
 
     # Logging
-    log_level: str = "INFO" if environment == "production" else "DEBUG"
-    log_format: str = "json" if environment == "production" else "pretty"
-    
+    log_level: str = "INFO"
+    log_format: str = "pretty"
+
     # Server
     host: str = "0.0.0.0"
-    port: int = int(os.getenv("PORT", "8000"))
+    port: int = 8000
     
     class Config:
         env_file = ".env"
