@@ -44,36 +44,65 @@ export const pdf = {
                 feedbackWidget.remove();
             }
 
-            // Force dark text colors for PDF readability
-            const forceTextColors = (element: HTMLElement) => {
-                // Set default dark text color
+            // Recursively force all text to black and backgrounds to white
+            const forceReadableColors = (element: HTMLElement) => {
+                // Force this element's styles
                 element.style.color = '#000000';
-
-                // Force specific elements to have strong contrast
-                const headings = element.querySelectorAll('h1, h2, h3, h4, h5, h6');
-                headings.forEach((heading: Element) => {
-                    (heading as HTMLElement).style.color = '#000000';
-                    (heading as HTMLElement).style.fontWeight = 'bold';
-                });
-
-                // Force paragraph and div text to be dark
-                const textElements = element.querySelectorAll('p, div, span, td, th, li');
-                textElements.forEach((el: Element) => {
-                    (el as HTMLElement).style.color = '#000000';
-                });
-
-                // Force strong/bold elements to be even darker
-                const strongElements = element.querySelectorAll('strong, b');
-                strongElements.forEach((el: Element) => {
-                    (el as HTMLElement).style.color = '#000000';
-                    (el as HTMLElement).style.fontWeight = 'bold';
-                });
-
-                // Force background colors to be white or light
                 element.style.backgroundColor = '#ffffff';
+
+                // Remove any problematic styles
+                element.style.opacity = '1';
+                element.style.filter = 'none';
+
+                // Recursively apply to all children
+                const allElements = element.querySelectorAll('*');
+                allElements.forEach((el: Element) => {
+                    const htmlEl = el as HTMLElement;
+                    htmlEl.style.color = '#000000';
+
+                    // Set appropriate backgrounds
+                    if (htmlEl.classList.contains('sign-card')) {
+                        htmlEl.style.backgroundColor = '#ffffff';
+                        htmlEl.style.border = '1px solid #cccccc';
+                    } else if (htmlEl.classList.contains('detail-icon') ||
+                               htmlEl.classList.contains('sign-number')) {
+                        htmlEl.style.backgroundColor = '#f0f0f0';
+                        htmlEl.style.color = '#000000';
+                    } else if (htmlEl.classList.contains('asl-note')) {
+                        htmlEl.style.backgroundColor = '#f9f9f9';
+                        htmlEl.style.border = '1px solid #cccccc';
+                    } else {
+                        // Default to white or transparent
+                        if (window.getComputedStyle(htmlEl).backgroundColor !== 'rgba(0, 0, 0, 0)') {
+                            htmlEl.style.backgroundColor = '#ffffff';
+                        }
+                    }
+
+                    // Force headings to be bold and black
+                    if (htmlEl.tagName.match(/^H[1-6]$/)) {
+                        htmlEl.style.fontWeight = 'bold';
+                        htmlEl.style.color = '#000000';
+                    }
+
+                    // Force labels to be slightly gray but readable
+                    if (htmlEl.classList.contains('detail-label')) {
+                        htmlEl.style.color = '#666666';
+                        htmlEl.style.fontSize = '12px';
+                    }
+
+                    // Force values to be black
+                    if (htmlEl.classList.contains('detail-value')) {
+                        htmlEl.style.color = '#000000';
+                        htmlEl.style.fontSize = '14px';
+                        htmlEl.style.fontWeight = '500';
+                    }
+
+                    htmlEl.style.opacity = '1';
+                    htmlEl.style.filter = 'none';
+                });
             };
 
-            forceTextColors(resultsClone);
+            forceReadableColors(resultsClone);
 
             // Add header with title and date
             const header = document.createElement('div');
@@ -90,10 +119,12 @@ export const pdf = {
 
             // Capture the container as canvas
             const canvas = await html2canvas(container, {
-                scale: 2,
+                scale: 1.5, // Reduced from 2 to make smaller PDFs
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff',
+                windowWidth: 800,
+                windowHeight: container.scrollHeight,
             });
 
             // Remove temporary container
