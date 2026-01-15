@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Ocean Blue background circle -->
+  <circle cx="50" cy="50" r="48" fill="#0B75BC" stroke="#0A5A8F" stroke-width="2"/>
+
+  <!-- Hand sign in white/teal -->
+  <g fill="#E0F7FA" stroke="#00ACC1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Palm -->
+    <ellipse cx="50" cy="55" rx="12" ry="18" fill="#F5F5F5"/>
+
+    <!-- Thumb -->
+    <path d="M 38 55 Q 32 50 32 42 Q 32 38 34 36 Q 36 34 38 36 Q 40 38 40 42 Q 40 48 42 52" fill="#F5F5F5"/>
+
+    <!-- Index finger (pointing up) -->
+    <path d="M 45 37 Q 44 28 44 20 Q 44 16 46 14 Q 48 12 50 14 Q 52 16 52 20 Q 52 28 51 37" fill="#F5F5F5"/>
+
+    <!-- Middle finger -->
+    <path d="M 52 37 Q 53 28 54 22 Q 54 18 56 16 Q 58 14 60 16 Q 62 18 62 22 Q 62 30 60 37" fill="#F5F5F5"/>
+
+    <!-- Ring finger -->
+    <path d="M 60 40 Q 62 32 64 26 Q 64 22 66 20 Q 68 18 70 20 Q 72 22 72 26 Q 72 32 70 40" fill="#F5F5F5"/>
+
+    <!-- Pinky -->
+    <path d="M 67 45 Q 69 38 70 32 Q 70 28 72 26 Q 74 24 76 26 Q 78 28 78 32 Q 78 38 76 45" fill="#F5F5F5"/>
+  </g>
+
+  <!-- ASL text at bottom -->
+  <text x="50" y="90" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#FFFFFF">ASL</text>
+</svg>

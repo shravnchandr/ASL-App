@@ -19,7 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Import local modules
 from config import get_settings
 from logger import app_logger
-from database import init_db, get_db, create_feedback, get_feedback_stats
+from database import init_db, get_db, create_feedback, get_feedback_stats, get_paginated_feedback
+from auth import verify_admin_password
+from cache import init_redis, close_redis, get_cached_translation, cache_translation, get_cache_stats
 
 # Import LangGraph ASL dictionary
 sys.path.append(os.path.join(os.path.dirname(__file__), "python_code"))
@@ -36,17 +38,21 @@ limiter = Limiter(key_func=get_remote_address)
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     app_logger.info(f"Starting {settings.app_name} in {settings.environment} mode")
-    
+
     # Initialize database
     await init_db()
-    
+
+    # Initialize Redis cache (optional)
+    await init_redis()
+
     # Build LangGraph application
     app.state.asl_graph = build_asl_graph()
     app_logger.info("LangGraph ASL application initialized")
-    
+
     yield
-    
+
     # Cleanup
+    await close_redis()
     app_logger.info("Shutting down application")
 
 
@@ -158,28 +164,35 @@ async def health_check():
 async def translate_to_asl(request: Request, translate_req: TranslateRequest):
     """
     Translate English phrase to ASL sign descriptions
-    
+
     Rate limited to prevent abuse
+    Uses Redis caching for improved performance
     """
     try:
         app_logger.info(f"Translation request: '{translate_req.text}'")
-        
+
+        # Check cache first
+        cached_result = await get_cached_translation(translate_req.text)
+        if cached_result:
+            app_logger.info(f"Returning cached translation for: '{translate_req.text}'")
+            return TranslateResponse(**cached_result)
+
         # Get LangGraph app from state
         asl_graph = request.app.state.asl_graph
-        
+
         # Get custom API key from header if provided
         custom_api_key = request.headers.get("X-Custom-API-Key")
-        
+
         # Temporarily set environment variable if custom key provided
         original_api_key = os.environ.get("GOOGLE_API_KEY")
         if custom_api_key:
             os.environ["GOOGLE_API_KEY"] = custom_api_key
             app_logger.info("Using custom API key from request header")
-        
+
         try:
             # Initial state
             initial_state = {"english_input": translate_req.text}
-            
+
             # Execute LangGraph workflow
             final_state = asl_graph.invoke(initial_state)
         finally:
@@ -189,19 +202,19 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest):
                     os.environ["GOOGLE_API_KEY"] = original_api_key
                 else:
                     os.environ.pop("GOOGLE_API_KEY", None)
-        
+
         # Check for errors
         if final_state.get("error"):
             app_logger.error(f"Translation error: {final_state['error']}")
             raise HTTPException(status_code=500, detail=f"Translation failed: {final_state['error']}")
-        
+
         # Get final output
         final_output: SentenceDescriptionSchema = final_state.get("final_output")
-        
+
         if not final_output:
             app_logger.error("No output from LangGraph")
             raise HTTPException(status_code=500, detail="Translation produced no output")
-        
+
         # Convert to response format
         signs = [
             SignResponse(
@@ -213,16 +226,22 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest):
             )
             for sign in final_output.signs
         ]
-        
+
         response = TranslateResponse(
             query=translate_req.text,
             signs=signs,
             note=final_output.note,
         )
-        
+
+        # Cache the result
+        await cache_translation(
+            translate_req.text,
+            response.model_dump()
+        )
+
         app_logger.info(f"Translation successful: {len(signs)} signs returned")
         return response
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -315,6 +334,142 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
         return stats
     except Exception as e:
         app_logger.exception(f"Error fetching stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch statistics")
+
+
+# Admin Endpoints
+
+@app.get(f"{settings.api_prefix}/admin/feedback")
+async def get_admin_feedback(
+    page: int = 1,
+    limit: int = 50,
+    feedback_type: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin_password)
+):
+    """
+    Get paginated feedback for admin review
+    Requires admin password in X-Admin-Password header
+    """
+    try:
+        if limit > 100:
+            limit = 100  # Max 100 items per page
+
+        items, total = await get_paginated_feedback(db, page, limit, feedback_type)
+
+        # Convert to dict for JSON response
+        feedback_list = [
+            {
+                "id": item.id,
+                "query": item.query,
+                "rating": item.rating,
+                "feedback_text": item.feedback_text,
+                "timestamp": item.timestamp.isoformat(),
+                "feedback_type": item.feedback_type,
+                "category": item.category,
+                "email": item.email,
+            }
+            for item in items
+        ]
+
+        return {
+            "items": feedback_list,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit  # Ceiling division
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(f"Error fetching admin feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch feedback")
+
+
+@app.delete(f"{settings.api_prefix}/admin/feedback/{{feedback_id}}")
+async def delete_feedback(
+    feedback_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin_password)
+):
+    """
+    Delete a specific feedback entry
+    Requires admin password in X-Admin-Password header
+    """
+    try:
+        from sqlalchemy import select, delete
+        from database import Feedback
+
+        # Check if feedback exists
+        query = select(Feedback).where(Feedback.id == feedback_id)
+        result = await db.execute(query)
+        feedback = result.scalar_one_or_none()
+
+        if not feedback:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+
+        # Delete feedback
+        delete_query = delete(Feedback).where(Feedback.id == feedback_id)
+        await db.execute(delete_query)
+        await db.commit()
+
+        app_logger.info(f"Feedback {feedback_id} deleted by admin")
+
+        return {"success": True, "message": "Feedback deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(f"Error deleting feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete feedback")
+
+
+@app.get(f"{settings.api_prefix}/admin/stats")
+async def get_admin_stats(
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin_password)
+):
+    """
+    Get detailed admin statistics
+    Requires admin password in X-Admin-Password header
+    """
+    try:
+        from sqlalchemy import select, func
+        from database import Feedback
+
+        # Get basic stats
+        stats = await get_feedback_stats(db)
+
+        # Get counts by feedback type
+        type_query = select(
+            Feedback.feedback_type,
+            func.count(Feedback.id).label('count')
+        ).group_by(Feedback.feedback_type)
+        type_result = await db.execute(type_query)
+        type_counts = {row.feedback_type: row.count for row in type_result}
+
+        # Get counts by category (for general feedback)
+        category_query = select(
+            Feedback.category,
+            func.count(Feedback.id).label('count')
+        ).where(
+            Feedback.category.isnot(None)
+        ).group_by(Feedback.category)
+        category_result = await db.execute(category_query)
+        category_counts = {row.category: row.count for row in category_result}
+
+        # Get cache stats
+        cache_stats = await get_cache_stats()
+
+        return {
+            **stats,
+            "by_type": type_counts,
+            "by_category": category_counts,
+            "cache": cache_stats
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(f"Error fetching admin stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch statistics")
 
 

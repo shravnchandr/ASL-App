@@ -17,6 +17,7 @@ import { ActionButtons } from './components/features/ActionButtons';
 import { WelcomeBanner } from './components/features/WelcomeBanner';
 import { GeneralFeedbackModal } from './components/features/GeneralFeedbackModal';
 import { FloatingFeedbackButton } from './components/features/FloatingFeedbackButton';
+import { Admin } from './components/Admin';
 import { translateToASL, submitFeedback, submitGeneralFeedback, setCustomApiKey } from './services/api';
 import { announceToScreenReader } from './utils/accessibility';
 import { print } from './utils/print';
@@ -26,6 +27,9 @@ import type { TranslateResponse } from './types';
 import './App.css';
 
 function App() {
+  // Check if we're on the admin route
+  const isAdminRoute = window.location.pathname === '/admin' || window.location.search.includes('admin=true');
+
   const { customApiKey, addToHistory } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<TranslateResponse | null>(null);
@@ -126,6 +130,11 @@ function App() {
       throw err; // Re-throw to let modal handle it
     }
   };
+
+  // If admin route, show admin panel (after all hooks are called)
+  if (isAdminRoute) {
+    return <Admin />;
+  }
 
   return (
     <div className="app">
