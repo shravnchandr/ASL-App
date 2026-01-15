@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosError } from 'axios';
-import type { TranslateResponse, FeedbackData, FeedbackResponse, FeedbackStats, APIError, PaginatedFeedback, AdminStats } from '../types';
+import type { TranslateResponse, FeedbackData, FeedbackResponse, FeedbackStats, APIError, PaginatedFeedback, AdminStats, AnalyticsOverview } from '../types';
 
 // Get API URL from environment or use same-origin
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -198,6 +198,29 @@ export async function getAdminStats(adminPassword: string): Promise<AdminStats> 
                 throw new Error('Invalid admin password');
             }
             throw new Error(axiosError.response?.data?.detail || 'Failed to fetch statistics');
+        }
+        throw new Error('An unexpected error occurred');
+    }
+}
+
+/**
+ * Admin: Get analytics overview
+ */
+export async function getAnalyticsOverview(adminPassword: string): Promise<AnalyticsOverview> {
+    try {
+        const response = await apiClient.get<AnalyticsOverview>(`${API_PREFIX}/admin/analytics/overview`, {
+            headers: {
+                'X-Admin-Password': adminPassword,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError<APIError>;
+            if (axiosError.response?.status === 401) {
+                throw new Error('Invalid admin password');
+            }
+            throw new Error(axiosError.response?.data?.detail || 'Failed to fetch analytics');
         }
         throw new Error('An unexpected error occurred');
     }

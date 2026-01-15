@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAdminFeedback, deleteAdminFeedback, getAdminStats } from '../services/api';
-import type { PaginatedFeedback, AdminStats, FeedbackItem } from '../types';
+import { getAdminFeedback, deleteAdminFeedback, getAdminStats, getAnalyticsOverview } from '../services/api';
+import type { PaginatedFeedback, AdminStats, FeedbackItem, AnalyticsOverview } from '../types';
 import './Admin.css';
 
 export function Admin() {
@@ -15,9 +15,13 @@ export function Admin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'feedback' | 'analytics'>('feedback');
+
   // Data states
   const [feedback, setFeedback] = useState<PaginatedFeedback | null>(null);
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
 
   // Filter & pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,18 +53,50 @@ export function Admin() {
         setPassword('');
         setFeedback(null);
         setStats(null);
+        setAnalytics(null);
       }
     } finally {
       setLoading(false);
     }
   }, [adminPassword, currentPage, limit, feedbackType]);
 
+  const loadAnalytics = useCallback(async () => {
+    if (!adminPassword) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const analyticsData = await getAnalyticsOverview(adminPassword);
+      setAnalytics(analyticsData);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load analytics';
+      setError(message);
+
+      // If unauthorized, log out
+      if (message.includes('Invalid admin password')) {
+        setIsAuthenticated(false);
+        setAdminPassword('');
+        setPassword('');
+        setFeedback(null);
+        setStats(null);
+        setAnalytics(null);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [adminPassword]);
+
   // Load data when authenticated or filters change
   useEffect(() => {
     if (isAuthenticated) {
-      loadData();
+      if (activeTab === 'feedback') {
+        loadData();
+      } else if (activeTab === 'analytics') {
+        loadAnalytics();
+      }
     }
-  }, [isAuthenticated, loadData]);
+  }, [isAuthenticated, activeTab, loadData, loadAnalytics]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +205,22 @@ export function Admin() {
         </div>
       </header>
 
+      {/* Tab Navigation */}
+      <nav className="admin-tabs">
+        <button
+          className={`admin-tab ${activeTab === 'feedback' ? 'active' : ''}`}
+          onClick={() => setActiveTab('feedback')}
+        >
+          Feedback
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          Analytics
+        </button>
+      </nav>
+
       <main className="admin-main">
         {error && (
           <div className="admin-error" role="alert">
@@ -176,8 +228,11 @@ export function Admin() {
           </div>
         )}
 
-        {/* Statistics */}
-        {stats && (
+        {/* Feedback Tab */}
+        {activeTab === 'feedback' && (
+          <>
+            {/* Statistics */}
+            {stats && (
           <section className="admin-stats">
             <h2 className="section-title">Statistics</h2>
             <div className="stats-grid">
@@ -340,6 +395,136 @@ export function Admin() {
             </>
           )}
         </section>
+          </>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && analytics && (
+          <>
+            {/* Unique Users Stats */}
+            <section className="admin-stats">
+              <h2 className="section-title">User Analytics</h2>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.unique_users_today}</div>
+                  <div className="stat-label">Users Today</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.unique_users_7d}</div>
+                  <div className="stat-label">Users (7 days)</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.unique_users_30d}</div>
+                  <div className="stat-label">Users (30 days)</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.translations.total}</div>
+                  <div className="stat-label">Total Translations</div>
+                </div>
+              </div>
+            </section>
+
+            {/* Translation Stats */}
+            <section className="admin-stats">
+              <h2 className="section-title">Translation Performance</h2>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.translations.cache_hits}</div>
+                  <div className="stat-label">Cache Hits</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.translations.cache_misses}</div>
+                  <div className="stat-label">Cache Misses</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.translations.cache_hit_rate.toFixed(1)}%</div>
+                  <div className="stat-label">Cache Hit Rate</div>
+                </div>
+              </div>
+            </section>
+
+            {/* Popular Searches */}
+            {analytics.popular_searches.length > 0 && (
+              <section className="admin-analytics-section">
+                <h2 className="section-title">Popular Searches (Last 30 Days)</h2>
+                <div className="popular-searches">
+                  <table className="analytics-table">
+                    <thead>
+                      <tr>
+                        <th>Rank</th>
+                        <th>Query</th>
+                        <th>Count</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.popular_searches.map((search, index) => (
+                        <tr key={search.query}>
+                          <td className="rank">#{index + 1}</td>
+                          <td className="query">{search.query}</td>
+                          <td className="count">{search.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {/* Daily Active Users */}
+            {analytics.daily_active_users.length > 0 && (
+              <section className="admin-analytics-section">
+                <h2 className="section-title">Daily Active Users (Last 30 Days)</h2>
+                <div className="chart-container">
+                  <div className="bar-chart">
+                    {analytics.daily_active_users.map((day) => {
+                      const maxUsers = Math.max(...analytics.daily_active_users.map(d => d.unique_users));
+                      const height = maxUsers > 0 ? (day.unique_users / maxUsers) * 100 : 0;
+                      return (
+                        <div key={day.date} className="bar-item" title={`${day.date}: ${day.unique_users} users`}>
+                          <div className="bar" style={{ height: `${height}%` }}>
+                            <span className="bar-value">{day.unique_users}</span>
+                          </div>
+                          <div className="bar-label">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Hourly Usage Pattern */}
+            <section className="admin-analytics-section">
+              <h2 className="section-title">Hourly Usage Pattern (Last 7 Days)</h2>
+              <div className="chart-container">
+                <div className="bar-chart horizontal">
+                  {Object.entries(analytics.hourly_usage)
+                    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                    .map(([hour, count]) => {
+                      const maxCount = Math.max(...Object.values(analytics.hourly_usage));
+                      const width = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                      return (
+                        <div key={hour} className="bar-item horizontal">
+                          <div className="bar-label">{hour}:00</div>
+                          <div className="bar horizontal" style={{ width: `${width}%` }} title={`${count} requests`}>
+                            <span className="bar-value">{count}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === 'analytics' && loading && (
+          <div className="admin-loading">Loading analytics...</div>
+        )}
+
+        {activeTab === 'analytics' && !loading && !analytics && !error && (
+          <div className="admin-empty">No analytics data available yet. Start using the app to see metrics!</div>
+        )}
       </main>
     </div>
   );

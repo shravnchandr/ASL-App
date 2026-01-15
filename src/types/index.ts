@@ -61,3 +61,31 @@ export interface AdminStats extends FeedbackStats {
     by_type: Record<string, number>;
     by_category: Record<string, number>;
 }
+
+// Analytics types
+export interface PopularSearch {
+    query: string;
+    count: number;
+}
+
+export interface DailyActiveUser {
+    date: string;
+    unique_users: number;
+}
+
+export interface TranslationStats {
+    total: number;
+    cache_hits: number;
+    cache_misses: number;
+    cache_hit_rate: number;
+}
+
+export interface AnalyticsOverview {
+    unique_users_30d: number;
+    unique_users_7d: number;
+    unique_users_today: number;
+    translations: TranslationStats;
+    popular_searches: PopularSearch[];
+    daily_active_users: DailyActiveUser[];
+    hourly_usage: Record<string, number>;
+}
