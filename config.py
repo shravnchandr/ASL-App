@@ -35,7 +35,11 @@ class Settings(BaseSettings):
         ])
     
     # Database
-    database_url: str = "sqlite+aiosqlite:///./asl_feedback.db"
+    database_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./asl_feedback.db")
+
+    # Fix Render's postgres:// URL to use asyncpg driver
+    if database_url and database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
     
     # Google Gemini API
     google_api_key: str = os.getenv("GOOGLE_API_KEY", "")

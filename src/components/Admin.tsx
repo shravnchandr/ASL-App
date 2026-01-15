@@ -3,7 +3,7 @@
  * Provides interface for viewing and managing feedback
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAdminFeedback, deleteAdminFeedback, getAdminStats } from '../services/api';
 import type { PaginatedFeedback, AdminStats, FeedbackItem } from '../types';
 import './Admin.css';
@@ -24,14 +24,7 @@ export function Admin() {
   const [feedbackType, setFeedbackType] = useState<string>('');
   const [limit] = useState(50);
 
-  // Load data when authenticated or filters change
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated, currentPage, feedbackType]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!adminPassword) return;
 
     setLoading(true);
@@ -51,12 +44,23 @@ export function Admin() {
 
       // If unauthorized, log out
       if (message.includes('Invalid admin password')) {
-        handleLogout();
+        setIsAuthenticated(false);
+        setAdminPassword('');
+        setPassword('');
+        setFeedback(null);
+        setStats(null);
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [adminPassword, currentPage, limit, feedbackType]);
+
+  // Load data when authenticated or filters change
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, loadData]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
