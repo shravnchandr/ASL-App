@@ -37,10 +37,19 @@ services:
         value: json
 
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:///./asl_feedback.db
+        sync: false  # Set manually in Render Dashboard (PostgreSQL URL)
 
-      # IMPORTANT: Set this in Render Dashboard (don't commit secrets!)
+      - key: REDIS_URL
+        sync: false  # Set manually in Render Dashboard (Redis URL)
+
+      - key: CACHE_TTL
+        value: 3600
+
+      # IMPORTANT: Set these in Render Dashboard (don't commit secrets!)
       - key: GOOGLE_API_KEY
+        sync: false  # This must be set manually in Render Dashboard
+
+      - key: ADMIN_PASSWORD
         sync: false  # This must be set manually in Render Dashboard
 
       # CORS - Render provides a URL like: https://asl-dictionary.onrender.com
