@@ -16,14 +16,16 @@ A modern, production-ready web application that translates English phrases into 
 ### Core Functionality
 - 🔤 **ASL Translation** - Detailed sign descriptions including hand shapes, locations, movements, and facial expressions powered by Google Gemini AI
 - 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
-- 🔗 **Share & Print** - Share translations via Web Share API or print-optimized views
+- 🔗 **Share, Print & Export** - Share translations via Web Share API, print-optimized views, or export to PDF
 - 💾 **Feedback System** - Rate translations and provide feedback stored in database
+- 🎯 **Admin Dashboard** - Password-protected admin panel for managing feedback and viewing analytics
 
 ### User Experience
 - 🎨 **Material 3 Expressive UI** - Stunning Ocean Blue & Teal design with fluid animations and micro-interactions
 - 🌙 **Multiple Themes** - Light, Dark, and High Contrast modes for all lighting conditions
 - 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
-- ⚡ **Fast & Optimized** - Production-optimized builds with code splitting and lazy loading
+- ⚡ **Fast & Optimized** - Production-optimized builds with code splitting, lazy loading, and Redis caching
+- 📄 **PDF Export** - Download professional PDFs of translation results for offline reference
 
 ### Security & Privacy
 - 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally)
@@ -41,7 +43,10 @@ A modern, production-ready web application that translates English phrases into 
 - 🐳 **Docker Support** - Multi-stage Docker build for easy deployment
 - 📊 **Structured Logging** - JSON logging for production monitoring
 - 🔄 **Auto-Deploy** - Render.com integration with PR previews
-- 🧪 **TypeScript** - Full type safety across frontend and backend
+- 🧪 **Comprehensive Testing** - Backend tests with pytest (13 passing tests)
+- 💾 **Flexible Database** - SQLite for development, PostgreSQL for production with async support
+- 🚀 **Redis Caching** - Optional Redis integration for faster repeat translations
+- 🔒 **Admin Panel** - Secure admin dashboard for feedback management and analytics
 
 ---
 
@@ -158,6 +163,7 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 - **Vite 7** - Build tool with HMR
 - **Material 3 Design** - Design system
 - **Axios** - HTTP client
+- **jsPDF & html2canvas** - PDF generation
 
 ### Backend
 - **FastAPI** - Modern Python web framework
@@ -165,7 +171,9 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 - **Google Gemini AI** - LLM for ASL translation
 - **LangGraph** - Agentic workflow orchestration
 - **SQLAlchemy** - ORM with async support
-- **SQLite/PostgreSQL** - Database
+- **SQLite/PostgreSQL** - Database (SQLite for dev, PostgreSQL for production)
+- **Redis** - Optional caching layer for improved performance
+- **pytest** - Testing framework with async support
 
 ### DevOps
 - **Docker** - Containerization
@@ -191,11 +199,13 @@ This app is production-ready with:
 
 **Bundle Size:**
 ```
-dist/index.html           0.58 kB │ gzip: 0.33 kB
-dist/assets/index.css    54.00 kB │ gzip: 8.13 kB
-dist/assets/api.js       35.79 kB │ gzip: 14.00 kB
-dist/assets/index.js     40.84 kB │ gzip: 11.44 kB
-dist/assets/vendor.js   138.94 kB │ gzip: 44.85 kB
+dist/index.html            0.80 kB │ gzip:   0.43 kB
+dist/assets/index.css     61.24 kB │ gzip:   9.53 kB
+dist/assets/purify.js     22.58 kB │ gzip:   8.47 kB
+dist/assets/api.js        35.79 kB │ gzip:  14.00 kB
+dist/assets/vendor.js    139.10 kB │ gzip:  44.89 kB
+dist/assets/index.js     633.40 kB │ gzip: 182.31 kB
+Total (gzipped):        ~260 kB
 ```
 
 ---
@@ -205,6 +215,45 @@ dist/assets/vendor.js   138.94 kB │ gzip: 44.85 kB
 - **[RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md)** - Complete Render.com deployment guide
 - **[PRODUCTION_READY.md](./PRODUCTION_READY.md)** - Production checklist and security report
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - General deployment options (Railway, Fly.io, etc.)
+- **[SOCIAL_MEDIA_TEMPLATES.md](./SOCIAL_MEDIA_TEMPLATES.md)** - Marketing templates for social media
+
+## 🔧 Advanced Features
+
+### Admin Dashboard
+Access the admin panel at `/admin` or add `?admin=true` to your URL. Features include:
+- View all feedback submissions
+- Filter by rating (thumbs up/down) and category
+- View detailed analytics and statistics
+- Secure password authentication
+- Real-time feedback management
+
+Set the `ADMIN_PASSWORD` environment variable to enable admin access.
+
+### Redis Caching
+Enable Redis caching for faster repeat translations:
+1. Set `REDIS_URL` environment variable (e.g., `redis://localhost:6379`)
+2. Optionally configure `CACHE_TTL` (default: 3600 seconds)
+3. Translations are automatically cached and retrieved
+
+Benefits:
+- Instant responses for previously translated phrases
+- Reduced API costs
+- Better user experience
+
+### PostgreSQL Database
+For production deployments, use PostgreSQL instead of SQLite:
+1. Set `DATABASE_URL` environment variable
+2. The app automatically uses `postgresql+asyncpg://` driver
+3. All async operations supported
+
+Example: `DATABASE_URL=postgres://user:pass@host:5432/dbname`
+
+### PDF Export
+Users can export translation results to PDF with a single click:
+- Professional formatting with header and date
+- Includes all sign details and descriptions
+- Multi-page support for long translations
+- Optimized for printing and archiving
 
 ---
 
