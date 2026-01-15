@@ -4,8 +4,11 @@ Provides async REST API endpoints for ASL translation and feedback collection
 """
 import os
 import sys
+import time
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional, List
+from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +22,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Import local modules
 from config import get_settings
 from logger import app_logger
-from database import init_db, get_db, create_feedback, get_feedback_stats, get_paginated_feedback
+from database import (
+    init_db, get_db, create_feedback, get_feedback_stats, get_paginated_feedback,
+    create_analytics_event, get_unique_users_count, get_translations_count,
+    get_popular_searches, get_daily_active_users, get_hourly_usage_pattern,
+    AsyncSessionLocal
+)
 from auth import verify_admin_password
 from cache import init_redis, close_redis, get_cached_translation, cache_translation, get_cache_stats
 
@@ -104,6 +112,40 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+# Analytics Tracking Middleware
+@app.middleware("http")
+async def analytics_tracking_middleware(request: Request, call_next):
+    """Track page views and API requests for analytics"""
+    # Skip analytics endpoints, health check, and static files
+    skip_paths = ["/api/admin", "/health", "/assets"]
+    should_track = not any(request.url.path.startswith(path) for path in skip_paths)
+
+    if should_track:
+        start_time = time.time()
+        response = await call_next(request)
+        response_time_ms = int((time.time() - start_time) * 1000)
+
+        # Track in background to avoid blocking response
+        async def log_analytics():
+            try:
+                async with AsyncSessionLocal() as session:
+                    await create_analytics_event(
+                        session=session,
+                        event_type="page_view",
+                        ip_address=get_remote_address(request),
+                        endpoint=request.url.path,
+                        user_agent=request.headers.get("user-agent"),
+                        response_time_ms=response_time_ms
+                    )
+            except Exception as e:
+                app_logger.error(f"Failed to log analytics: {e}")
+
+        asyncio.create_task(log_analytics())
+        return response
+    else:
+        return await call_next(request)
+
+
 # Request/Response Models
 
 class TranslateRequest(BaseModel):
@@ -161,19 +203,39 @@ async def health_check():
 
 @app.post(f"{settings.api_prefix}/translate", response_model=TranslateResponse)
 @limiter.limit(settings.rate_limit)
-async def translate_to_asl(request: Request, translate_req: TranslateRequest):
+async def translate_to_asl(request: Request, translate_req: TranslateRequest, db: AsyncSession = Depends(get_db)):
     """
     Translate English phrase to ASL sign descriptions
 
     Rate limited to prevent abuse
     Uses Redis caching for improved performance
     """
+    start_time = time.time()
+    cache_hit = False
+
     try:
         app_logger.info(f"Translation request: '{translate_req.text}'")
 
         # Check cache first
         cached_result = await get_cached_translation(translate_req.text)
         if cached_result:
+            cache_hit = True
+            response_time_ms = int((time.time() - start_time) * 1000)
+
+            # Track cache hit analytics in background
+            asyncio.create_task(
+                create_analytics_event(
+                    session=db,
+                    event_type="translation",
+                    ip_address=get_remote_address(request),
+                    query=translate_req.text,
+                    cache_hit=True,
+                    user_agent=request.headers.get("user-agent"),
+                    endpoint="/api/translate",
+                    response_time_ms=response_time_ms
+                )
+            )
+
             app_logger.info(f"Returning cached translation for: '{translate_req.text}'")
             return TranslateResponse(**cached_result)
 
@@ -237,6 +299,21 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest):
         await cache_translation(
             translate_req.text,
             response.model_dump()
+        )
+
+        # Track translation analytics in background
+        response_time_ms = int((time.time() - start_time) * 1000)
+        asyncio.create_task(
+            create_analytics_event(
+                session=db,
+                event_type="translation",
+                ip_address=get_remote_address(request),
+                query=translate_req.text,
+                cache_hit=False,
+                user_agent=request.headers.get("user-agent"),
+                endpoint="/api/translate",
+                response_time_ms=response_time_ms
+            )
         )
 
         app_logger.info(f"Translation successful: {len(signs)} signs returned")
@@ -471,6 +548,83 @@ async def get_admin_stats(
     except Exception as e:
         app_logger.exception(f"Error fetching admin stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch statistics")
+
+
+@app.get(f"{settings.api_prefix}/admin/analytics/overview")
+async def get_analytics_overview(
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin_password)
+):
+    """
+    Get analytics overview with key metrics
+    Requires admin password in X-Admin-Password header
+    """
+    try:
+        # Calculate date ranges
+        now = datetime.utcnow()
+        thirty_days_ago = now - timedelta(days=30)
+        seven_days_ago = now - timedelta(days=7)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        return {
+            "unique_users_30d": await get_unique_users_count(db, start_date=thirty_days_ago),
+            "unique_users_7d": await get_unique_users_count(db, start_date=seven_days_ago),
+            "unique_users_today": await get_unique_users_count(db, start_date=today_start),
+            "translations": await get_translations_count(db, start_date=thirty_days_ago),
+            "popular_searches": await get_popular_searches(db, limit=10, start_date=thirty_days_ago),
+            "daily_active_users": await get_daily_active_users(db, days=30),
+            "hourly_usage": await get_hourly_usage_pattern(db, days=7)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(f"Error fetching analytics overview: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch analytics")
+
+
+@app.get(f"{settings.api_prefix}/admin/analytics/users")
+async def get_user_analytics(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin_password)
+):
+    """
+    Get detailed user analytics
+    Requires admin password in X-Admin-Password header
+    """
+    try:
+        start_date = datetime.utcnow() - timedelta(days=days)
+
+        return {
+            "daily_active_users": await get_daily_active_users(db, days=days),
+            "unique_users": await get_unique_users_count(db, start_date=start_date)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(f"Error fetching user analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch user analytics")
+
+
+@app.get(f"{settings.api_prefix}/admin/analytics/searches")
+async def get_search_analytics(
+    limit: int = 20,
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin_password)
+):
+    """
+    Get popular search analytics
+    Requires admin password in X-Admin-Password header
+    """
+    try:
+        start_date = datetime.utcnow() - timedelta(days=days)
+        return await get_popular_searches(db, limit=limit, start_date=start_date)
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(f"Error fetching search analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch search analytics")
 
 
 # Serve frontend in production
