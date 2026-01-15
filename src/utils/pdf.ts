@@ -44,6 +44,37 @@ export const pdf = {
                 feedbackWidget.remove();
             }
 
+            // Force dark text colors for PDF readability
+            const forceTextColors = (element: HTMLElement) => {
+                // Set default dark text color
+                element.style.color = '#000000';
+
+                // Force specific elements to have strong contrast
+                const headings = element.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                headings.forEach((heading: Element) => {
+                    (heading as HTMLElement).style.color = '#000000';
+                    (heading as HTMLElement).style.fontWeight = 'bold';
+                });
+
+                // Force paragraph and div text to be dark
+                const textElements = element.querySelectorAll('p, div, span, td, th, li');
+                textElements.forEach((el: Element) => {
+                    (el as HTMLElement).style.color = '#000000';
+                });
+
+                // Force strong/bold elements to be even darker
+                const strongElements = element.querySelectorAll('strong, b');
+                strongElements.forEach((el: Element) => {
+                    (el as HTMLElement).style.color = '#000000';
+                    (el as HTMLElement).style.fontWeight = 'bold';
+                });
+
+                // Force background colors to be white or light
+                element.style.backgroundColor = '#ffffff';
+            };
+
+            forceTextColors(resultsClone);
+
             // Add header with title and date
             const header = document.createElement('div');
             header.style.marginBottom = '30px';
