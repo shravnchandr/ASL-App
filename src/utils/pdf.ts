@@ -11,6 +11,8 @@ export const pdf = {
      * Generate and download PDF from translation results
      */
     async exportToPDF(query: string): Promise<void> {
+        let container: HTMLElement | null = null;
+
         try {
             // Find the results section
             const resultsSection = document.querySelector('.results-section') as HTMLElement;
@@ -18,17 +20,16 @@ export const pdf = {
                 throw new Error('Results section not found');
             }
 
-            // Create a temporary container for PDF content
-            const container = document.createElement('div');
-            container.style.position = 'fixed';
-            container.style.left = '0';
+            // Create a temporary container for PDF content (off-screen to avoid visual glitches)
+            container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '-99999px';
             container.style.top = '0';
             container.style.width = '800px';
             container.style.minHeight = '100vh';
             container.style.padding = '40px';
             container.style.backgroundColor = '#ffffff';
             container.style.fontFamily = 'Arial, sans-serif';
-            container.style.zIndex = '99999';
             container.style.overflow = 'visible';
             document.body.appendChild(container);
 
@@ -190,9 +191,6 @@ export const pdf = {
                 windowHeight: actualHeight,
             });
 
-            // Remove temporary container
-            document.body.removeChild(container);
-
             // Calculate PDF dimensions
             const imgWidth = 210; // A4 width in mm
             const pageHeight = 297; // A4 height in mm
@@ -225,6 +223,11 @@ export const pdf = {
         } catch (error) {
             console.error('Error generating PDF:', error);
             throw new Error('Failed to generate PDF. Please try again.');
+        } finally {
+            // Always remove the temporary container, even if there was an error
+            if (container && container.parentNode) {
+                document.body.removeChild(container);
+            }
         }
     },
 

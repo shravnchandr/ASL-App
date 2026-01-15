@@ -223,18 +223,23 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
             response_time_ms = int((time.time() - start_time) * 1000)
 
             # Track cache hit analytics in background
-            asyncio.create_task(
-                create_analytics_event(
-                    session=db,
-                    event_type="translation",
-                    ip_address=get_remote_address(request),
-                    query=translate_req.text,
-                    cache_hit=True,
-                    user_agent=request.headers.get("user-agent"),
-                    endpoint="/api/translate",
-                    response_time_ms=response_time_ms
-                )
-            )
+            async def log_cache_hit():
+                try:
+                    async with AsyncSessionLocal() as session:
+                        await create_analytics_event(
+                            session=session,
+                            event_type="translation",
+                            ip_address=get_remote_address(request),
+                            query=translate_req.text,
+                            cache_hit=True,
+                            user_agent=request.headers.get("user-agent"),
+                            endpoint="/api/translate",
+                            response_time_ms=response_time_ms
+                        )
+                except Exception as e:
+                    app_logger.error(f"Failed to log cache hit analytics: {e}")
+
+            asyncio.create_task(log_cache_hit())
 
             app_logger.info(f"Returning cached translation for: '{translate_req.text}'")
             return TranslateResponse(**cached_result)
@@ -303,18 +308,24 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
 
         # Track translation analytics in background
         response_time_ms = int((time.time() - start_time) * 1000)
-        asyncio.create_task(
-            create_analytics_event(
-                session=db,
-                event_type="translation",
-                ip_address=get_remote_address(request),
-                query=translate_req.text,
-                cache_hit=False,
-                user_agent=request.headers.get("user-agent"),
-                endpoint="/api/translate",
-                response_time_ms=response_time_ms
-            )
-        )
+
+        async def log_translation():
+            try:
+                async with AsyncSessionLocal() as session:
+                    await create_analytics_event(
+                        session=session,
+                        event_type="translation",
+                        ip_address=get_remote_address(request),
+                        query=translate_req.text,
+                        cache_hit=False,
+                        user_agent=request.headers.get("user-agent"),
+                        endpoint="/api/translate",
+                        response_time_ms=response_time_ms
+                    )
+            except Exception as e:
+                app_logger.error(f"Failed to log translation analytics: {e}")
+
+        asyncio.create_task(log_translation())
 
         app_logger.info(f"Translation successful: {len(signs)} signs returned")
         return response
