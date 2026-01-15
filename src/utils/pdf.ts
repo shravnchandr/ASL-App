@@ -1,18 +1,15 @@
 /**
  * PDF Export Utility
- * Handles PDF generation for translation results
+ * Handles PDF generation for translation results using native browser print
  */
 
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 export const pdf = {
     /**
-     * Generate and download PDF from translation results
+     * Generate and download PDF from translation results using jsPDF text API
      */
     async exportToPDF(query: string): Promise<void> {
-        let container: HTMLElement | null = null;
-
         try {
             // Find the results section
             const resultsSection = document.querySelector('.results-section') as HTMLElement;
@@ -20,200 +17,164 @@ export const pdf = {
                 throw new Error('Results section not found');
             }
 
-            // Create a temporary container for PDF content (off-screen to avoid visual glitches)
-            container = document.createElement('div');
-            container.style.position = 'absolute';
-            container.style.left = '-99999px';
-            container.style.top = '0';
-            container.style.width = '800px';
-            container.style.minHeight = '100vh';
-            container.style.padding = '40px';
-            container.style.backgroundColor = '#ffffff';
-            container.style.fontFamily = 'Arial, sans-serif';
-            container.style.overflow = 'visible';
-            document.body.appendChild(container);
+            // Extract data from the DOM
+            const titleEl = resultsSection.querySelector('.results-title');
+            const title = titleEl ? titleEl.textContent || 'Translation Results' : 'Translation Results';
 
-            // Clone the results content
-            const resultsClone = resultsSection.cloneNode(true) as HTMLElement;
-
-            // Remove action buttons from the clone
-            const actionButtons = resultsClone.querySelector('.action-buttons');
-            if (actionButtons) {
-                actionButtons.remove();
+            const signCards = resultsSection.querySelectorAll('.sign-card');
+            if (signCards.length === 0) {
+                throw new Error('No signs found to export');
             }
-
-            // Remove feedback widget from the clone
-            const feedbackWidget = resultsClone.querySelector('.feedback-widget');
-            if (feedbackWidget) {
-                feedbackWidget.remove();
-            }
-
-            // Aggressively force all text and backgrounds to be readable
-            const forceReadableStyles = (element: HTMLElement) => {
-                // Get all elements including the root
-                const allElements = [element, ...Array.from(element.querySelectorAll('*'))] as HTMLElement[];
-
-                allElements.forEach((el) => {
-                    // Force black text by default
-                    el.style.setProperty('color', '#000000', 'important');
-                    el.style.setProperty('opacity', '1', 'important');
-                    el.style.setProperty('filter', 'none', 'important');
-
-                    // Handle specific element types
-                    const tag = el.tagName.toLowerCase();
-                    const classes = el.className;
-
-                    // Headings - bold and black
-                    if (tag.match(/^h[1-6]$/)) {
-                        el.style.setProperty('color', '#000000', 'important');
-                        el.style.setProperty('font-weight', 'bold', 'important');
-                        el.style.setProperty('background-color', 'transparent', 'important');
-                    }
-
-                    // Sign cards - white background with border
-                    if (classes.includes('sign-card')) {
-                        el.style.setProperty('background-color', '#ffffff', 'important');
-                        el.style.setProperty('border', '2px solid #cccccc', 'important');
-                        el.style.setProperty('box-shadow', 'none', 'important');
-                        el.style.setProperty('display', 'block', 'important');
-                        el.style.setProperty('margin-bottom', '20px', 'important');
-                        el.style.setProperty('padding', '20px', 'important');
-                    }
-
-                    // Sign word - large and bold
-                    if (classes.includes('sign-word')) {
-                        el.style.setProperty('color', '#000000', 'important');
-                        el.style.setProperty('font-size', '24px', 'important');
-                        el.style.setProperty('font-weight', 'bold', 'important');
-                    }
-
-                    // Sign number badge
-                    if (classes.includes('sign-number')) {
-                        el.style.setProperty('background-color', '#333333', 'important');
-                        el.style.setProperty('color', '#ffffff', 'important');
-                        el.style.setProperty('padding', '4px 12px', 'important');
-                        el.style.setProperty('border-radius', '12px', 'important');
-                    }
-
-                    // Detail icons
-                    if (classes.includes('detail-icon')) {
-                        el.style.setProperty('background-color', '#f0f0f0', 'important');
-                        el.style.setProperty('color', '#000000', 'important');
-                        el.style.setProperty('border-radius', '8px', 'important');
-                        el.style.setProperty('padding', '8px', 'important');
-                    }
-
-                    // Detail labels - dark gray
-                    if (classes.includes('detail-label')) {
-                        el.style.setProperty('color', '#666666', 'important');
-                        el.style.setProperty('font-size', '11px', 'important');
-                        el.style.setProperty('font-weight', '600', 'important');
-                        el.style.setProperty('text-transform', 'uppercase', 'important');
-                    }
-
-                    // Detail values - black and bold
-                    if (classes.includes('detail-value')) {
-                        el.style.setProperty('color', '#000000', 'important');
-                        el.style.setProperty('font-size', '14px', 'important');
-                        el.style.setProperty('font-weight', '500', 'important');
-                        el.style.setProperty('line-height', '1.5', 'important');
-                    }
-
-                    // ASL note - light background with dark text
-                    if (classes.includes('asl-note')) {
-                        el.style.setProperty('background-color', '#f9f9f9', 'important');
-                        el.style.setProperty('border', '2px solid #cccccc', 'important');
-                        el.style.setProperty('padding', '20px', 'important');
-                        el.style.setProperty('margin-top', '20px', 'important');
-                    }
-
-                    if (classes.includes('note-title')) {
-                        el.style.setProperty('color', '#000000', 'important');
-                        el.style.setProperty('font-weight', 'bold', 'important');
-                        el.style.setProperty('font-size', '16px', 'important');
-                    }
-
-                    if (classes.includes('note-text')) {
-                        el.style.setProperty('color', '#000000', 'important');
-                        el.style.setProperty('font-size', '14px', 'important');
-                        el.style.setProperty('line-height', '1.6', 'important');
-                    }
-
-                    // Results header
-                    if (classes.includes('results-title')) {
-                        el.style.setProperty('color', '#cccccc', 'important');
-                        el.style.setProperty('font-size', '28px', 'important');
-                        el.style.setProperty('font-weight', 'normal', 'important');
-                    }
-
-                    if (classes.includes('results-count')) {
-                        el.style.setProperty('color', '#cccccc', 'important');
-                    }
-
-                    // Signs grid - make it a vertical list
-                    if (classes.includes('signs-grid')) {
-                        el.style.setProperty('display', 'block', 'important');
-                        el.style.setProperty('width', '100%', 'important');
-                    }
-                });
-            };
-
-            forceReadableStyles(resultsClone);
-
-            // Add header with title and date
-            const header = document.createElement('div');
-            header.style.marginBottom = '30px';
-            header.style.borderBottom = '2px solid #333';
-            header.style.paddingBottom = '20px';
-            header.innerHTML = `
-                <h1 style="margin: 0 0 10px 0; font-size: 28px; color: #000000; font-weight: bold;">ASL Dictionary Translation</h1>
-                <p style="margin: 0; color: #666666; font-size: 14px;">Generated on ${this.getFormattedDate()}</p>
-            `;
-
-            container.appendChild(header);
-            container.appendChild(resultsClone);
-
-            // Wait for layout to settle
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Get actual rendered height
-            const actualHeight = container.scrollHeight;
-
-            // Capture the container as canvas
-            const canvas = await html2canvas(container, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                width: 800,
-                height: actualHeight,
-                windowWidth: 800,
-                windowHeight: actualHeight,
-            });
-
-            // Calculate PDF dimensions
-            const imgWidth = 210; // A4 width in mm
-            const pageHeight = 297; // A4 height in mm
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             // Create PDF
             const doc = new jsPDF('p', 'mm', 'a4');
-            const imgData = canvas.toDataURL('image/png');
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const margin = 20;
+            const contentWidth = pageWidth - (2 * margin);
+            let yPos = margin;
 
-            // Handle multi-page PDFs
-            let heightLeft = imgHeight;
-            let position = 0;
+            // Helper to add new page if needed
+            const checkPageBreak = (needed: number) => {
+                if (yPos + needed > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                    return true;
+                }
+                return false;
+            };
 
-            // Add first page
-            doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+            // Add header
+            doc.setFontSize(24);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text('ASL Dictionary Translation', margin, yPos);
+            yPos += 10;
 
-            // Add additional pages if needed
-            while (heightLeft > 0) {
-                position = -pageHeight * Math.floor((imgHeight - heightLeft) / pageHeight);
-                doc.addPage();
-                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on ${this.getFormattedDate()}`, margin, yPos);
+            yPos += 5;
+
+            // Add horizontal line
+            doc.setDrawColor(51, 51, 51);
+            doc.setLineWidth(0.5);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 15;
+
+            // Add query title
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(200, 200, 200);
+            const wrappedTitle = doc.splitTextToSize(title, contentWidth);
+            doc.text(wrappedTitle, margin, yPos);
+            yPos += (wrappedTitle.length * 8) + 10;
+
+            // Process each sign card
+            signCards.forEach((card, index) => {
+                const signWord = card.querySelector('.sign-word')?.textContent || '';
+                const handShape = card.querySelector('.detail-value')?.textContent || '';
+                const details = card.querySelectorAll('.sign-detail-item');
+
+                let location = '';
+                let movement = '';
+
+                details.forEach((detail) => {
+                    const label = detail.querySelector('.detail-label')?.textContent?.toLowerCase() || '';
+                    const value = detail.querySelector('.detail-value')?.textContent || '';
+
+                    if (label.includes('location')) location = value;
+                    else if (label.includes('movement')) movement = value;
+                });
+
+                // Check if we need a new page for this sign
+                checkPageBreak(60);
+
+                // Draw sign card border
+                doc.setDrawColor(204, 204, 204);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(margin, yPos, contentWidth, 55, 2, 2);
+
+                // Sign number badge
+                doc.setFillColor(51, 51, 51);
+                doc.roundedRect(pageWidth - margin - 20, yPos + 5, 15, 8, 2, 2, 'F');
+                doc.setFontSize(10);
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`#${index + 1}`, pageWidth - margin - 17.5, yPos + 10.5);
+
+                // Sign word
+                doc.setFontSize(16);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text(signWord.toUpperCase(), margin + 5, yPos + 12);
+
+                // Details
+                let detailY = yPos + 20;
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(102, 102, 102);
+                doc.text('HAND SHAPE', margin + 5, detailY);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(10);
+                const wrappedHandShape = doc.splitTextToSize(handShape, contentWidth - 10);
+                doc.text(wrappedHandShape, margin + 5, detailY + 4);
+                detailY += (wrappedHandShape.length * 5) + 8;
+
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(102, 102, 102);
+                doc.text('LOCATION', margin + 5, detailY);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(10);
+                const wrappedLocation = doc.splitTextToSize(location, contentWidth - 10);
+                doc.text(wrappedLocation, margin + 5, detailY + 4);
+                detailY += (wrappedLocation.length * 5) + 8;
+
+                if (detailY - yPos > 45) {
+                    checkPageBreak(30);
+                    yPos = margin;
+                }
+
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(102, 102, 102);
+                doc.text('MOVEMENT', margin + 5, detailY);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(10);
+                const wrappedMovement = doc.splitTextToSize(movement, contentWidth - 10);
+                doc.text(wrappedMovement, margin + 5, detailY + 4);
+
+                yPos += 60;
+            });
+
+            // Add ASL note if present
+            const noteEl = resultsSection.querySelector('.asl-note');
+            if (noteEl) {
+                checkPageBreak(30);
+
+                const noteText = noteEl.querySelector('.note-text')?.textContent || '';
+
+                // Note box background
+                doc.setFillColor(249, 249, 249);
+                doc.setDrawColor(204, 204, 204);
+                doc.roundedRect(margin, yPos, contentWidth, 25, 2, 2, 'FD');
+
+                // Note title
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0);
+                doc.text('ASL Grammar Note', margin + 5, yPos + 8);
+
+                // Note text
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                const wrappedNote = doc.splitTextToSize(noteText, contentWidth - 10);
+                doc.text(wrappedNote, margin + 5, yPos + 15);
             }
 
             // Download PDF
@@ -223,11 +184,6 @@ export const pdf = {
         } catch (error) {
             console.error('Error generating PDF:', error);
             throw new Error('Failed to generate PDF. Please try again.');
-        } finally {
-            // Always remove the temporary container, even if there was an error
-            if (container && container.parentNode) {
-                document.body.removeChild(container);
-            }
         }
     },
 
