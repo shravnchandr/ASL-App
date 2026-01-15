@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { share } from '../../utils/share';
 import { print } from '../../utils/print';
+import { pdf } from '../../utils/pdf';
 import { useApp } from '../../contexts/AppContext';
 import { announceToScreenReader } from '../../utils/accessibility';
 import './ActionButtons.css';
@@ -18,6 +19,7 @@ interface ActionButtonsProps {
 export const ActionButtons: React.FC<ActionButtonsProps> = ({ query, signsCount }) => {
     const { isFavorite, addFavorite, removeFavorite } = useApp();
     const [showCopySuccess, setShowCopySuccess] = useState(false);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const favorite = isFavorite(query);
 
     const handleShare = async () => {
@@ -47,6 +49,21 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ query, signsCount 
         } else {
             addFavorite(query);
             announceToScreenReader(`Added "${query}" to favorites`, 'polite');
+        }
+    };
+
+    const handleSavePDF = async () => {
+        setIsGeneratingPDF(true);
+        announceToScreenReader('Generating PDF...', 'polite');
+        try {
+            await pdf.exportToPDF(query);
+            announceToScreenReader('PDF downloaded successfully', 'polite');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';
+            announceToScreenReader(`Error: ${errorMessage}`, 'assertive');
+            alert(errorMessage);
+        } finally {
+            setIsGeneratingPDF(false);
         }
     };
 
@@ -87,6 +104,20 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ query, signsCount 
                     <path d="M5 6.66667V2.5H15V6.66667M5 15H3.33333C2.89131 15 2.46738 14.8244 2.15482 14.5118C1.84226 14.1993 1.66667 13.7754 1.66667 13.3333V9.16667C1.66667 8.72464 1.84226 8.30072 2.15482 7.98816C2.46738 7.67559 2.89131 7.5 3.33333 7.5H16.6667C17.1087 7.5 17.5326 7.67559 17.8452 7.98816C18.1577 8.30072 18.3333 8.72464 18.3333 9.16667V13.3333C18.3333 13.7754 18.1577 14.1993 17.8452 14.5118C17.5326 14.8244 17.1087 15 16.6667 15H15M5 12.5H15V17.5H5V12.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span>Print</span>
+            </button>
+
+            <button
+                className="action-button"
+                onClick={handleSavePDF}
+                aria-label="Save translation as PDF"
+                disabled={isGeneratingPDF}
+            >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M17.5 12.5V15.8333C17.5 16.2754 17.3244 16.6993 17.0118 17.0118C16.6993 17.3244 16.2754 17.5 15.8333 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M5.83333 8.33333L10 12.5L14.1667 8.33333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M10 12.5V2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>{isGeneratingPDF ? 'Generating...' : 'Save PDF'}</span>
             </button>
 
             {showCopySuccess && (
