@@ -19,13 +19,14 @@ A modern, production-ready web application that translates English phrases into 
 - 🔗 **Share, Print & Export** - Share translations via Web Share API, print-optimized views, or export to PDF
 - 💾 **Feedback System** - Rate translations and provide feedback stored in database
 - 🎯 **Admin Dashboard** - Password-protected admin panel for managing feedback and viewing analytics
+- 📊 **User Analytics** - Privacy-preserving analytics tracking unique users, popular searches, and usage patterns with IP hashing
 
 ### User Experience
 - 🎨 **Material 3 Expressive UI** - Stunning Ocean Blue & Teal design with fluid animations and micro-interactions
 - 🌙 **Multiple Themes** - Light, Dark, and High Contrast modes for all lighting conditions
 - 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
 - ⚡ **Fast & Optimized** - Production-optimized builds with code splitting, lazy loading, and Redis caching
-- 📄 **PDF Export** - Download professional PDFs of translation results for offline reference
+- 📄 **PDF Export** - Download lightweight (~16KB), professionally formatted PDFs of translation results for offline reference
 
 ### Security & Privacy
 - 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally)
@@ -43,7 +44,7 @@ A modern, production-ready web application that translates English phrases into 
 - 🐳 **Docker Support** - Multi-stage Docker build for easy deployment
 - 📊 **Structured Logging** - JSON logging for production monitoring
 - 🔄 **Auto-Deploy** - Render.com integration with PR previews
-- 🧪 **Comprehensive Testing** - Backend tests with pytest (13 passing tests)
+- 🧪 **Comprehensive Testing** - Backend tests with pytest (28 passing tests, 53% coverage)
 - 💾 **Flexible Database** - SQLite for development, PostgreSQL for production with async support
 - 🚀 **Redis Caching** - Optional Redis integration for faster repeat translations
 - 🔒 **Admin Panel** - Secure admin dashboard for feedback management and analytics
@@ -65,7 +66,7 @@ A modern, production-ready web application that translates English phrases into 
 
 Your app will be live in 5-10 minutes with automatic HTTPS, deployments, and PR previews!
 
-📖 **Full Guide:** [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md)
+📖 **API Guide:** See [GEMINI.md](./GEMINI.md) for Google Gemini setup details
 
 ---
 
@@ -163,7 +164,7 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 - **Vite 7** - Build tool with HMR
 - **Material 3 Design** - Design system
 - **Axios** - HTTP client
-- **jsPDF & html2canvas** - PDF generation
+- **jsPDF** - Lightweight PDF generation
 
 ### Backend
 - **FastAPI** - Modern Python web framework
@@ -212,20 +213,23 @@ Total (gzipped):        ~260 kB
 
 ## 📚 Documentation
 
-- **[RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md)** - Complete Render.com deployment guide
-- **[PRODUCTION_READY.md](./PRODUCTION_READY.md)** - Production checklist and security report
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - General deployment options (Railway, Fly.io, etc.)
-- **[SOCIAL_MEDIA_TEMPLATES.md](./SOCIAL_MEDIA_TEMPLATES.md)** - Marketing templates for social media
+- **[GEMINI.md](./GEMINI.md)** - Google Gemini API setup and configuration guide
+- **[CLAUDE.md](./CLAUDE.md)** - Claude AI integration guide for developers
 
 ## 🔧 Advanced Features
 
 ### Admin Dashboard
 Access the admin panel at `/admin` or add `?admin=true` to your URL. Features include:
-- View all feedback submissions
-- Filter by rating (thumbs up/down) and category
-- View detailed analytics and statistics
-- Secure password authentication
-- Real-time feedback management
+- **Feedback Management** - View and manage all user feedback submissions
+- **Filter & Search** - Filter by rating (thumbs up/down), type, and category
+- **Analytics Dashboard** - View detailed analytics with visualizations:
+  - Unique users (today, 7 days, 30 days)
+  - Total translations and cache hit rates
+  - Popular searches (top 10 queries)
+  - Daily active users chart
+  - Hourly usage patterns
+- **Privacy-Preserving** - All user data is anonymized with IP hashing
+- **Secure Access** - Password-protected with admin authentication
 
 Set the `ADMIN_PASSWORD` environment variable to enable admin access.
 
@@ -250,10 +254,12 @@ Example: `DATABASE_URL=postgres://user:pass@host:5432/dbname`
 
 ### PDF Export
 Users can export translation results to PDF with a single click:
-- Professional formatting with header and date
-- Includes all sign details and descriptions
-- Multi-page support for long translations
-- Optimized for printing and archiving
+- **Lightweight files** - ~16KB per PDF using jsPDF text API
+- **Professional formatting** - Clean layout with headers, borders, and sign cards
+- **Complete content** - All sign details (hand shape, location, movement, non-manual markers)
+- **Multi-page support** - Automatic page breaks for long translations
+- **Dark, readable text** - High contrast black text on white background
+- **Optimized for printing** - Perfect for offline reference and archiving
 
 ---
 
