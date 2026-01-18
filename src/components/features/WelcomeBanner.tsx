@@ -1,10 +1,11 @@
 /**
  * Welcome Banner Component
- * Shows important setup information on first visit
+ * Shows friendly welcome message, only pushes API key after user tries the app
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { getRateLimitStatus } from '../../services/api';
 import './WelcomeBanner.css';
 
 interface WelcomeBannerProps {
@@ -16,6 +17,14 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ onOpenApiKeyModal 
     const [isDismissed, setIsDismissed] = useState<boolean>(() => {
         return localStorage.getItem('welcome_banner_dismissed') === 'true';
     });
+    const [hasSharedKey, setHasSharedKey] = useState(false);
+
+    useEffect(() => {
+        // Check if shared key is available
+        getRateLimitStatus().then(status => {
+            setHasSharedKey(status.shared_key_available);
+        });
+    }, []);
 
     const handleDismiss = () => {
         localStorage.setItem('welcome_banner_dismissed', 'true');
@@ -28,25 +37,47 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ onOpenApiKeyModal 
     }
 
     return (
-        <div className="welcome-banner" role="alert">
+        <div className="welcome-banner" role="note">
             <div className="banner-content">
                 <div className="banner-icon" aria-hidden="true">
-                    💡
+                    👋
                 </div>
                 <div className="banner-text">
-                    <h3 className="banner-title">Welcome to ASL Dictionary!</h3>
+                    <h3 className="banner-title">Welcome to ASL Learning Assistant!</h3>
                     <p className="banner-message">
-                        To use this app, you'll need a <strong>free Google Gemini API key</strong>.
-                        Click the key icon in the header to add yours and get started.
+                        {hasSharedKey ? (
+                            <>
+                                Try it free! You get <strong>10 sign breakdowns per day</strong> with our shared API key.
+                                Want unlimited access? Add your own free Google Gemini API key.
+                            </>
+                        ) : (
+                            <>
+                                To get started, you'll need a <strong>free Google Gemini API key</strong>.
+                                Click the key icon in the header to add yours.
+                            </>
+                        )}
                     </p>
                 </div>
                 <div className="banner-actions">
-                    <button className="banner-button primary" onClick={onOpenApiKeyModal}>
-                        Add API Key
-                    </button>
-                    <button className="banner-button secondary" onClick={handleDismiss}>
-                        Dismiss
-                    </button>
+                    {hasSharedKey ? (
+                        <>
+                            <button className="banner-button secondary" onClick={handleDismiss}>
+                                Got it!
+                            </button>
+                            <button className="banner-button primary" onClick={onOpenApiKeyModal}>
+                                Add My Key
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button className="banner-button primary" onClick={onOpenApiKeyModal}>
+                                Add API Key
+                            </button>
+                            <button className="banner-button secondary" onClick={handleDismiss}>
+                                Dismiss
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
