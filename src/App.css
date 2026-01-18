@@ -78,13 +78,14 @@
   background: rgba(255, 255, 255, 0.2);
   color: var(--md-sys-color-on-primary);
   border-radius: var(--md-sys-shape-corner-pill);
-  transition: all var(--md-sys-motion-duration-short-3) var(--md-sys-motion-easing-standard);
+  transition: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
 }
 
 .api-key-button:hover {
   background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.05);
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .api-key-indicator {

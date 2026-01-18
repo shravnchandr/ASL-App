@@ -82,7 +82,7 @@ export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
                     }}
                     aria-label="Add your own API key for unlimited access"
                 >
-                    Add your key for unlimited
+                    Get unlimited access
                 </button>
             </div>
         </div>

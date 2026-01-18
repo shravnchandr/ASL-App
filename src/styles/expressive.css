@@ -1,0 +1,353 @@
+/**
+ * Material 3 Expressive Enhancements
+ * Spring physics, playful interactions, and gradient accents
+ */
+
+/* ===== SPRING PHYSICS ANIMATIONS ===== */
+
+/* Spring easing functions */
+:root {
+    /* Expressive spring-based easings */
+    --spring-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --spring-smooth: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --spring-gentle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --spring-energetic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+
+    /* Durations for different interaction types */
+    --duration-instant: 150ms;
+    --duration-quick: 250ms;
+    --duration-smooth: 400ms;
+    --duration-slow: 600ms;
+}
+
+/* ===== ENHANCED BUTTON MORPHING ===== */
+
+.banner-button,
+.error-retry,
+.error-setup,
+button[type="submit"],
+.video-link {
+    position: relative;
+    overflow: hidden;
+    transition: all var(--duration-smooth) var(--spring-bounce);
+}
+
+.banner-button:hover,
+.error-retry:hover,
+.error-setup:hover,
+button[type="submit"]:hover,
+.video-link:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow:
+        0 8px 16px rgba(0, 0, 0, 0.1),
+        0 4px 8px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.banner-button:active,
+.error-retry:active,
+.error-setup:active,
+button[type="submit"]:active,
+.video-link:active {
+    transform: translateY(0) scale(0.98);
+    transition: all var(--duration-instant) var(--spring-gentle);
+}
+
+/* Ripple effect on click */
+.banner-button::after,
+.error-retry::after,
+.error-setup::after,
+button[type="submit"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width var(--duration-smooth) var(--spring-smooth),
+                height var(--duration-smooth) var(--spring-smooth),
+                opacity var(--duration-smooth) ease-out;
+    opacity: 0;
+}
+
+.banner-button:active::after,
+.error-retry:active::after,
+.error-setup:active::after,
+button[type="submit"]:active::after {
+    width: 300px;
+    height: 300px;
+    opacity: 0;
+}
+
+/* ===== GRADIENT ACCENTS ===== */
+
+/* Enhanced header gradient with shimmer */
+.app-header {
+    background: linear-gradient(135deg,
+        var(--md-sys-color-primary) 0%,
+        var(--md-sys-color-primary-container) 50%,
+        var(--md-sys-color-tertiary) 100%);
+    position: relative;
+}
+
+.app-header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Gradient accent on primary buttons */
+.banner-button.primary,
+.search-submit {
+    background: linear-gradient(135deg,
+        var(--md-sys-color-primary) 0%,
+        var(--md-sys-color-tertiary) 100%);
+    background-size: 200% 100%;
+    transition: background-position var(--duration-smooth) var(--spring-smooth),
+                transform var(--duration-smooth) var(--spring-bounce),
+                box-shadow var(--duration-smooth) var(--spring-smooth);
+}
+
+.banner-button.primary:hover,
+.search-submit:hover {
+    background-position: 100% 0;
+}
+
+/* ===== PLAYFUL CARD HOVER STATES ===== */
+
+.sign-card {
+    transition: all var(--duration-smooth) var(--spring-bounce);
+    transform-style: preserve-3d;
+}
+
+.sign-card:hover {
+    transform: translateY(-8px) rotateX(2deg) rotateY(-2deg);
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.12),
+        0 10px 20px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.sign-card:hover .detail-icon {
+    transform: scale(1.15) rotate(5deg);
+    transition: transform var(--duration-quick) var(--spring-energetic);
+}
+
+.sign-card:hover .sign-word {
+    color: var(--md-sys-color-primary);
+    transition: color var(--duration-quick) ease-out;
+}
+
+/* Stagger entrance with bounce */
+@keyframes cardEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+    60% {
+        transform: translateY(-8px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.sign-card {
+    animation: cardEnter var(--duration-slow) var(--spring-bounce) backwards;
+}
+
+/* Stagger delays (already applied via inline style, but enhanced) */
+.sign-card:nth-child(1) { animation-delay: 0ms; }
+.sign-card:nth-child(2) { animation-delay: 100ms; }
+.sign-card:nth-child(3) { animation-delay: 200ms; }
+.sign-card:nth-child(4) { animation-delay: 300ms; }
+.sign-card:nth-child(5) { animation-delay: 400ms; }
+
+/* ===== MICRO-INTERACTIONS ===== */
+
+/* Search bar focus animation */
+.search-container.focused {
+    transform: scale(1.01);
+    transition: transform var(--duration-quick) var(--spring-smooth);
+}
+
+/* API key button pulse when no key */
+.api-key-button:not(:has(.api-key-indicator)) {
+    animation: gentlePulse 2s var(--spring-gentle) infinite;
+}
+
+@keyframes gentlePulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+    }
+}
+
+/* Loading state with spring bounce */
+.loading-spinner {
+    animation: spinBounce 1s var(--spring-smooth) infinite;
+}
+
+@keyframes spinBounce {
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.1);
+    }
+    100% {
+        transform: rotate(360deg) scale(1);
+    }
+}
+
+/* Detail icons playful entrance */
+.detail-icon {
+    transition: transform var(--duration-smooth) var(--spring-bounce);
+}
+
+.sign-card:hover .detail-icon:nth-child(1) {
+    animation: iconBounce var(--duration-smooth) var(--spring-energetic);
+    animation-delay: 0ms;
+}
+
+@keyframes iconBounce {
+    0%, 100% {
+        transform: scale(1) rotate(0deg);
+    }
+    25% {
+        transform: scale(1.2) rotate(-5deg);
+    }
+    75% {
+        transform: scale(1.15) rotate(5deg);
+    }
+}
+
+/* Video link gradient on hover */
+.video-link {
+    background: linear-gradient(135deg,
+        var(--primary-container) 0%,
+        var(--secondary-container) 100%);
+    background-size: 200% 100%;
+    transition: all var(--duration-smooth) var(--spring-bounce);
+}
+
+.video-link:hover {
+    background-position: 100% 0;
+}
+
+/* Welcome banner entrance */
+.welcome-banner {
+    animation: bannerSlide var(--duration-slow) var(--spring-bounce);
+}
+
+@keyframes bannerSlide {
+    0% {
+        transform: translateY(-100%) scale(0.95);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Rate limit banner slide down */
+.rate-limit-banner {
+    animation: slideDown var(--duration-smooth) var(--spring-smooth);
+}
+
+/* Learning disclaimer pop in */
+.learning-disclaimer {
+    animation: popIn var(--duration-smooth) var(--spring-energetic);
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Feedback widget bounce on hover */
+.feedback-widget {
+    transition: transform var(--duration-quick) var(--spring-bounce);
+}
+
+.feedback-widget:hover {
+    transform: translateY(-4px);
+}
+
+/* Action buttons group spring */
+.action-button {
+    transition: all var(--duration-smooth) var(--spring-bounce);
+}
+
+.action-button:hover {
+    transform: translateY(-3px) scale(1.05);
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .sign-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .banner-button:hover,
+    .video-link:hover {
+        transform: none;
+    }
+}
+
+/* ===== DARK MODE ADJUSTMENTS ===== */
+
+[data-theme="dark"] .app-header::after {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        transparent 100%);
+}
+
+[data-theme="dark"] .sign-card:hover {
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.3),
+        0 10px 20px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+}

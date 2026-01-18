@@ -88,7 +88,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
                 disabled={!query.trim() || isLoading}
                 aria-label="Search"
             >
-                <span>Translate</span>
+                <span>Learn Signs</span>
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                     <path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
