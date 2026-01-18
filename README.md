@@ -1,6 +1,8 @@
-# 🤟 ASL Dictionary Web Application
+# 🤟 ASL Learning Assistant
 
-A modern, production-ready web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. Built with Material 3 Expressive design featuring an Ocean Blue and Teal color palette.
+A modern, production-ready web application that helps you learn American Sign Language with AI-powered sign breakdowns. Get detailed descriptions of hand shapes, movements, facial expressions, and more to supplement your ASL studies. Built with Material 3 Expressive design featuring an Ocean Blue and Teal color palette.
+
+**Note:** This is a study tool that generates AI-powered text descriptions. Always verify signs with video tutorials and practice with fluent signers for accurate learning.
 
 [![Material 3](https://img.shields.io/badge/Material%203-Expressive-blue)](https://m3.material.io/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)](https://fastapi.tiangolo.com/)
@@ -13,9 +15,11 @@ A modern, production-ready web application that translates English phrases into 
 ## ✨ Features
 
 ### Core Functionality
-- 🔤 **ASL Translation** - Detailed sign descriptions including hand shapes, locations, movements, and facial expressions powered by Google Gemini AI
+- 🔤 **ASL Sign Breakdowns** - Detailed descriptions with beginner-friendly language: "How to Form Your Hands", "Where to Place Your Hands", "How to Move", "Facial Expressions & Body Language"
+- 🎥 **Video Resource Links** - Direct links to Handspeak, ASL University, and YouTube for each sign to watch proper demonstrations
 - 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
-- 🔗 **Share, Print & Export** - Share translations via Web Share API, print-optimized views, or export to PDF
+- 🔗 **Share, Print & Export** - Share sign breakdowns via Web Share API, print-optimized views, or export to PDF
+- 🔑 **Shared API Key** - Try the app immediately with our shared API key (10 free translations/day per IP) - no setup required!
 - 💾 **Feedback System** - Rate translations and provide feedback stored in database
 - 🎯 **Admin Dashboard** - Password-protected admin panel for managing feedback and viewing analytics
 - 📊 **User Analytics** - Privacy-preserving analytics tracking unique users, popular searches, and usage patterns with IP hashing
