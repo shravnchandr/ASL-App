@@ -92,22 +92,22 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                         Signing Savvy
                     </a>
                     <a
-                        href={`https://www.signschool.com/search?q=${encodeURIComponent(sign.word)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="video-link"
-                        aria-label={`Watch ${sign.word} on SignSchool`}
-                    >
-                        SignSchool
-                    </a>
-                    <a
-                        href={`https://www.youtube.com/results?search_query=asl+sign+${encodeURIComponent(sign.word)}`}
+                        href={`https://www.youtube.com/results?search_query=how+to+sign+${encodeURIComponent(sign.word)}+in+asl`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="video-link"
                         aria-label={`Search ${sign.word} on YouTube`}
                     >
                         YouTube
+                    </a>
+                    <a
+                        href={`https://www.spreadthesign.com/en.us/search/?q=${encodeURIComponent(sign.word)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="video-link"
+                        aria-label={`Watch ${sign.word} on Spread The Sign`}
+                    >
+                        Spread The Sign
                     </a>
                 </div>
             </div>
