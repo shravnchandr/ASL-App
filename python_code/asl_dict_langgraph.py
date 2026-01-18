@@ -58,13 +58,23 @@ class ASLState(TypedDict):
 def grammar_planner_node(state: ASLState) -> dict:
     """Decides if the sentence needs to be reordered using ASL grammar rules."""
     print(f"{Fore.MAGENTA}🧠 Grammar Agent: Planning ASL structure...{Style.RESET_ALL}")
-    
+
     system_prompt = (
-        "You are an expert ASL grammarian. Your task is to analyze the user's English input and determine "
-        "if it requires reordering to follow the ASL Time-Topic-Comment (TTC) structure. "
-        "If reordering is needed, provide the new gloss order. If not, return the original order."
+        "You are an expert ASL grammarian. Analyze the English input for ASL grammar transformation.\n\n"
+        "ASL Grammar Rules:\n"
+        "1. TIME-TOPIC-COMMENT (TTC) structure: Time expressions come first, then topic, then comment\n"
+        "2. OMIT: Articles (a, an, the), linking verbs (is, am, are, was, were), infinitive 'to'\n"
+        "3. SIMPLIFY: Contractions (I'm → I, don't → NOT), auxiliary verbs (will, would, should)\n"
+        "4. DIRECTIONAL: Many verbs show direction naturally (GIVE-you vs GIVE-me)\n"
+        "5. QUESTIONS: Raise eyebrows for yes/no, furrow for wh-questions\n\n"
+        "Examples:\n"
+        "- 'I am going to the store' → 'I STORE GO' (omit am/to/the, destination before verb)\n"
+        "- 'Yesterday I saw my friend' → 'YESTERDAY I FRIEND SEE' (time first)\n"
+        "- 'What is your name?' → 'YOUR NAME WHAT' (wh-word at end, eyebrows furrowed)\n"
+        "- 'I don't like coffee' → 'I COFFEE LIKE NOT' (negation at end)\n\n"
+        "Determine if reordering is needed and provide the ASL gloss order (capitalized words, space-separated)."
     )
-    
+
     llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.0)
     grammar_chain = (
         ChatPromptTemplate.from_messages([
@@ -104,27 +114,43 @@ def sign_instructor_node(state: ASLState) -> dict:
 
     print(f"{Fore.MAGENTA}🤖 Instructor Agent: Generating signs for '{input_text}'...{Style.RESET_ALL}")
 
+    # Get the original English input to compare transformations
+    original_input = state["english_input"]
+
     system_prompt = (
-        "You are an expert ASL lexicographer and teacher. Your task is to translate the given English text "
-        "into a sequence of Standard American Sign Language (ASL) signs. "
-        "For each sign, provide the gloss (word) and a detailed description of how to perform it. "
-        "Ensure the order follows ASL grammar (Time-Topic-Comment) where appropriate, or English word order if it's a direct translation request. "
-        "Break down each sign into hand shape, location, movement, and non-manual markers. "
-        "Also provide a helpful 'note' about the grammar, facial expressions (NMM), or context for the phrase."
+        "You are an expert ASL lexicographer and teacher. Generate detailed sign descriptions.\n\n"
+        "For each sign in the ASL gloss sequence:\n"
+        "1. word: The ASL gloss (capitalized English word representing the sign)\n"
+        "2. hand_shape: Detailed description of hand configuration (e.g., 'flat hand with fingers together', 'closed fist with thumb extended')\n"
+        "3. location: Where the sign is performed relative to the body (e.g., 'in front of chest', 'at temple', 'neutral space')\n"
+        "4. movement: Precise description of motion (e.g., 'move forward in arc', 'tap twice', 'circular motion clockwise')\n"
+        "5. non_manual_markers: Facial expressions, head movement, body shift (e.g., 'raised eyebrows', 'head nod', 'lean forward slightly')\n\n"
+        "IMPORTANT for the 'note' field:\n"
+        "Explain the ASL grammar transformation from English to ASL. Address:\n"
+        "- What words were omitted and why (articles, linking verbs, etc.)\n"
+        "- How word order changed (TTC structure, negation placement, question formation)\n"
+        "- Any directional or spatial aspects of the signs\n"
+        "- Facial expression requirements for the sentence type\n"
+        "- Context or usage tips for natural signing\n\n"
+        "Example note: 'In ASL, we omit \"am\", \"to\", and \"the\" from the English sentence. "
+        "The destination (STORE) comes before the verb (GO) to show direction. Sign with "
+        "neutral expression unless emphasizing urgency.'\n\n"
+        "Original English: '{original}'\n"
+        "ASL Gloss Order: '{text}'"
     )
 
     llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.0)
     instructor_chain = (
         ChatPromptTemplate.from_messages([
             ("system", system_prompt),
-            ("human", "Translate and describe the ASL signs for: '{text}'."),
+            ("human", "Generate detailed ASL sign descriptions."),
         ])
         | llm.with_structured_output(SentenceDescriptionSchema)
     )
 
     try:
         # Use the planned/reordered text as the input for the instruction
-        result = instructor_chain.invoke({"text": input_text})
+        result = instructor_chain.invoke({"text": input_text, "original": original_input})
         # Update the state with the final result
         return {"final_output": result}
     except Exception as e:
