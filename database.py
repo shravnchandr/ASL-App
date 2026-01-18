@@ -389,3 +389,51 @@ async def get_hourly_usage_pattern(
         hourly_data[hour] = row.count
 
     return hourly_data
+
+
+async def get_shared_key_usage_today(
+    session: AsyncSession,
+    ip_hash: str
+) -> int:
+    """Get count of translations using shared key today for a specific IP"""
+    from sqlalchemy import func, select
+
+    # Get today's start (midnight UTC)
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    query = (
+        select(func.count(Analytics.id))
+        .where(
+            Analytics.ip_hash == ip_hash,
+            Analytics.event_type == "translation",
+            Analytics.timestamp >= today_start
+        )
+    )
+
+    result = await session.execute(query)
+    count = result.scalar() or 0
+
+    return count
+
+
+async def check_shared_key_rate_limit(
+    session: AsyncSession,
+    ip_hash: str,
+    daily_limit: int
+) -> dict:
+    """
+    Check if IP has exceeded shared key rate limit
+
+    Returns:
+        dict with 'allowed' (bool), 'used' (int), 'limit' (int), 'remaining' (int)
+    """
+    used = await get_shared_key_usage_today(session, ip_hash)
+    remaining = max(0, daily_limit - used)
+    allowed = used < daily_limit
+
+    return {
+        "allowed": allowed,
+        "used": used,
+        "limit": daily_limit,
+        "remaining": remaining
+    }

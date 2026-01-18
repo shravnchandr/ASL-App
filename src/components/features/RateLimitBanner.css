@@ -1,0 +1,122 @@
+/**
+ * Rate Limit Banner Styles
+ */
+
+.rate-limit-banner {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 12px 20px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease-out;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.rate-limit-banner.status-good {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    color: #2e7d32;
+}
+
+.rate-limit-banner.status-warning {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    color: #e65100;
+}
+
+.rate-limit-banner.status-critical {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    color: #c62828;
+}
+
+.banner-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.banner-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.banner-text {
+    flex: 1;
+    min-width: 250px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.banner-text strong {
+    font-weight: 600;
+}
+
+.banner-action {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.status-good .banner-action {
+    background: #2e7d32;
+    color: white;
+}
+
+.status-warning .banner-action {
+    background: #e65100;
+    color: white;
+}
+
+.status-critical .banner-action {
+    background: #c62828;
+    color: white;
+}
+
+.banner-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.banner-action:active {
+    transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .rate-limit-banner {
+        padding: 10px 16px;
+    }
+
+    .banner-content {
+        gap: 8px;
+    }
+
+    .banner-text {
+        font-size: 13px;
+        min-width: 200px;
+    }
+
+    .banner-action {
+        width: 100%;
+        padding: 10px 16px;
+    }
+}

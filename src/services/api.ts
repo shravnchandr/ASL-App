@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosError } from 'axios';
-import type { TranslateResponse, FeedbackData, FeedbackResponse, FeedbackStats, APIError, PaginatedFeedback, AdminStats, AnalyticsOverview } from '../types';
+import type { TranslateResponse, FeedbackData, FeedbackResponse, FeedbackStats, APIError, PaginatedFeedback, AdminStats, AnalyticsOverview, RateLimitStatus } from '../types';
 
 // Get API URL from environment or use same-origin
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -115,6 +115,23 @@ export async function submitGeneralFeedback(data: {
             throw new Error(axiosError.response?.data?.detail || 'Failed to submit feedback.');
         }
         throw new Error('An unexpected error occurred while submitting feedback.');
+    }
+}
+
+/**
+ * Check rate limit status for shared API key usage
+ */
+export async function getRateLimitStatus(): Promise<RateLimitStatus> {
+    try {
+        const response = await apiClient.get<RateLimitStatus>(`${API_PREFIX}/rate-limit`);
+        return response.data;
+    } catch (error) {
+        console.error('Failed to check rate limit:', error);
+        // Return default values if check fails
+        return {
+            shared_key_available: false,
+            message: 'Unable to check rate limit status'
+        };
     }
 }
 

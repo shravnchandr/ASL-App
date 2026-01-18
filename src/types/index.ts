@@ -89,3 +89,13 @@ export interface AnalyticsOverview {
     daily_active_users: DailyActiveUser[];
     hourly_usage: Record<string, number>;
 }
+
+// Rate limit types
+export interface RateLimitStatus {
+    shared_key_available: boolean;
+    limit?: number;
+    used?: number;
+    remaining?: number;
+    reset?: string;
+    message?: string;
+}

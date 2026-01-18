@@ -17,6 +17,7 @@ import { ActionButtons } from './components/features/ActionButtons';
 import { WelcomeBanner } from './components/features/WelcomeBanner';
 import { GeneralFeedbackModal } from './components/features/GeneralFeedbackModal';
 import { FloatingFeedbackButton } from './components/features/FloatingFeedbackButton';
+import { RateLimitBanner } from './components/features/RateLimitBanner';
 import { Admin } from './components/Admin';
 import { translateToASL, submitFeedback, submitGeneralFeedback, setCustomApiKey } from './services/api';
 import { announceToScreenReader } from './utils/accessibility';
@@ -52,6 +53,13 @@ function App() {
   useEffect(() => {
     const cleanup = print.setupPrintListeners();
     return cleanup;
+  }, []);
+
+  // Listen for custom event to open API key modal
+  useEffect(() => {
+    const handleOpenModal = () => setShowApiKeyModal(true);
+    window.addEventListener('openApiKeyModal', handleOpenModal);
+    return () => window.removeEventListener('openApiKeyModal', handleOpenModal);
   }, []);
 
   // Handle URL query parameter for sharing
@@ -173,6 +181,8 @@ function App() {
           </div>
         </div>
       </header>
+
+      <RateLimitBanner customApiKey={customApiKey} />
 
       <main id="main-content" className="app-main">
         <div className="container">

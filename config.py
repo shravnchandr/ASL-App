@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     model_name: str = "gemini-2.5-flash"
 
+    # Shared API Key for new users (optional)
+    shared_api_key: str = ""
+    shared_key_daily_limit: int = 10  # Translations per day per IP
+
     # Admin Access
     admin_password: str = ""
 

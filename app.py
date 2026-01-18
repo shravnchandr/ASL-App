@@ -26,6 +26,7 @@ from database import (
     init_db, get_db, create_feedback, get_feedback_stats, get_paginated_feedback,
     create_analytics_event, get_unique_users_count, get_translations_count,
     get_popular_searches, get_daily_active_users, get_hourly_usage_pattern,
+    get_shared_key_usage_today, check_shared_key_rate_limit, hash_ip,
     AsyncSessionLocal
 )
 from auth import verify_admin_password
@@ -209,9 +210,12 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
 
     Rate limited to prevent abuse
     Uses Redis caching for improved performance
+    Supports shared API key with IP-based rate limiting
     """
     start_time = time.time()
     cache_hit = False
+    using_shared_key = False
+    rate_limit_info = None
 
     try:
         app_logger.info(f"Translation request: '{translate_req.text}'")
@@ -250,11 +254,54 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
         # Get custom API key from header if provided
         custom_api_key = request.headers.get("X-Custom-API-Key")
 
-        # Temporarily set environment variable if custom key provided
+        # Determine which API key to use
+        api_key_to_use = None
         original_api_key = os.environ.get("GOOGLE_API_KEY")
+
         if custom_api_key:
-            os.environ["GOOGLE_API_KEY"] = custom_api_key
+            # User provided their own API key
+            api_key_to_use = custom_api_key
             app_logger.info("Using custom API key from request header")
+        elif settings.shared_api_key:
+            # Use shared API key with rate limiting
+            using_shared_key = True
+            ip_hash = hash_ip(get_remote_address(request))
+
+            # Check rate limit for shared key usage
+            rate_limit_info = await check_shared_key_rate_limit(
+                db,
+                ip_hash,
+                settings.shared_key_daily_limit
+            )
+
+            if not rate_limit_info["allowed"]:
+                app_logger.warning(f"Shared key rate limit exceeded for IP hash: {ip_hash[:8]}...")
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Daily limit of {settings.shared_key_daily_limit} translations reached. Add your own API key for unlimited access.",
+                    headers={
+                        "X-RateLimit-Limit": str(settings.shared_key_daily_limit),
+                        "X-RateLimit-Remaining": "0",
+                        "X-RateLimit-Reset": "midnight UTC"
+                    }
+                )
+
+            api_key_to_use = settings.shared_api_key
+            app_logger.info(f"Using shared API key (remaining: {rate_limit_info['remaining']})")
+        elif original_api_key:
+            # Fall back to server's main API key
+            api_key_to_use = original_api_key
+            app_logger.info("Using server's main API key")
+        else:
+            # No API key available
+            raise HTTPException(
+                status_code=503,
+                detail="Translation service unavailable. Please add your own API key."
+            )
+
+        # Temporarily set environment variable with selected API key
+        if api_key_to_use != original_api_key:
+            os.environ["GOOGLE_API_KEY"] = api_key_to_use
 
         try:
             # Initial state
@@ -264,7 +311,7 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
             final_state = asl_graph.invoke(initial_state)
         finally:
             # Restore original API key
-            if custom_api_key:
+            if api_key_to_use != original_api_key:
                 if original_api_key:
                     os.environ["GOOGLE_API_KEY"] = original_api_key
                 else:
@@ -328,6 +375,23 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
         asyncio.create_task(log_translation())
 
         app_logger.info(f"Translation successful: {len(signs)} signs returned")
+
+        # Add rate limit headers if using shared key
+        if using_shared_key and rate_limit_info:
+            # Recalculate after this translation (increment used count)
+            updated_used = rate_limit_info["used"] + 1
+            updated_remaining = max(0, settings.shared_key_daily_limit - updated_used)
+
+            return JSONResponse(
+                content=response.model_dump(),
+                headers={
+                    "X-RateLimit-Limit": str(settings.shared_key_daily_limit),
+                    "X-RateLimit-Remaining": str(updated_remaining),
+                    "X-RateLimit-Reset": "midnight UTC",
+                    "X-Using-Shared-Key": "true"
+                }
+            )
+
         return response
 
     except HTTPException:
@@ -335,6 +399,42 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
     except Exception as e:
         app_logger.exception(f"Unexpected error in translation: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get(f"{settings.api_prefix}/rate-limit")
+async def get_rate_limit_status(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    Get rate limit status for shared API key usage
+
+    Returns remaining translations for the current IP address
+    """
+    try:
+        # Check if shared key is configured
+        if not settings.shared_api_key:
+            return {
+                "shared_key_available": False,
+                "message": "Shared API key not configured"
+            }
+
+        # Get rate limit info for this IP
+        ip_hash = hash_ip(get_remote_address(request))
+        rate_limit_info = await check_shared_key_rate_limit(
+            db,
+            ip_hash,
+            settings.shared_key_daily_limit
+        )
+
+        return {
+            "shared_key_available": True,
+            "limit": rate_limit_info["limit"],
+            "used": rate_limit_info["used"],
+            "remaining": rate_limit_info["remaining"],
+            "reset": "midnight UTC"
+        }
+
+    except Exception as e:
+        app_logger.exception(f"Error checking rate limit: {e}")
+        raise HTTPException(status_code=500, detail="Failed to check rate limit")
 
 
 @app.post(f"{settings.api_prefix}/feedback", response_model=FeedbackResponse)
