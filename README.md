@@ -7,7 +7,6 @@ A modern, production-ready web application that translates English phrases into 
 [![React](https://img.shields.io/badge/React-18.3+-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Production Ready](https://img.shields.io/badge/Production-Ready-success)](PRODUCTION_READY.md)
 
 ---
 
