@@ -1,6 +1,7 @@
 /**
  * SignCard Component
  * Displays individual ASL sign with expressive Material 3 design
+ * Updated with beginner-friendly language and video resource links
  */
 
 import React from 'react';
@@ -36,7 +37,7 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                         </svg>
                     </div>
                     <div className="detail-content">
-                        <dt className="detail-label">Hand Shape</dt>
+                        <dt className="detail-label">How to Form Your Hands</dt>
                         <dd className="detail-value">{sign.hand_shape}</dd>
                     </div>
                 </div>
@@ -48,7 +49,7 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                         </svg>
                     </div>
                     <div className="detail-content">
-                        <dt className="detail-label">Location</dt>
+                        <dt className="detail-label">Where to Place Your Hands</dt>
                         <dd className="detail-value">{sign.location}</dd>
                     </div>
                 </div>
@@ -60,7 +61,7 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                         </svg>
                     </div>
                     <div className="detail-content">
-                        <dt className="detail-label">Movement</dt>
+                        <dt className="detail-label">How to Move</dt>
                         <dd className="detail-value">{sign.movement}</dd>
                     </div>
                 </div>
@@ -72,9 +73,42 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                         </svg>
                     </div>
                     <div className="detail-content">
-                        <dt className="detail-label">Non-Manual Markers</dt>
+                        <dt className="detail-label">Facial Expressions & Body Language</dt>
                         <dd className="detail-value">{sign.non_manual_markers}</dd>
                     </div>
+                </div>
+            </div>
+
+            <div className="video-resources">
+                <p className="video-resources-label">🎥 Watch video tutorials:</p>
+                <div className="video-links">
+                    <a
+                        href={`https://www.handspeak.com/word/search/index.php?id=${encodeURIComponent(sign.word)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="video-link"
+                        aria-label={`Watch ${sign.word} on Handspeak`}
+                    >
+                        Handspeak
+                    </a>
+                    <a
+                        href={`https://www.lifeprint.com/asl101/pages-layout/search.htm?search=${encodeURIComponent(sign.word)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="video-link"
+                        aria-label={`Watch ${sign.word} on ASL University`}
+                    >
+                        ASL University
+                    </a>
+                    <a
+                        href={`https://www.youtube.com/results?search_query=asl+sign+${encodeURIComponent(sign.word)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="video-link"
+                        aria-label={`Search ${sign.word} on YouTube`}
+                    >
+                        YouTube
+                    </a>
                 </div>
             </div>
         </article>

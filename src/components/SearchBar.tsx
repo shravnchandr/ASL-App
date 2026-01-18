@@ -32,7 +32,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
         <form className="search-bar" onSubmit={handleSubmit}>
             <div className={`search-container ${isFocused ? 'focused' : ''} ${query ? 'has-value' : ''}`}>
                 <label htmlFor="search-input" className="search-label">
-                    Enter English phrase to translate
+                    Enter phrase to learn ASL signs
                 </label>
 
                 <div className="search-input-wrapper">

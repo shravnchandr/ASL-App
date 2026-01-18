@@ -1,0 +1,96 @@
+/**
+ * Learning Disclaimer Styles
+ */
+
+.learning-disclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-left: 4px solid #1976d2;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.disclaimer-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.disclaimer-content {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #0d47a1;
+}
+
+.disclaimer-content strong {
+    font-weight: 700;
+    color: #01579b;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .learning-disclaimer {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    border-left-color: #5c6bc0;
+}
+
+[data-theme="dark"] .disclaimer-content {
+    color: #c5cae9;
+}
+
+[data-theme="dark"] .disclaimer-content strong {
+    color: #e8eaf6;
+}
+
+/* High contrast theme */
+[data-theme="high-contrast"] .learning-disclaimer {
+    background: #000;
+    border: 3px solid #fff;
+    border-left-width: 6px;
+}
+
+[data-theme="high-contrast"] .disclaimer-content {
+    color: #fff;
+}
+
+[data-theme="high-contrast"] .disclaimer-content strong {
+    color: #ffeb3b;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .learning-disclaimer {
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .disclaimer-icon {
+        font-size: 20px;
+    }
+
+    .disclaimer-content {
+        font-size: 13px;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .learning-disclaimer {
+        animation: none;
+    }
+}

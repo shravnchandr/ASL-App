@@ -9,6 +9,7 @@ import { SignCard } from './components/SignCard';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { FeedbackModal } from './components/FeedbackModal';
 import { LoadingState } from './components/LoadingState';
+import { LearningDisclaimer } from './components/LearningDisclaimer';
 import { SearchHistory } from './components/features/SearchHistory';
 import { ApiKeyModal } from './components/features/ApiKeyModal';
 import { ThemeSwitcher } from './components/features/ThemeSwitcher';
@@ -156,7 +157,7 @@ function App() {
             <div className="header-top">
               <h1 className="app-title">
                 <span className="title-icon" aria-hidden="true">🤟</span>
-                ASL Dictionary
+                ASL Learning Assistant
               </h1>
               <div className="header-actions">
                 <button
@@ -176,7 +177,7 @@ function App() {
               </div>
             </div>
             <p className="app-subtitle">
-              Translate English phrases into American Sign Language descriptions
+              Learn ASL signs with AI-powered breakdowns - your study companion for mastering sign language
             </p>
           </div>
         </div>
@@ -241,6 +242,8 @@ function App() {
                 </p>
               </div>
 
+              <LearningDisclaimer />
+
               <ActionButtons query={result.query} signsCount={result.signs.length} />
 
               <div className="signs-grid">
@@ -255,7 +258,7 @@ function App() {
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                       <path d="M10 2C5.58 2 2 5.58 2 10C2 14.42 5.58 18 10 18C14.42 18 18 14.42 18 10C18 5.58 14.42 2 10 2ZM11 15H9V9H11V15ZM11 7H9V5H11V7Z" fill="currentColor" />
                     </svg>
-                    ASL Grammar Note
+                    ASL Grammar Tips
                   </h3>
                   <p className="note-text">{result.note}</p>
                 </div>

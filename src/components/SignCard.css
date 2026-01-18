@@ -145,6 +145,57 @@
     }
 }
 
+/* Video Resources */
+.video-resources {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid var(--surface-variant);
+}
+
+.video-resources-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    margin-bottom: 12px;
+}
+
+.video-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.video-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.video-link:hover {
+    background: var(--primary);
+    color: var(--on-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.video-link:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+}
+
+.video-link:active {
+    transform: translateY(0);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .sign-card {
@@ -156,6 +207,10 @@
     }
 
     .sign-card:hover .detail-icon {
+        transform: none;
+    }
+
+    .video-link:hover {
         transform: none;
     }
 }
