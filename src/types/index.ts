@@ -99,3 +99,61 @@ export interface RateLimitStatus {
     reset?: string;
     message?: string;
 }
+
+// Learning feature types
+export type Coordinate = [number, number, number] | null;
+
+export interface SignFrame {
+    pose: Coordinate[];
+    left_hand: Coordinate[];
+    right_hand: Coordinate[];
+    face: Coordinate[];
+}
+
+export interface SignData {
+    sign: string;
+    frames: SignFrame[];
+    frame_count: number;
+    fps: number;
+    source: string;
+}
+
+export interface SignMetadataEntry {
+    difficulty: 'beginner' | 'intermediate' | 'other';
+    frame_count: number;
+    fps: number;
+    source: string;
+}
+
+export interface SignMetadata {
+    version: string;
+    total_signs: number;
+    face_landmark_count: number;
+    pose_landmark_count: number;
+    hand_landmark_count: number;
+    face_keypoint_mapping: Record<string, number[]>;
+    face_indices: number[];
+    signs: Record<string, SignMetadataEntry>;
+}
+
+export interface SignProgress {
+    timesStudied: number;
+    timesCorrect: number;
+    lastStudied: string;
+    mastery: number;
+}
+
+export interface Exercise {
+    id: string;
+    type: 'sign-to-word' | 'word-to-sign' | 'recall';
+    sign: string;
+    options?: string[];
+    correctAnswer: string;
+}
+
+export interface LearnSession {
+    exercises: Exercise[];
+    currentIndex: number;
+    score: number;
+    startTime: string;
+}

@@ -1,0 +1,180 @@
+/**
+ * WordToSignExercise Component Styles
+ */
+
+.word-to-sign {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-lg, 24px);
+    width: 100%;
+}
+
+.word-to-sign__prompt {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--on-surface, #333);
+    text-align: center;
+    margin: 0;
+}
+
+[data-theme="dark"] .word-to-sign__prompt {
+    color: var(--on-surface, #eee);
+}
+
+.word-to-sign__target {
+    font-weight: 700;
+    color: var(--primary, #0077b6);
+    text-transform: capitalize;
+}
+
+/* Options grid */
+.word-to-sign__options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md, 16px);
+    width: 100%;
+    max-width: 500px;
+}
+
+.word-to-sign__option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+    padding: var(--spacing-sm, 8px);
+    border: 2px solid var(--outline, #ccc);
+    border-radius: var(--radius-md, 12px);
+    background: var(--surface, #fff);
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .word-to-sign__option {
+    background: var(--surface-container, #2a2a3e);
+    border-color: var(--outline, #444);
+}
+
+/* Play button */
+.word-to-sign__play-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary, #0077b6);
+    color: var(--on-primary, #fff);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.word-to-sign__play-btn:hover:not(:disabled) {
+    background: var(--primary-hover, #005f8a);
+    transform: scale(1.1);
+}
+
+.word-to-sign__play-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Animation container */
+.word-to-sign__animation {
+    pointer-events: none;
+}
+
+/* Select button */
+.word-to-sign__select-btn {
+    width: 100%;
+    padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
+    border: none;
+    border-radius: var(--radius-sm, 8px);
+    background: var(--surface-container-high, #e8e8e8);
+    color: var(--on-surface, #333);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .word-to-sign__select-btn {
+    background: var(--surface-container-high, #3a3a4e);
+    color: var(--on-surface, #eee);
+}
+
+.word-to-sign__select-btn:hover:not(:disabled) {
+    background: var(--primary, #0077b6);
+    color: var(--on-primary, #fff);
+}
+
+.word-to-sign__select-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Correct answer state */
+.word-to-sign__option--correct {
+    border-color: #4caf50;
+    background: #e8f5e9;
+}
+
+[data-theme="dark"] .word-to-sign__option--correct {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: #4caf50;
+}
+
+.word-to-sign__option--correct .word-to-sign__select-btn {
+    background: #4caf50;
+    color: #fff;
+}
+
+/* Incorrect answer state */
+.word-to-sign__option--incorrect {
+    border-color: #f44336;
+    background: #ffebee;
+    animation: shake 0.4s ease;
+}
+
+[data-theme="dark"] .word-to-sign__option--incorrect {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: #f44336;
+}
+
+.word-to-sign__option--incorrect .word-to-sign__select-btn {
+    background: #f44336;
+    color: #fff;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+/* Disabled state */
+.word-to-sign__option--disabled {
+    opacity: 0.5;
+}
+
+/* Hint text */
+.word-to-sign__hint {
+    font-size: 0.875rem;
+    color: var(--on-surface-variant, #666);
+    text-align: center;
+    margin: 0;
+}
+
+[data-theme="dark"] .word-to-sign__hint {
+    color: var(--on-surface-variant, #aaa);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .word-to-sign__options {
+        grid-template-columns: 1fr;
+        max-width: 250px;
+    }
+}

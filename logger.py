@@ -2,6 +2,7 @@
 Structured logging configuration using loguru
 Provides JSON-formatted logs for production and pretty logs for development
 """
+
 import sys
 from loguru import logger
 from config import get_settings
@@ -11,10 +12,10 @@ settings = get_settings()
 
 def setup_logging():
     """Configure loguru logger based on environment"""
-    
+
     # Remove default handler
     logger.remove()
-    
+
     if settings.log_format == "json":
         # Production: JSON formatted logs
         logger.add(
@@ -35,7 +36,7 @@ def setup_logging():
             backtrace=True,
             diagnose=True,
         )
-    
+
     # Also log to file in production
     if settings.environment == "production":
         logger.add(
@@ -46,7 +47,7 @@ def setup_logging():
             level=settings.log_level,
             serialize=True,
         )
-    
+
     logger.info(f"Logging configured for {settings.environment} environment")
     return logger
 

@@ -1,0 +1,162 @@
+/**
+ * PlaybackControls Component Styles
+ */
+
+.playback-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm, 8px);
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Progress bar */
+.playback-controls__progress {
+    height: 4px;
+    background: var(--surface-container-highest, #e0e0e0);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .playback-controls__progress {
+    background: var(--surface-container-highest, #333);
+}
+
+.playback-controls__progress-fill {
+    height: 100%;
+    background: var(--primary, #0077b6);
+    border-radius: 2px;
+    transition: width 0.1s linear;
+}
+
+/* Buttons container */
+.playback-controls__buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md, 16px);
+}
+
+/* Base button styles */
+.playback-controls__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.playback-controls__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Primary button (play/pause) */
+.playback-controls__btn--primary {
+    width: 56px;
+    height: 56px;
+    background: var(--primary, #0077b6);
+    color: var(--on-primary, #fff);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.playback-controls__btn--primary:hover:not(:disabled) {
+    background: var(--primary-hover, #005f8a);
+    transform: scale(1.05);
+}
+
+.playback-controls__btn--primary:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* Secondary button (replay) */
+.playback-controls__btn--secondary {
+    width: 40px;
+    height: 40px;
+    background: var(--surface-container, #f5f5f5);
+    color: var(--on-surface, #333);
+}
+
+[data-theme="dark"] .playback-controls__btn--secondary {
+    background: var(--surface-container, #2a2a3e);
+    color: var(--on-surface, #eee);
+}
+
+.playback-controls__btn--secondary:hover:not(:disabled) {
+    background: var(--surface-container-high, #e8e8e8);
+}
+
+[data-theme="dark"] .playback-controls__btn--secondary:hover:not(:disabled) {
+    background: var(--surface-container-high, #3a3a4e);
+}
+
+/* Speed selector */
+.playback-controls__speed {
+    display: flex;
+    gap: 4px;
+    background: var(--surface-container, #f5f5f5);
+    border-radius: var(--radius-full, 9999px);
+    padding: 4px;
+}
+
+[data-theme="dark"] .playback-controls__speed {
+    background: var(--surface-container, #2a2a3e);
+}
+
+.playback-controls__speed-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    background: transparent;
+    color: var(--on-surface-variant, #666);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .playback-controls__speed-btn {
+    color: var(--on-surface-variant, #aaa);
+}
+
+.playback-controls__speed-btn:hover:not(:disabled) {
+    background: var(--surface-container-high, #e8e8e8);
+}
+
+[data-theme="dark"] .playback-controls__speed-btn:hover:not(:disabled) {
+    background: var(--surface-container-high, #3a3a4e);
+}
+
+.playback-controls__speed-btn--active {
+    background: var(--primary, #0077b6);
+    color: var(--on-primary, #fff);
+}
+
+.playback-controls__speed-btn--active:hover:not(:disabled) {
+    background: var(--primary-hover, #005f8a);
+}
+
+[data-theme="dark"] .playback-controls__speed-btn--active {
+    background: var(--primary, #0077b6);
+    color: var(--on-primary, #fff);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .playback-controls__btn--primary {
+        width: 48px;
+        height: 48px;
+    }
+
+    .playback-controls__btn--secondary {
+        width: 36px;
+        height: 36px;
+    }
+
+    .playback-controls__speed-btn {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+}

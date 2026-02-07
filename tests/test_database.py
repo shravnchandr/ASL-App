@@ -1,6 +1,7 @@
 """
 Tests for database operations
 """
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import Feedback, create_feedback, get_feedback_stats
@@ -17,7 +18,7 @@ class TestFeedbackModel:
             query="hello",
             rating="up",
             feedback_text="Great!",
-            ip_address="127.0.0.1"
+            ip_address="127.0.0.1",
         )
 
         assert feedback.id is not None
@@ -36,7 +37,7 @@ class TestFeedbackModel:
             ip_address="127.0.0.1",
             feedback_type="general",
             category="bug",
-            email="test@example.com"
+            email="test@example.com",
         )
 
         assert feedback.id is not None
@@ -59,16 +60,10 @@ class TestFeedbackModel:
         """Test getting stats with existing feedback"""
         # Create some feedback
         await create_feedback(
-            session=test_db,
-            query="hello",
-            rating="up",
-            ip_address="127.0.0.1"
+            session=test_db, query="hello", rating="up", ip_address="127.0.0.1"
         )
         await create_feedback(
-            session=test_db,
-            query="goodbye",
-            rating="down",
-            ip_address="127.0.0.1"
+            session=test_db, query="goodbye", rating="down", ip_address="127.0.0.1"
         )
 
         stats = await get_feedback_stats(test_db)
@@ -80,10 +75,7 @@ class TestFeedbackModel:
     async def test_ip_address_hashing(self, test_db: AsyncSession):
         """Test that IP addresses are hashed"""
         feedback = await create_feedback(
-            session=test_db,
-            query="test",
-            rating="up",
-            ip_address="192.168.1.1"
+            session=test_db, query="test", rating="up", ip_address="192.168.1.1"
         )
 
         # IP should be hashed, not stored in plain text

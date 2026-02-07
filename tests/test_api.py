@@ -1,6 +1,7 @@
 """
 Tests for API endpoints
 """
+
 import pytest
 from httpx import AsyncClient
 from unittest.mock import patch, MagicMock
@@ -36,8 +37,12 @@ class TestTranslationEndpoint:
         assert response.status_code == 422  # Validation error
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Translation test requires mocking app.state.asl_graph which is complex - tested manually")
-    async def test_translate_success(self, client: AsyncClient, mock_translation_result):
+    @pytest.mark.skip(
+        reason="Translation test requires mocking app.state.asl_graph which is complex - tested manually"
+    )
+    async def test_translate_success(
+        self, client: AsyncClient, mock_translation_result
+    ):
         """Test successful translation - skipped as requires complex mocking"""
         pass
 
@@ -51,7 +56,7 @@ class TestFeedbackEndpoint:
         feedback_data = {
             "query": "hello",
             "rating": "up",
-            "feedback_text": "Great translation!"
+            "feedback_text": "Great translation!",
         }
         response = await client.post("/api/feedback", json=feedback_data)
         assert response.status_code == 200
@@ -62,11 +67,7 @@ class TestFeedbackEndpoint:
     @pytest.mark.asyncio
     async def test_submit_feedback_invalid_rating(self, client: AsyncClient):
         """Test feedback with invalid rating"""
-        feedback_data = {
-            "query": "hello",
-            "rating": "invalid",
-            "feedback_text": "Test"
-        }
+        feedback_data = {"query": "hello", "rating": "invalid", "feedback_text": "Test"}
         response = await client.post("/api/feedback", json=feedback_data)
         assert response.status_code == 422  # Validation error
 
@@ -76,7 +77,7 @@ class TestFeedbackEndpoint:
         feedback_data = {
             "category": "bug",
             "feedback_text": "Found a bug in the search feature",
-            "email": "test@example.com"
+            "email": "test@example.com",
         }
         response = await client.post("/api/feedback/general", json=feedback_data)
         assert response.status_code == 200

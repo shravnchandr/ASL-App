@@ -1,6 +1,7 @@
 """
 Pytest configuration and fixtures
 """
+
 import os
 import sys
 
@@ -83,8 +84,7 @@ async def client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_db] = override_get_db
 
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
@@ -103,8 +103,8 @@ def mock_translation_result():
                 "hand_shape": "Flat hand, palm forward",
                 "location": "Near the forehead",
                 "movement": "Move hand forward in a small wave",
-                "non_manual_markers": "Smile, friendly expression"
+                "non_manual_markers": "Smile, friendly expression",
             }
         ],
-        "note": "This is a common greeting in ASL."
+        "note": "This is a common greeting in ASL.",
     }

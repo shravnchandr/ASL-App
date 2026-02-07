@@ -2,6 +2,7 @@
 FastAPI application for ASL Dictionary
 Provides async REST API endpoints for ASL translation and feedback collection
 """
+
 import os
 import sys
 import time
@@ -23,18 +24,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import get_settings
 from logger import app_logger
 from database import (
-    init_db, get_db, create_feedback, get_feedback_stats, get_paginated_feedback,
-    create_analytics_event, get_unique_users_count, get_translations_count,
-    get_popular_searches, get_daily_active_users, get_hourly_usage_pattern,
-    get_shared_key_usage_today, check_shared_key_rate_limit, hash_ip,
-    AsyncSessionLocal
+    init_db,
+    get_db,
+    create_feedback,
+    get_feedback_stats,
+    get_paginated_feedback,
+    create_analytics_event,
+    get_unique_users_count,
+    get_translations_count,
+    get_popular_searches,
+    get_daily_active_users,
+    get_hourly_usage_pattern,
+    get_shared_key_usage_today,
+    check_shared_key_rate_limit,
+    hash_ip,
+    AsyncSessionLocal,
 )
 from auth import verify_admin_password
-from cache import init_redis, close_redis, get_cached_translation, cache_translation, get_cache_stats
+from cache import (
+    init_redis,
+    close_redis,
+    get_cached_translation,
+    cache_translation,
+    get_cache_stats,
+)
 
 # Import LangGraph ASL dictionary
 sys.path.append(os.path.join(os.path.dirname(__file__), "python_code"))
-from asl_dict_langgraph import build_asl_graph, SentenceDescriptionSchema, DescriptionSchema
+from asl_dict_langgraph import (
+    build_asl_graph,
+    SentenceDescriptionSchema,
+    DescriptionSchema,
+)
 
 settings = get_settings()
 
@@ -97,7 +118,9 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
 
     # Content Security Policy (adjust as needed)
     if settings.environment == "production":
@@ -136,7 +159,7 @@ async def analytics_tracking_middleware(request: Request, call_next):
                         ip_address=get_remote_address(request),
                         endpoint=request.url.path,
                         user_agent=request.headers.get("user-agent"),
-                        response_time_ms=response_time_ms
+                        response_time_ms=response_time_ms,
                     )
             except Exception as e:
                 app_logger.error(f"Failed to log analytics: {e}")
@@ -149,13 +172,18 @@ async def analytics_tracking_middleware(request: Request, call_next):
 
 # Request/Response Models
 
+
 class TranslateRequest(BaseModel):
     """Request model for translation endpoint"""
-    text: str = Field(..., min_length=1, max_length=500, description="English phrase to translate")
+
+    text: str = Field(
+        ..., min_length=1, max_length=500, description="English phrase to translate"
+    )
 
 
 class SignResponse(BaseModel):
     """Response model for individual ASL sign"""
+
     word: str
     hand_shape: str
     location: str
@@ -165,6 +193,7 @@ class SignResponse(BaseModel):
 
 class TranslateResponse(BaseModel):
     """Response model for translation endpoint"""
+
     query: str
     signs: List[SignResponse]
     note: str
@@ -172,6 +201,7 @@ class TranslateResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     """Request model for feedback submission"""
+
     query: str = Field(..., min_length=1, max_length=500)
     rating: str = Field(..., pattern="^(up|down)$", description="Either 'up' or 'down'")
     feedback_text: Optional[str] = Field(None, max_length=1000)
@@ -179,18 +209,27 @@ class FeedbackRequest(BaseModel):
 
 class FeedbackResponse(BaseModel):
     """Response model for feedback submission"""
+
     success: bool
     message: str
 
 
 class GeneralFeedbackRequest(BaseModel):
     """Request model for general feedback submission"""
-    category: str = Field(..., pattern="^(bug|feature|general|ui_ux)$", description="Feedback category")
-    feedback_text: str = Field(..., min_length=10, max_length=2000, description="Feedback text")
-    email: Optional[str] = Field(None, max_length=255, description="Optional email for follow-up")
+
+    category: str = Field(
+        ..., pattern="^(bug|feature|general|ui_ux)$", description="Feedback category"
+    )
+    feedback_text: str = Field(
+        ..., min_length=10, max_length=2000, description="Feedback text"
+    )
+    email: Optional[str] = Field(
+        None, max_length=255, description="Optional email for follow-up"
+    )
 
 
 # API Endpoints
+
 
 @app.get("/health")
 async def health_check():
@@ -204,7 +243,11 @@ async def health_check():
 
 @app.post(f"{settings.api_prefix}/translate", response_model=TranslateResponse)
 @limiter.limit(settings.rate_limit)
-async def translate_to_asl(request: Request, translate_req: TranslateRequest, db: AsyncSession = Depends(get_db)):
+async def translate_to_asl(
+    request: Request,
+    translate_req: TranslateRequest,
+    db: AsyncSession = Depends(get_db),
+):
     """
     Translate English phrase to ASL sign descriptions
 
@@ -238,7 +281,7 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
                             cache_hit=True,
                             user_agent=request.headers.get("user-agent"),
                             endpoint="/api/translate",
-                            response_time_ms=response_time_ms
+                            response_time_ms=response_time_ms,
                         )
                 except Exception as e:
                     app_logger.error(f"Failed to log cache hit analytics: {e}")
@@ -269,25 +312,27 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
 
             # Check rate limit for shared key usage
             rate_limit_info = await check_shared_key_rate_limit(
-                db,
-                ip_hash,
-                settings.shared_key_daily_limit
+                db, ip_hash, settings.shared_key_daily_limit
             )
 
             if not rate_limit_info["allowed"]:
-                app_logger.warning(f"Shared key rate limit exceeded for IP hash: {ip_hash[:8]}...")
+                app_logger.warning(
+                    f"Shared key rate limit exceeded for IP hash: {ip_hash[:8]}..."
+                )
                 raise HTTPException(
                     status_code=429,
                     detail=f"Daily limit of {settings.shared_key_daily_limit} translations reached. Add your own API key for unlimited access.",
                     headers={
                         "X-RateLimit-Limit": str(settings.shared_key_daily_limit),
                         "X-RateLimit-Remaining": "0",
-                        "X-RateLimit-Reset": "midnight UTC"
-                    }
+                        "X-RateLimit-Reset": "midnight UTC",
+                    },
                 )
 
             api_key_to_use = settings.shared_api_key
-            app_logger.info(f"Using shared API key (remaining: {rate_limit_info['remaining']})")
+            app_logger.info(
+                f"Using shared API key (remaining: {rate_limit_info['remaining']})"
+            )
         elif original_api_key:
             # Fall back to server's main API key
             api_key_to_use = original_api_key
@@ -296,7 +341,7 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
             # No API key available
             raise HTTPException(
                 status_code=503,
-                detail="Translation service unavailable. Please add your own API key."
+                detail="Translation service unavailable. Please add your own API key.",
             )
 
         # Temporarily set environment variable with selected API key
@@ -320,14 +365,18 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
         # Check for errors
         if final_state.get("error"):
             app_logger.error(f"Translation error: {final_state['error']}")
-            raise HTTPException(status_code=500, detail=f"Translation failed: {final_state['error']}")
+            raise HTTPException(
+                status_code=500, detail=f"Translation failed: {final_state['error']}"
+            )
 
         # Get final output
         final_output: SentenceDescriptionSchema = final_state.get("final_output")
 
         if not final_output:
             app_logger.error("No output from LangGraph")
-            raise HTTPException(status_code=500, detail="Translation produced no output")
+            raise HTTPException(
+                status_code=500, detail="Translation produced no output"
+            )
 
         # Convert to response format
         signs = [
@@ -348,10 +397,7 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
         )
 
         # Cache the result
-        await cache_translation(
-            translate_req.text,
-            response.model_dump()
-        )
+        await cache_translation(translate_req.text, response.model_dump())
 
         # Track translation analytics in background
         response_time_ms = int((time.time() - start_time) * 1000)
@@ -367,7 +413,7 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
                         cache_hit=False,
                         user_agent=request.headers.get("user-agent"),
                         endpoint="/api/translate",
-                        response_time_ms=response_time_ms
+                        response_time_ms=response_time_ms,
                     )
             except Exception as e:
                 app_logger.error(f"Failed to log translation analytics: {e}")
@@ -388,8 +434,8 @@ async def translate_to_asl(request: Request, translate_req: TranslateRequest, db
                     "X-RateLimit-Limit": str(settings.shared_key_daily_limit),
                     "X-RateLimit-Remaining": str(updated_remaining),
                     "X-RateLimit-Reset": "midnight UTC",
-                    "X-Using-Shared-Key": "true"
-                }
+                    "X-Using-Shared-Key": "true",
+                },
             )
 
         return response
@@ -413,15 +459,13 @@ async def get_rate_limit_status(request: Request, db: AsyncSession = Depends(get
         if not settings.shared_api_key:
             return {
                 "shared_key_available": False,
-                "message": "Shared API key not configured"
+                "message": "Shared API key not configured",
             }
 
         # Get rate limit info for this IP
         ip_hash = hash_ip(get_remote_address(request))
         rate_limit_info = await check_shared_key_rate_limit(
-            db,
-            ip_hash,
-            settings.shared_key_daily_limit
+            db, ip_hash, settings.shared_key_daily_limit
         )
 
         return {
@@ -429,7 +473,7 @@ async def get_rate_limit_status(request: Request, db: AsyncSession = Depends(get
             "limit": rate_limit_info["limit"],
             "used": rate_limit_info["used"],
             "remaining": rate_limit_info["remaining"],
-            "reset": "midnight UTC"
+            "reset": "midnight UTC",
         }
 
     except Exception as e:
@@ -446,15 +490,17 @@ async def submit_feedback(
 ):
     """
     Submit user feedback for a translation
-    
+
     Rate limited to prevent spam
     """
     try:
-        app_logger.info(f"Feedback submission: {feedback_req.rating} for '{feedback_req.query[:50]}'")
-        
+        app_logger.info(
+            f"Feedback submission: {feedback_req.rating} for '{feedback_req.query[:50]}'"
+        )
+
         # Get client IP
         client_ip = get_remote_address(request)
-        
+
         # Create feedback entry
         await create_feedback(
             session=db,
@@ -463,12 +509,9 @@ async def submit_feedback(
             feedback_text=feedback_req.feedback_text,
             ip_address=client_ip,
         )
-        
-        return FeedbackResponse(
-            success=True,
-            message="Thank you for your feedback!"
-        )
-        
+
+        return FeedbackResponse(success=True, message="Thank you for your feedback!")
+
     except Exception as e:
         app_logger.exception(f"Error saving feedback: {e}")
         raise HTTPException(status_code=500, detail="Failed to save feedback")
@@ -483,15 +526,15 @@ async def submit_general_feedback(
 ):
     """
     Submit general feedback (bug reports, feature requests, etc.)
-    
+
     Rate limited to prevent spam
     """
     try:
         app_logger.info(f"General feedback submission: {feedback_req.category}")
-        
+
         # Get client IP
         client_ip = get_remote_address(request)
-        
+
         # Create feedback entry
         await create_feedback(
             session=db,
@@ -501,12 +544,12 @@ async def submit_general_feedback(
             category=feedback_req.category,
             email=feedback_req.email,
         )
-        
+
         return FeedbackResponse(
             success=True,
-            message="Thank you for your feedback! We appreciate your input."
+            message="Thank you for your feedback! We appreciate your input.",
         )
-        
+
     except Exception as e:
         app_logger.exception(f"Error saving general feedback: {e}")
         raise HTTPException(status_code=500, detail="Failed to save feedback")
@@ -527,13 +570,14 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
 # Admin Endpoints
 
+
 @app.get(f"{settings.api_prefix}/admin/feedback")
 async def get_admin_feedback(
     page: int = 1,
     limit: int = 50,
     feedback_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_admin_password)
+    _: bool = Depends(verify_admin_password),
 ):
     """
     Get paginated feedback for admin review
@@ -565,7 +609,7 @@ async def get_admin_feedback(
             "total": total,
             "page": page,
             "limit": limit,
-            "pages": (total + limit - 1) // limit  # Ceiling division
+            "pages": (total + limit - 1) // limit,  # Ceiling division
         }
     except HTTPException:
         raise
@@ -578,7 +622,7 @@ async def get_admin_feedback(
 async def delete_feedback(
     feedback_id: int,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_admin_password)
+    _: bool = Depends(verify_admin_password),
 ):
     """
     Delete a specific feedback entry
@@ -613,8 +657,7 @@ async def delete_feedback(
 
 @app.get(f"{settings.api_prefix}/admin/stats")
 async def get_admin_stats(
-    db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_admin_password)
+    db: AsyncSession = Depends(get_db), _: bool = Depends(verify_admin_password)
 ):
     """
     Get detailed admin statistics
@@ -629,19 +672,17 @@ async def get_admin_stats(
 
         # Get counts by feedback type
         type_query = select(
-            Feedback.feedback_type,
-            func.count(Feedback.id).label('count')
+            Feedback.feedback_type, func.count(Feedback.id).label("count")
         ).group_by(Feedback.feedback_type)
         type_result = await db.execute(type_query)
         type_counts = {row.feedback_type: row.count for row in type_result}
 
         # Get counts by category (for general feedback)
-        category_query = select(
-            Feedback.category,
-            func.count(Feedback.id).label('count')
-        ).where(
-            Feedback.category.isnot(None)
-        ).group_by(Feedback.category)
+        category_query = (
+            select(Feedback.category, func.count(Feedback.id).label("count"))
+            .where(Feedback.category.isnot(None))
+            .group_by(Feedback.category)
+        )
         category_result = await db.execute(category_query)
         category_counts = {row.category: row.count for row in category_result}
 
@@ -652,7 +693,7 @@ async def get_admin_stats(
             **stats,
             "by_type": type_counts,
             "by_category": category_counts,
-            "cache": cache_stats
+            "cache": cache_stats,
         }
     except HTTPException:
         raise
@@ -663,8 +704,7 @@ async def get_admin_stats(
 
 @app.get(f"{settings.api_prefix}/admin/analytics/overview")
 async def get_analytics_overview(
-    db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_admin_password)
+    db: AsyncSession = Depends(get_db), _: bool = Depends(verify_admin_password)
 ):
     """
     Get analytics overview with key metrics
@@ -678,13 +718,23 @@ async def get_analytics_overview(
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         return {
-            "unique_users_30d": await get_unique_users_count(db, start_date=thirty_days_ago),
-            "unique_users_7d": await get_unique_users_count(db, start_date=seven_days_ago),
-            "unique_users_today": await get_unique_users_count(db, start_date=today_start),
-            "translations": await get_translations_count(db, start_date=thirty_days_ago),
-            "popular_searches": await get_popular_searches(db, limit=10, start_date=thirty_days_ago),
+            "unique_users_30d": await get_unique_users_count(
+                db, start_date=thirty_days_ago
+            ),
+            "unique_users_7d": await get_unique_users_count(
+                db, start_date=seven_days_ago
+            ),
+            "unique_users_today": await get_unique_users_count(
+                db, start_date=today_start
+            ),
+            "translations": await get_translations_count(
+                db, start_date=thirty_days_ago
+            ),
+            "popular_searches": await get_popular_searches(
+                db, limit=10, start_date=thirty_days_ago
+            ),
             "daily_active_users": await get_daily_active_users(db, days=30),
-            "hourly_usage": await get_hourly_usage_pattern(db, days=7)
+            "hourly_usage": await get_hourly_usage_pattern(db, days=7),
         }
     except HTTPException:
         raise
@@ -697,7 +747,7 @@ async def get_analytics_overview(
 async def get_user_analytics(
     days: int = 30,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_admin_password)
+    _: bool = Depends(verify_admin_password),
 ):
     """
     Get detailed user analytics
@@ -708,7 +758,7 @@ async def get_user_analytics(
 
         return {
             "daily_active_users": await get_daily_active_users(db, days=days),
-            "unique_users": await get_unique_users_count(db, start_date=start_date)
+            "unique_users": await get_unique_users_count(db, start_date=start_date),
         }
     except HTTPException:
         raise
@@ -722,7 +772,7 @@ async def get_search_analytics(
     limit: int = 20,
     days: int = 30,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_admin_password)
+    _: bool = Depends(verify_admin_password),
 ):
     """
     Get popular search analytics
@@ -744,7 +794,11 @@ if settings.environment == "production":
     static_path = os.path.join(os.path.dirname(__file__), "dist")
     if os.path.exists(static_path):
         # Mount static assets - this must be BEFORE the catch-all route
-        app.mount("/assets", StaticFiles(directory=os.path.join(static_path, "assets")), name="assets")
+        app.mount(
+            "/assets",
+            StaticFiles(directory=os.path.join(static_path, "assets")),
+            name="assets",
+        )
 
         @app.get("/")
         async def serve_frontend():
@@ -782,7 +836,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app:app",
         host=settings.host,

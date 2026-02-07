@@ -1,0 +1,185 @@
+/**
+ * RecallExercise Component Styles
+ */
+
+.recall-exercise {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-lg, 24px);
+    width: 100%;
+}
+
+.recall-exercise__prompt {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--on-surface, #333);
+    text-align: center;
+    margin: 0;
+}
+
+[data-theme="dark"] .recall-exercise__prompt {
+    color: var(--on-surface, #eee);
+}
+
+.recall-exercise__animation {
+    display: flex;
+    justify-content: center;
+}
+
+/* Form */
+.recall-exercise__form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md, 16px);
+    width: 100%;
+    max-width: 400px;
+}
+
+.recall-exercise__input-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm, 8px);
+}
+
+/* Input field */
+.recall-exercise__input {
+    width: 100%;
+    padding: var(--spacing-md, 16px);
+    border: 2px solid var(--outline, #ccc);
+    border-radius: var(--radius-md, 12px);
+    background: var(--surface, #fff);
+    color: var(--on-surface, #333);
+    font-size: 1.125rem;
+    font-weight: 500;
+    text-align: center;
+    text-transform: lowercase;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .recall-exercise__input {
+    background: var(--surface-container, #2a2a3e);
+    border-color: var(--outline, #444);
+    color: var(--on-surface, #eee);
+}
+
+.recall-exercise__input::placeholder {
+    color: var(--on-surface-variant, #999);
+    text-transform: none;
+}
+
+.recall-exercise__input:focus {
+    outline: none;
+    border-color: var(--primary, #0077b6);
+    box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.2);
+}
+
+.recall-exercise__input:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+/* Correct state */
+.recall-exercise__input--correct {
+    border-color: #4caf50;
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+[data-theme="dark"] .recall-exercise__input--correct {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: #4caf50;
+    color: #81c784;
+}
+
+/* Incorrect state */
+.recall-exercise__input--incorrect {
+    border-color: #f44336;
+    background: #ffebee;
+    color: #c62828;
+    animation: shake 0.4s ease;
+}
+
+[data-theme="dark"] .recall-exercise__input--incorrect {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: #f44336;
+    color: #ef9a9a;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+/* Correct answer reveal */
+.recall-exercise__correct-answer {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--on-surface-variant, #666);
+}
+
+[data-theme="dark"] .recall-exercise__correct-answer {
+    color: var(--on-surface-variant, #aaa);
+}
+
+.recall-exercise__correct-answer strong {
+    color: var(--primary, #0077b6);
+    text-transform: capitalize;
+}
+
+/* Submit button */
+.recall-exercise__submit-btn {
+    padding: var(--spacing-md, 16px) var(--spacing-xl, 32px);
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--primary, #0077b6);
+    color: var(--on-primary, #fff);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.recall-exercise__submit-btn:hover:not(:disabled) {
+    background: var(--primary-hover, #005f8a);
+    transform: scale(1.02);
+}
+
+.recall-exercise__submit-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.recall-exercise__submit-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Hint text */
+.recall-exercise__hint {
+    font-size: 0.875rem;
+    color: var(--on-surface-variant, #666);
+    text-align: center;
+    margin: 0;
+}
+
+[data-theme="dark"] .recall-exercise__hint {
+    color: var(--on-surface-variant, #aaa);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .recall-exercise__input {
+        padding: var(--spacing-sm, 12px);
+        font-size: 1rem;
+    }
+
+    .recall-exercise__submit-btn {
+        width: 100%;
+        padding: var(--spacing-sm, 12px);
+    }
+}

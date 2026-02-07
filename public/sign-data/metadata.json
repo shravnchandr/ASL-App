@@ -1,0 +1,799 @@
+{
+  "version": "1.0",
+  "total_signs": 100,
+  "face_landmark_count": 33,
+  "pose_landmark_count": 33,
+  "hand_landmark_count": 21,
+  "face_keypoint_mapping": {
+    "left_eyebrow": [
+      70,
+      63,
+      105,
+      66,
+      107
+    ],
+    "right_eyebrow": [
+      336,
+      296,
+      334,
+      293,
+      300
+    ],
+    "left_eye": [
+      33,
+      133,
+      159,
+      145
+    ],
+    "right_eye": [
+      362,
+      263,
+      386,
+      374
+    ],
+    "mouth": [
+      61,
+      291,
+      0,
+      17,
+      78,
+      308,
+      13,
+      14
+    ],
+    "nose": [
+      1,
+      4
+    ],
+    "chin": [
+      152,
+      377,
+      400,
+      148,
+      176
+    ]
+  },
+  "face_indices": [
+    0,
+    1,
+    4,
+    13,
+    14,
+    17,
+    33,
+    61,
+    63,
+    66,
+    70,
+    78,
+    105,
+    107,
+    133,
+    145,
+    148,
+    152,
+    159,
+    176,
+    263,
+    291,
+    293,
+    296,
+    300,
+    308,
+    334,
+    336,
+    362,
+    374,
+    377,
+    386,
+    400
+  ],
+  "signs": {
+    "a": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "angry": {
+      "difficulty": "beginner",
+      "frame_count": 78,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "april": {
+      "difficulty": "beginner",
+      "frame_count": 82,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "august": {
+      "difficulty": "beginner",
+      "frame_count": 47,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "b": {
+      "difficulty": "beginner",
+      "frame_count": 29,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "bad": {
+      "difficulty": "beginner",
+      "frame_count": 51,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "bathroom": {
+      "difficulty": "beginner",
+      "frame_count": 59,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "book": {
+      "difficulty": "beginner",
+      "frame_count": 58,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "c": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "car": {
+      "difficulty": "beginner",
+      "frame_count": 57,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "d": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "december": {
+      "difficulty": "beginner",
+      "frame_count": 44,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "e": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "eight": {
+      "difficulty": "beginner",
+      "frame_count": 36,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "f": {
+      "difficulty": "beginner",
+      "frame_count": 29,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "family": {
+      "difficulty": "beginner",
+      "frame_count": 65,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "february": {
+      "difficulty": "beginner",
+      "frame_count": 47,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "finished": {
+      "difficulty": "beginner",
+      "frame_count": 68,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "five": {
+      "difficulty": "beginner",
+      "frame_count": 37,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "food": {
+      "difficulty": "beginner",
+      "frame_count": 61,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "four": {
+      "difficulty": "beginner",
+      "frame_count": 32,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "friend": {
+      "difficulty": "beginner",
+      "frame_count": 42,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "g": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "good": {
+      "difficulty": "beginner",
+      "frame_count": 34,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "goodbye": {
+      "difficulty": "beginner",
+      "frame_count": 60,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "grandfather": {
+      "difficulty": "beginner",
+      "frame_count": 49,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "grandmother": {
+      "difficulty": "beginner",
+      "frame_count": 50,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "h": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "happy": {
+      "difficulty": "beginner",
+      "frame_count": 65,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "hello": {
+      "difficulty": "beginner",
+      "frame_count": 51,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "home": {
+      "difficulty": "beginner",
+      "frame_count": 53,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "hospital": {
+      "difficulty": "beginner",
+      "frame_count": 56,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "house": {
+      "difficulty": "beginner",
+      "frame_count": 44,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "how": {
+      "difficulty": "beginner",
+      "frame_count": 42,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "hungry": {
+      "difficulty": "beginner",
+      "frame_count": 49,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "i": {
+      "difficulty": "beginner",
+      "frame_count": 29,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "j": {
+      "difficulty": "beginner",
+      "frame_count": 70,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "january": {
+      "difficulty": "beginner",
+      "frame_count": 59,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "july": {
+      "difficulty": "beginner",
+      "frame_count": 75,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "june": {
+      "difficulty": "beginner",
+      "frame_count": 84,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "k": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "l": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "later": {
+      "difficulty": "beginner",
+      "frame_count": 52,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "learn": {
+      "difficulty": "beginner",
+      "frame_count": 34,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "m": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "march": {
+      "difficulty": "beginner",
+      "frame_count": 69,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "may": {
+      "difficulty": "beginner",
+      "frame_count": 51,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "morning": {
+      "difficulty": "beginner",
+      "frame_count": 53,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "mother": {
+      "difficulty": "beginner",
+      "frame_count": 57,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "n": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "need": {
+      "difficulty": "beginner",
+      "frame_count": 65,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "nine": {
+      "difficulty": "beginner",
+      "frame_count": 34,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "november": {
+      "difficulty": "beginner",
+      "frame_count": 49,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "now": {
+      "difficulty": "beginner",
+      "frame_count": 57,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "o": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "october": {
+      "difficulty": "beginner",
+      "frame_count": 47,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "one": {
+      "difficulty": "beginner",
+      "frame_count": 34,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "p": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "phone": {
+      "difficulty": "beginner",
+      "frame_count": 56,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "please": {
+      "difficulty": "beginner",
+      "frame_count": 51,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "q": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "r": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "read": {
+      "difficulty": "beginner",
+      "frame_count": 58,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "s": {
+      "difficulty": "beginner",
+      "frame_count": 29,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "sad": {
+      "difficulty": "beginner",
+      "frame_count": 44,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "scared": {
+      "difficulty": "beginner",
+      "frame_count": 51,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "school": {
+      "difficulty": "beginner",
+      "frame_count": 74,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "september": {
+      "difficulty": "beginner",
+      "frame_count": 48,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "months"
+    },
+    "seven": {
+      "difficulty": "beginner",
+      "frame_count": 38,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "sit": {
+      "difficulty": "beginner",
+      "frame_count": 62,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "six": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "sleep": {
+      "difficulty": "beginner",
+      "frame_count": 60,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "sorry": {
+      "difficulty": "beginner",
+      "frame_count": 57,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "stand": {
+      "difficulty": "beginner",
+      "frame_count": 43,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "t": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "ten": {
+      "difficulty": "beginner",
+      "frame_count": 51,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "thank_you": {
+      "difficulty": "beginner",
+      "frame_count": 66,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "thirsty": {
+      "difficulty": "beginner",
+      "frame_count": 68,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "three": {
+      "difficulty": "beginner",
+      "frame_count": 36,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "tired": {
+      "difficulty": "beginner",
+      "frame_count": 70,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "today": {
+      "difficulty": "beginner",
+      "frame_count": 58,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "tomorrow": {
+      "difficulty": "beginner",
+      "frame_count": 60,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "two": {
+      "difficulty": "beginner",
+      "frame_count": 35,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "numbers"
+    },
+    "u": {
+      "difficulty": "beginner",
+      "frame_count": 29,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "v": {
+      "difficulty": "beginner",
+      "frame_count": 28,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "w": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "wait": {
+      "difficulty": "beginner",
+      "frame_count": 69,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "want": {
+      "difficulty": "beginner",
+      "frame_count": 62,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "water": {
+      "difficulty": "beginner",
+      "frame_count": 49,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "when": {
+      "difficulty": "beginner",
+      "frame_count": 45,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "where": {
+      "difficulty": "beginner",
+      "frame_count": 70,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "which": {
+      "difficulty": "beginner",
+      "frame_count": 48,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "who": {
+      "difficulty": "beginner",
+      "frame_count": 36,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "common"
+    },
+    "why": {
+      "difficulty": "beginner",
+      "frame_count": 49,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "write": {
+      "difficulty": "beginner",
+      "frame_count": 45,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "x": {
+      "difficulty": "beginner",
+      "frame_count": 30,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "y": {
+      "difficulty": "beginner",
+      "frame_count": 29,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "alphabet"
+    },
+    "yes": {
+      "difficulty": "beginner",
+      "frame_count": 45,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "yesterday": {
+      "difficulty": "beginner",
+      "frame_count": 47,
+      "fps": 29.97,
+      "source": "extracted",
+      "category": "common"
+    },
+    "z": {
+      "difficulty": "beginner",
+      "frame_count": 73,
+      "fps": 29.97002997002997,
+      "source": "extracted",
+      "category": "alphabet"
+    }
+  },
+  "categories": [
+    "alphabet",
+    "numbers",
+    "months",
+    "common"
+  ]
+}

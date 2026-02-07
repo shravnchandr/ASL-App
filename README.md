@@ -24,6 +24,14 @@ A modern, production-ready web application that helps you learn American Sign La
 - 🎯 **Admin Dashboard** - Password-protected admin panel for managing feedback and viewing analytics
 - 📊 **User Analytics** - Privacy-preserving analytics tracking unique users, popular searches, and usage patterns with IP hashing
 
+### Interactive Learning
+- 🎓 **Learn Signs Mode** - Duolingo-style exercises with animated sign demonstrations
+- 🤖 **100 Animated Signs** - MediaPipe landmark-based stick figure animations (26 letters, 10 numbers, 12 months, 52 common signs)
+- 📖 **Sign Library** - Browse all available signs with search and category filters
+- 🎮 **Three Exercise Types** - Sign-to-Word (easiest), Word-to-Sign (medium), and Recall (hardest)
+- 📈 **Progress Tracking** - XP system, mastery levels, and learning streaks
+- ⚡ **Playback Controls** - Adjustable animation speed (0.5x, 1x, 1.5x) with play/pause
+
 ### User Experience
 - 🎨 **Material 3 Expressive UI** - Stunning Ocean Blue & Teal design with fluid animations and micro-interactions
 - 🌙 **Multiple Themes** - Light, Dark, and High Contrast modes for all lighting conditions
@@ -217,7 +225,17 @@ Total (gzipped):        ~260 kB
 ## 📚 Documentation
 
 - **[GEMINI.md](./GEMINI.md)** - Google Gemini API setup and configuration guide
-- **[CLAUDE.md](./CLAUDE.md)** - Claude AI integration guide for developers
+- **[CLAUDE.md](./CLAUDE.md)** - Development guide for Claude Code (includes Learning Feature architecture)
+
+### Sign Data
+
+The app includes 100 pre-extracted sign animations in `public/sign-data/`:
+- **26 alphabet letters** (A-Z fingerspelling)
+- **10 numbers** (one through ten)
+- **12 months** (January-December)
+- **52 common signs** (greetings, family, feelings, actions)
+
+To add more signs, see the "Adding New Signs" section in [CLAUDE.md](./CLAUDE.md).
 
 ## 🔧 Advanced Features
 

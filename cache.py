@@ -2,6 +2,7 @@
 Redis caching layer for ASL Dictionary
 Caches translation results to improve performance
 """
+
 import json
 import hashlib
 from typing import Optional
@@ -102,11 +103,7 @@ async def cache_translation(text: str, translation_data: dict) -> bool:
         cache_key = generate_cache_key(text)
         cached_json = json.dumps(translation_data)
 
-        await _redis_client.setex(
-            cache_key,
-            settings.cache_ttl,
-            cached_json
-        )
+        await _redis_client.setex(cache_key, settings.cache_ttl, cached_json)
 
         app_logger.debug(f"Cached translation for key: {cache_key}")
         return True
@@ -148,10 +145,7 @@ async def invalidate_cache(text: Optional[str] = None):
 async def get_cache_stats() -> dict:
     """Get cache statistics"""
     if not _redis_client:
-        return {
-            "enabled": False,
-            "status": "disabled"
-        }
+        return {"enabled": False, "status": "disabled"}
 
     try:
         info = await _redis_client.info("stats")
@@ -173,8 +167,4 @@ async def get_cache_stats() -> dict:
 
     except Exception as e:
         app_logger.warning(f"Error getting cache stats: {e}")
-        return {
-            "enabled": True,
-            "status": "error",
-            "error": str(e)
-        }
+        return {"enabled": True, "status": "error", "error": str(e)}

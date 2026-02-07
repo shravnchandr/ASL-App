@@ -1,0 +1,156 @@
+/**
+ * SignAnimator Component Styles
+ */
+
+.sign-animator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+}
+
+.sign-animator__canvas {
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+    background: var(--surface-container, #f5f5f5);
+}
+
+[data-theme="dark"] .sign-animator__canvas {
+    background: var(--surface-container, #1a1a2e);
+}
+
+.sign-animator__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-container, #f5f5f5);
+    color: var(--on-surface-variant, #666);
+    border-radius: var(--radius-lg, 16px);
+    font-size: 0.875rem;
+}
+
+[data-theme="dark"] .sign-animator__placeholder {
+    background: var(--surface-container, #1a1a2e);
+    color: var(--on-surface-variant, #aaa);
+}
+
+.sign-animator__main {
+    position: relative;
+    display: inline-block;
+}
+
+.sign-animator__hand-zoom {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    border-radius: var(--radius-md, 12px);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--outline-variant, #ccc);
+    background: var(--surface-container, #f5f5f5);
+}
+
+[data-theme="dark"] .sign-animator__hand-zoom {
+    border-color: var(--outline-variant, #444);
+    background: var(--surface-container, #1a1a2e);
+}
+
+.sign-animator__hand-canvas {
+    display: block;
+}
+
+.sign-animator__info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm, 8px);
+}
+
+.sign-animator__frame {
+    font-size: 0.75rem;
+    color: var(--on-surface-variant, #666);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Size variants */
+.sign-animator--small .sign-animator__canvas,
+.sign-animator--small .sign-animator__placeholder {
+    width: 200px;
+    height: 200px;
+}
+
+.sign-animator--medium .sign-animator__canvas,
+.sign-animator--medium .sign-animator__placeholder {
+    width: 300px;
+    height: 300px;
+}
+
+.sign-animator--large .sign-animator__canvas,
+.sign-animator--large .sign-animator__placeholder {
+    width: 400px;
+    height: 400px;
+}
+
+/* Animation for loading state */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.sign-animator--loading .sign-animator__canvas {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sign-animator__hand-zoom {
+        bottom: 4px;
+        right: 4px;
+        border-width: 1px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sign-animator--large .sign-animator__canvas,
+    .sign-animator--large .sign-animator__placeholder {
+        width: 300px;
+        height: 300px;
+    }
+
+    .sign-animator--medium .sign-animator__canvas,
+    .sign-animator--medium .sign-animator__placeholder {
+        width: 250px;
+        height: 250px;
+    }
+
+    .sign-animator--small .sign-animator__canvas,
+    .sign-animator--small .sign-animator__placeholder {
+        width: 160px;
+        height: 160px;
+    }
+
+    /* Scale down hand zoom on mobile */
+    .sign-animator__hand-zoom {
+        transform: scale(0.8);
+        transform-origin: bottom right;
+    }
+}
+
+@media (max-width: 360px) {
+    .sign-animator--medium .sign-animator__canvas,
+    .sign-animator--medium .sign-animator__placeholder {
+        width: 200px;
+        height: 200px;
+    }
+
+    .sign-animator--small .sign-animator__canvas,
+    .sign-animator--small .sign-animator__placeholder {
+        width: 140px;
+        height: 140px;
+    }
+
+    /* Hide hand zoom on very small screens */
+    .sign-animator__hand-zoom {
+        display: none;
+    }
+}

@@ -63,6 +63,29 @@
   margin-bottom: var(--spacing-md);
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-pill);
+  transition: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px) scale(1.08);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -97,6 +120,37 @@
   background: var(--md-sys-color-secondary);
   border: 2px solid var(--md-sys-color-on-primary);
   border-radius: 50%;
+}
+
+/* Learn button */
+.learn-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-pill);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.learn-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.learn-button-text {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .learn-button-text {
+    display: inline;
+  }
 }
 
 .app-title {

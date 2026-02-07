@@ -289,3 +289,155 @@ Modify CSP if adding external scripts or resources.
 - **AI**: Google Gemini 2.5 Flash, LangGraph, LangChain
 - **Database**: SQLAlchemy (async), aiosqlite/PostgreSQL
 - **Deployment**: Docker, Render.com
+
+---
+
+## ASL Learning Feature
+
+The app includes a Duolingo-style learning feature with animated sign demonstrations using MediaPipe landmark data.
+
+### App Modes (Home Page)
+
+The app has three modes accessible from the home page (`/`):
+1. **Text to Signs** (`/dictionary`) - AI-powered text translation to ASL instructions
+2. **Learn Signs** (`/learn`) - Interactive exercises with animated sign demonstrations
+
+### Learning Feature Architecture
+
+**Entry Points:**
+- `src/components/HomePage.tsx` - Landing page with mode selection
+- `src/components/learn/LearnPage.tsx` - Main learning page with exercises
+- `src/components/learn/SignBrowser.tsx` - Sign library browser with search
+
+**Key Components:**
+- `SignAnimator.tsx` - Canvas-based MediaPipe landmark renderer
+- `PlaybackControls.tsx` - Animation speed and playback controls
+- `ExerciseCard.tsx` - Exercise wrapper with progress and feedback
+- `SignToWordExercise.tsx` - Show animation, pick word (easiest)
+- `WordToSignExercise.tsx` - Show word, pick animation (medium)
+- `RecallExercise.tsx` - Show animation, type word (hardest)
+
+**State Management:**
+- `src/contexts/LearnContext.tsx` - Learning session state, progress tracking, XP system
+
+### Sign Data (100 Signs)
+
+Sign data is stored in `public/sign-data/`:
+```
+public/sign-data/
+├── metadata.json           # Sign index with categories
+└── signs/
+    ├── a.json ... z.json   # 26 alphabet letters
+    ├── one.json ... ten.json  # 10 numbers
+    ├── january.json ... december.json  # 12 months
+    └── [common signs].json # 52 common signs
+```
+
+**Categories:**
+- `alphabet` - A-Z fingerspelling (26 signs)
+- `numbers` - one through ten (10 signs)
+- `months` - January through December (12 signs)
+- `common` - Greetings, feelings, family, actions, etc. (52 signs)
+
+**Sign JSON Structure:**
+```json
+{
+  "sign": "hello",
+  "frames": [
+    {
+      "pose": [[x, y, z], ...],      // 33 pose landmarks
+      "left_hand": [[x, y, z], ...], // 21 hand landmarks
+      "right_hand": [[x, y, z], ...],// 21 hand landmarks
+      "face": [[x, y, z], ...]       // 33 key face landmarks
+    }
+  ],
+  "frame_count": 45,
+  "fps": 29.97
+}
+```
+
+### Adding New Signs
+
+**Step 1: Download videos from Signing Savvy**
+```bash
+# Activate extraction environment
+source python_code/.venv-extraction/bin/activate
+
+# Download specific signs
+python python_code/download_signing_savvy.py --signs hello goodbye
+
+# Download categories
+python python_code/download_signing_savvy.py --alphabet
+python python_code/download_signing_savvy.py --numbers
+python python_code/download_signing_savvy.py --months
+python python_code/download_signing_savvy.py --common
+python python_code/download_signing_savvy.py --all
+```
+
+Videos are saved to `data/videos/{sign_name}.mp4`
+
+**Step 2: Extract landmarks**
+```bash
+# Extract from all videos in folder
+python python_code/extract_landmarks_from_video.py --folder data/videos/
+
+# Extract single video
+python python_code/extract_landmarks_from_video.py --video data/videos/hello.mp4 --sign hello
+```
+
+This creates JSON files in `public/sign-data/signs/` and updates `metadata.json`.
+
+**Manual Video Download:**
+For signs not available via script, download from:
+- Signing Savvy: https://www.signingsavvy.com/search/{sign_name}
+- Save video as `data/videos/{sign_name}.mp4` (lowercase, underscores)
+
+### Extraction Environment Setup
+
+The extraction requires Python 3.11 (MediaPipe doesn't support 3.12+):
+```bash
+cd python_code
+python3.11 -m venv .venv-extraction
+source .venv-extraction/bin/activate
+pip install mediapipe opencv-python yt-dlp beautifulsoup4
+```
+
+MediaPipe models are auto-downloaded to `mediapipe_models/` on first run.
+
+### Key Utility Files
+
+- `src/utils/format.ts` - `formatSignName()` converts "thank_you" to "Thank You"
+- `src/utils/signDataLoader.ts` - Loads sign JSON data, handles caching
+- `src/utils/storage.ts` - Learning progress persistence (localStorage)
+
+### Learning Progress Storage Keys
+
+```typescript
+LEARNING_PROGRESS: 'asl_learn_progress',  // Per-sign mastery
+LEARNING_SETTINGS: 'asl_learn_settings',  // Animation speed, difficulty
+LEARNING_STATS: 'asl_learn_stats',        // Total XP, level, streak
+```
+
+### Python Scripts Reference
+
+| Script | Purpose |
+|--------|---------|
+| `python_code/download_signing_savvy.py` | Download ASL videos from Signing Savvy |
+| `python_code/extract_landmarks_from_video.py` | Extract MediaPipe landmarks from videos |
+| `python_code/convert_landmarks.py` | Convert parquet data to JSON (legacy) |
+
+### Sign Browser Features
+
+- Category filters: All, Alphabet, Numbers, Months, Common
+- Search bar for quick sign lookup
+- Play/pause animation previews
+- "Press Play to View" placeholder for unloaded signs
+
+### Animation Renderer Features
+
+- Canvas-based MediaPipe landmark visualization
+- Body skeleton (pose), hands, face with connections
+- Hand zoom panel (bottom-right corner) for detail
+- Face estimation from shoulders when face not detected
+- Dark/light mode support
+- Mobile responsive (hand zoom scales/hides on small screens)

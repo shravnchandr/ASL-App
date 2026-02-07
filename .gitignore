@@ -17,6 +17,7 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+**/.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
@@ -47,6 +48,7 @@ __pycache__/
 .venv/
 venv/
 ENV/
+.venv-extraction/
 
 # Logs
 logs/
@@ -66,3 +68,14 @@ coverage.xml
 
 # Miscellaneous Files
 misc/
+
+# MediaPipe Models (large binary files)
+python_code/models/
+mediapipe_models/
+
+# Data directories (source videos, training data)
+# These are large files that can be re-downloaded/regenerated
+data/
+
+# Keep public/sign-data/ (extracted JSON for the app)
+# This is NOT ignored - it should be committed

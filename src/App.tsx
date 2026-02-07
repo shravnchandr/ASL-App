@@ -1,6 +1,6 @@
 /**
- * Main App Component - Enhanced with all features
- * ASL Dictionary with Material 3 Expressive Design
+ * Main App Component - ASL Guide
+ * Two modes: Text to Signs (Dictionary) and Learn Signs (Animations)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -20,6 +20,8 @@ import { GeneralFeedbackModal } from './components/features/GeneralFeedbackModal
 import { FloatingFeedbackButton } from './components/features/FloatingFeedbackButton';
 import { RateLimitBanner } from './components/features/RateLimitBanner';
 import { Admin } from './components/Admin';
+import { LearnPage } from './components/learn/LearnPage';
+import { HomePage } from './components/HomePage';
 import { translateToASL, submitFeedback, submitGeneralFeedback, setCustomApiKey } from './services/api';
 import { announceToScreenReader } from './utils/accessibility';
 import { print } from './utils/print';
@@ -28,9 +30,21 @@ import { useSessionTimeout } from './hooks/useSessionTimeout';
 import type { TranslateResponse } from './types';
 import './App.css';
 
+type AppMode = 'home' | 'dictionary' | 'learn';
+
 function App() {
-  // Check if we're on the admin route
+  // Check if we're on special routes
   const isAdminRoute = window.location.pathname === '/admin' || window.location.search.includes('admin=true');
+
+  // Determine initial mode from URL
+  const getInitialMode = (): AppMode => {
+    const path = window.location.pathname;
+    if (path === '/learn') return 'learn';
+    if (path === '/dictionary' || path === '/translate') return 'dictionary';
+    return 'home';
+  };
+
+  const [currentMode, setCurrentMode] = useState<AppMode>(getInitialMode);
 
   const { customApiKey, addToHistory } = useApp();
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +58,28 @@ function App() {
 
   // Session timeout
   const { showWarning: showTimeoutWarning, timeRemaining, dismissWarning } = useSessionTimeout();
+
+  // Handle mode selection from home page
+  const handleSelectMode = (mode: 'dictionary' | 'learn') => {
+    setCurrentMode(mode);
+    const path = mode === 'learn' ? '/learn' : '/dictionary';
+    window.history.pushState({}, '', path);
+  };
+
+  // Handle back to home
+  const handleBackToHome = () => {
+    setCurrentMode('home');
+    window.history.pushState({}, '', '/');
+  };
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentMode(getInitialMode());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Set custom API key when it changes
   useEffect(() => {
@@ -145,6 +181,17 @@ function App() {
     return <Admin />;
   }
 
+  // Show home page
+  if (currentMode === 'home') {
+    return <HomePage onSelectMode={handleSelectMode} />;
+  }
+
+  // Show learn page
+  if (currentMode === 'learn') {
+    return <LearnPage onBack={handleBackToHome} />;
+  }
+
+  // Dictionary mode
   return (
     <div className="app">
       <a href="#main-content" className="skip-link">
@@ -155,10 +202,22 @@ function App() {
         <div className="container">
           <div className="header-content">
             <div className="header-top">
-              <h1 className="app-title">
-                <span className="title-icon" aria-hidden="true">🤟</span>
-                ASL Learning Assistant
-              </h1>
+              <div className="header-left">
+                <button
+                  className="back-button"
+                  onClick={handleBackToHome}
+                  aria-label="Back to home"
+                  title="Back to ASL Guide"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <h1 className="app-title">
+                  <span className="title-icon" aria-hidden="true">🤟</span>
+                  Text to Signs
+                </h1>
+              </div>
               <div className="header-actions">
                 <button
                   className="api-key-button"
@@ -177,7 +236,7 @@ function App() {
               </div>
             </div>
             <p className="app-subtitle">
-              Learn ASL signs with AI-powered breakdowns - your study companion for mastering sign language
+              Enter any English phrase and get detailed ASL sign instructions
             </p>
           </div>
         </div>

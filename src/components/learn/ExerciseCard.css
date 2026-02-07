@@ -1,0 +1,195 @@
+/**
+ * ExerciseCard Component Styles
+ */
+
+.exercise-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg, 24px);
+    padding: var(--spacing-lg, 24px);
+    background: var(--surface, #fff);
+    border-radius: var(--radius-xl, 24px);
+    box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.12));
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .exercise-card {
+    background: var(--surface, #1e1e2e);
+}
+
+/* Header with progress */
+.exercise-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm, 8px);
+}
+
+.exercise-card__progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.exercise-card__progress-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--on-surface-variant, #666);
+}
+
+[data-theme="dark"] .exercise-card__progress-text {
+    color: var(--on-surface-variant, #aaa);
+}
+
+.exercise-card__skip-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--surface-container, #f5f5f5);
+    color: var(--on-surface-variant, #666);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .exercise-card__skip-btn {
+    background: var(--surface-container, #2a2a3e);
+    color: var(--on-surface-variant, #aaa);
+}
+
+.exercise-card__skip-btn:hover {
+    background: var(--surface-container-high, #e8e8e8);
+}
+
+[data-theme="dark"] .exercise-card__skip-btn:hover {
+    background: var(--surface-container-high, #3a3a4e);
+}
+
+/* Progress bar */
+.exercise-card__progress-bar {
+    height: 8px;
+    background: var(--surface-container-highest, #e0e0e0);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .exercise-card__progress-bar {
+    background: var(--surface-container-highest, #333);
+}
+
+.exercise-card__progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary, #0077b6), var(--secondary, #00b4d8));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Main content */
+.exercise-card__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-lg, 24px);
+    min-height: 300px;
+}
+
+/* Feedback display */
+.exercise-card__feedback {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+    padding: var(--spacing-md, 16px);
+    border-radius: var(--radius-md, 12px);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.exercise-card__feedback--correct {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+[data-theme="dark"] .exercise-card__feedback--correct {
+    background: rgba(46, 125, 50, 0.2);
+    color: #81c784;
+}
+
+.exercise-card__feedback--incorrect {
+    background: #ffebee;
+    color: #c62828;
+}
+
+[data-theme="dark"] .exercise-card__feedback--incorrect {
+    background: rgba(198, 40, 40, 0.2);
+    color: #ef9a9a;
+}
+
+.exercise-card__feedback-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.exercise-card__feedback-message {
+    font-weight: 500;
+}
+
+/* XP animation */
+.exercise-card__xp-animation {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary, #0077b6);
+    animation: xpPop 1.5s ease forwards;
+    pointer-events: none;
+    text-shadow: 0 2px 8px rgba(0, 119, 182, 0.3);
+}
+
+@keyframes xpPop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+    40% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -70%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -90%) scale(0.8);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .exercise-card {
+        padding: var(--spacing-md, 16px);
+        border-radius: var(--radius-lg, 16px);
+    }
+
+    .exercise-card__content {
+        min-height: 250px;
+    }
+}
