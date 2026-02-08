@@ -43,11 +43,39 @@
     cursor: not-allowed;
 }
 
+/* Auto mode indicator - subtle pulsing border */
+.theme-button--auto {
+    position: relative;
+    background: linear-gradient(135deg,
+        var(--md-sys-color-surface-container-highest) 0%,
+        var(--md-sys-color-primary-container) 100%);
+}
+
+.theme-button--auto::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: var(--gradient-ocean);
+    opacity: 0.5;
+    z-index: -1;
+    animation: autoPulse 3s ease-in-out infinite;
+}
+
+@keyframes autoPulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.05); }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-
     .theme-button:hover:not(:disabled),
     .text-size-button:hover:not(:disabled) {
         transform: none;
+    }
+
+    .theme-button--auto::before {
+        animation: none;
+        opacity: 0.4;
     }
 }

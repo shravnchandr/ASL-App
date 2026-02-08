@@ -1,15 +1,16 @@
 /**
  * Rate Limit Banner Styles
+ * M3 Expressive with spring physics and status colors
  */
 
 .rate-limit-banner {
     position: sticky;
     top: 0;
     z-index: 100;
-    padding: 12px 20px;
-    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-    animation: slideDown 0.3s ease-out;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: var(--spacing-md, 12px) var(--spacing-lg, 20px);
+    border-bottom: 2px solid var(--md-sys-color-outline-variant);
+    animation: slideDown var(--duration-smooth) var(--spring-bounce);
+    box-shadow: var(--md-sys-elevation-1);
 }
 
 @keyframes slideDown {
@@ -23,19 +24,61 @@
     }
 }
 
+/* Status: Good (Success) */
 .rate-limit-banner.status-good {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    color: #2e7d32;
+    background: linear-gradient(
+        135deg,
+        var(--md-sys-color-success-container) 0%,
+        hsl(174, 62%, 85%) 100%
+    );
+    color: var(--md-sys-color-on-success-container);
+    border-bottom-color: var(--md-sys-color-success);
 }
 
+[data-theme="dark"] .rate-limit-banner.status-good {
+    background: linear-gradient(
+        135deg,
+        var(--md-sys-color-success-container) 0%,
+        hsl(174, 70%, 15%) 100%
+    );
+}
+
+/* Status: Warning */
 .rate-limit-banner.status-warning {
-    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-    color: #e65100;
+    background: linear-gradient(
+        135deg,
+        var(--md-sys-color-warning-container) 0%,
+        hsl(40, 90%, 85%) 100%
+    );
+    color: var(--md-sys-color-on-warning-container);
+    border-bottom-color: var(--md-sys-color-warning);
 }
 
+[data-theme="dark"] .rate-limit-banner.status-warning {
+    background: linear-gradient(
+        135deg,
+        var(--md-sys-color-warning-container) 0%,
+        hsl(40, 90%, 15%) 100%
+    );
+}
+
+/* Status: Critical (Error) */
 .rate-limit-banner.status-critical {
-    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-    color: #c62828;
+    background: linear-gradient(
+        135deg,
+        var(--md-sys-color-error-container) 0%,
+        hsl(0, 72%, 85%) 100%
+    );
+    color: var(--md-sys-color-on-error-container);
+    border-bottom-color: var(--md-sys-color-error);
+}
+
+[data-theme="dark"] .rate-limit-banner.status-critical {
+    background: linear-gradient(
+        135deg,
+        var(--md-sys-color-error-container) 0%,
+        hsl(0, 80%, 15%) 100%
+    );
 }
 
 .banner-content {
@@ -43,7 +86,7 @@
     margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--spacing-md, 12px);
     flex-wrap: wrap;
 }
 
@@ -57,66 +100,86 @@
 .banner-text {
     flex: 1;
     min-width: 250px;
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: var(--md-sys-typescale-body-medium-size, 14px);
+    line-height: var(--md-sys-typescale-body-medium-line-height, 1.5);
 }
 
 .banner-text strong {
-    font-weight: 600;
+    font-weight: var(--md-sys-typescale-label-large-weight, 600);
 }
 
+/* Banner Action Button */
 .banner-action {
-    padding: 8px 16px;
-    border-radius: 8px;
+    padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
+    border-radius: var(--md-sys-shape-corner-large, 8px);
     border: none;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--md-sys-typescale-label-medium-size, 13px);
+    font-weight: var(--md-sys-typescale-label-large-weight, 600);
     cursor: pointer;
-    transition: all 0.2s ease;
     white-space: nowrap;
+    transition:
+        transform var(--duration-smooth) var(--spring-bounce),
+        box-shadow var(--duration-quick) ease;
 }
 
 .status-good .banner-action {
-    background: #2e7d32;
-    color: white;
+    background: var(--md-sys-color-success);
+    color: var(--md-sys-color-on-success);
 }
 
 .status-warning .banner-action {
-    background: #e65100;
-    color: white;
+    background: var(--md-sys-color-warning);
+    color: var(--md-sys-color-on-warning);
 }
 
 .status-critical .banner-action {
-    background: #c62828;
-    color: white;
+    background: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
 }
 
 .banner-action:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--md-sys-elevation-2);
 }
 
 .banner-action:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.98);
+    transition: all var(--duration-instant) var(--spring-gentle);
 }
 
 /* Responsive */
 @media (max-width: 640px) {
     .rate-limit-banner {
-        padding: 10px 16px;
+        padding: var(--spacing-sm, 10px) var(--spacing-md, 16px);
     }
 
     .banner-content {
-        gap: 8px;
+        gap: var(--spacing-sm, 8px);
     }
 
     .banner-text {
-        font-size: 13px;
+        font-size: var(--md-sys-typescale-body-small-size, 13px);
         min-width: 200px;
     }
 
     .banner-action {
         width: 100%;
-        padding: 10px 16px;
+        padding: var(--spacing-sm, 10px) var(--spacing-md, 16px);
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .rate-limit-banner {
+        animation: none;
+    }
+
+    .banner-action {
+        transition: none;
+    }
+
+    .banner-action:hover,
+    .banner-action:active {
+        transform: none;
     }
 }

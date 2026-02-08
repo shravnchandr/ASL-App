@@ -1,5 +1,6 @@
 /**
  * WordToSignExercise Component Styles
+ * M3 Expressive with spring animations and status feedback
  */
 
 .word-to-sign {
@@ -11,20 +12,16 @@
 }
 
 .word-to-sign__prompt {
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: var(--on-surface, #333);
+    font-size: var(--md-sys-typescale-title-large-size, 1.25rem);
+    font-weight: var(--md-sys-typescale-label-large-weight, 500);
+    color: var(--md-sys-color-on-surface);
     text-align: center;
     margin: 0;
 }
 
-[data-theme="dark"] .word-to-sign__prompt {
-    color: var(--on-surface, #eee);
-}
-
 .word-to-sign__target {
-    font-weight: 700;
-    color: var(--primary, #0077b6);
+    font-weight: var(--md-sys-typescale-headline-small-weight, 700);
+    color: var(--md-sys-color-primary);
     text-transform: capitalize;
 }
 
@@ -43,15 +40,19 @@
     align-items: center;
     gap: var(--spacing-sm, 8px);
     padding: var(--spacing-sm, 8px);
-    border: 2px solid var(--outline, #ccc);
-    border-radius: var(--radius-md, 12px);
-    background: var(--surface, #fff);
-    transition: all 0.2s ease;
+    border: 2px solid var(--md-sys-color-outline);
+    border-radius: var(--md-sys-shape-corner-medium);
+    background: var(--md-sys-color-surface);
+    transition:
+        border-color var(--duration-quick) ease,
+        background-color var(--duration-quick) ease,
+        transform var(--duration-quick) var(--spring-bounce),
+        box-shadow var(--duration-quick) ease;
 }
 
 [data-theme="dark"] .word-to-sign__option {
-    background: var(--surface-container, #2a2a3e);
-    border-color: var(--outline, #444);
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 /* Play button */
@@ -62,15 +63,17 @@
     width: 36px;
     height: 36px;
     border: none;
-    border-radius: 50%;
-    background: var(--primary, #0077b6);
-    color: var(--on-primary, #fff);
+    border-radius: var(--md-sys-shape-corner-pill);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        background-color var(--duration-quick) ease,
+        transform var(--duration-quick) var(--spring-bounce);
 }
 
 .word-to-sign__play-btn:hover:not(:disabled) {
-    background: var(--primary-hover, #005f8a);
+    background: var(--md-sys-color-tertiary);
     transform: scale(1.1);
 }
 
@@ -89,23 +92,26 @@
     width: 100%;
     padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
     border: none;
-    border-radius: var(--radius-sm, 8px);
-    background: var(--surface-container-high, #e8e8e8);
-    color: var(--on-surface, #333);
-    font-size: 0.875rem;
-    font-weight: 500;
+    border-radius: var(--md-sys-shape-corner-small);
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    font-size: var(--md-sys-typescale-body-small-size, 0.875rem);
+    font-weight: var(--md-sys-typescale-label-medium-weight, 500);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        background-color var(--duration-quick) ease,
+        color var(--duration-quick) ease,
+        transform var(--duration-quick) var(--spring-bounce);
 }
 
 [data-theme="dark"] .word-to-sign__select-btn {
-    background: var(--surface-container-high, #3a3a4e);
-    color: var(--on-surface, #eee);
+    background: var(--md-sys-color-surface-container-highest);
 }
 
 .word-to-sign__select-btn:hover:not(:disabled) {
-    background: var(--primary, #0077b6);
-    color: var(--on-primary, #fff);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    transform: translateY(-1px);
 }
 
 .word-to-sign__select-btn:disabled {
@@ -115,35 +121,41 @@
 
 /* Correct answer state */
 .word-to-sign__option--correct {
-    border-color: #4caf50;
-    background: #e8f5e9;
+    border-color: var(--md-sys-color-success);
+    background: var(--md-sys-color-success-container);
+    animation: correctPop var(--duration-smooth) var(--spring-energetic);
 }
 
 [data-theme="dark"] .word-to-sign__option--correct {
-    background: rgba(76, 175, 80, 0.2);
-    border-color: #4caf50;
+    background: hsla(174, 70%, 65%, 0.15);
 }
 
 .word-to-sign__option--correct .word-to-sign__select-btn {
-    background: #4caf50;
-    color: #fff;
+    background: var(--md-sys-color-success);
+    color: var(--md-sys-color-on-success);
+}
+
+@keyframes correctPop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.05); }
+    60% { transform: scale(0.98); }
+    100% { transform: scale(1); }
 }
 
 /* Incorrect answer state */
 .word-to-sign__option--incorrect {
-    border-color: #f44336;
-    background: #ffebee;
-    animation: shake 0.4s ease;
+    border-color: var(--md-sys-color-error);
+    background: var(--md-sys-color-error-container);
+    animation: shake 0.4s var(--spring-bounce);
 }
 
 [data-theme="dark"] .word-to-sign__option--incorrect {
-    background: rgba(244, 67, 54, 0.2);
-    border-color: #f44336;
+    background: hsla(0, 80%, 70%, 0.15);
 }
 
 .word-to-sign__option--incorrect .word-to-sign__select-btn {
-    background: #f44336;
-    color: #fff;
+    background: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
 }
 
 @keyframes shake {
@@ -161,14 +173,10 @@
 
 /* Hint text */
 .word-to-sign__hint {
-    font-size: 0.875rem;
-    color: var(--on-surface-variant, #666);
+    font-size: var(--md-sys-typescale-body-small-size, 0.875rem);
+    color: var(--md-sys-color-on-surface-variant);
     text-align: center;
     margin: 0;
-}
-
-[data-theme="dark"] .word-to-sign__hint {
-    color: var(--on-surface-variant, #aaa);
 }
 
 /* Responsive adjustments */
@@ -176,5 +184,27 @@
     .word-to-sign__options {
         grid-template-columns: 1fr;
         max-width: 250px;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .word-to-sign__option,
+    .word-to-sign__play-btn,
+    .word-to-sign__select-btn {
+        transition: none;
+    }
+
+    .word-to-sign__play-btn:hover:not(:disabled),
+    .word-to-sign__select-btn:hover:not(:disabled) {
+        transform: none;
+    }
+
+    .word-to-sign__option--correct {
+        animation: none;
+    }
+
+    .word-to-sign__option--incorrect {
+        animation: none;
     }
 }

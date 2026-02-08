@@ -51,6 +51,47 @@ html {
     }
 }
 
+/* ===== FOCUS INDICATORS (Accessibility) ===== */
+
+/* Remove default outline and use custom focus-visible styles */
+:focus {
+    outline: none;
+}
+
+/* Visible focus indicator for keyboard navigation */
+:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+    border-radius: var(--md-sys-shape-corner-extra-small);
+}
+
+/* Enhanced focus for buttons and interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px hsla(205, 90%, 55%, 0.2);
+}
+
+/* Focus indicator for dark theme */
+[data-theme="dark"] :focus-visible {
+    outline-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 4px hsla(205, 90%, 70%, 0.2);
+}
+
+/* High contrast focus for accessibility */
+@media (prefers-contrast: more) {
+    :focus-visible {
+        outline: 3px solid currentColor;
+        outline-offset: 3px;
+    }
+}
+
 /* ===== TYPOGRAPHY UTILITIES ===== */
 
 .display-large {

@@ -1,0 +1,99 @@
+/**
+ * LevelSelector Component Styles
+ * Grid layout for level cards with progression visual
+ */
+
+.level-selector {
+    width: 100%;
+    max-width: 1000px;
+    padding: var(--spacing-lg, 24px);
+}
+
+/* Header */
+.level-selector__header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl, 32px);
+}
+
+.level-selector__title {
+    font-size: var(--md-sys-typescale-headline-medium-size, 2rem);
+    font-weight: var(--md-sys-typescale-headline-medium-weight, 700);
+    color: var(--md-sys-color-on-surface);
+    margin: 0 0 var(--spacing-sm, 8px);
+}
+
+.level-selector__subtitle {
+    font-size: var(--md-sys-typescale-body-large-size, 1rem);
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 0;
+}
+
+/* Grid layout */
+.level-selector__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--spacing-lg, 24px);
+    margin-bottom: var(--spacing-xl, 32px);
+}
+
+/* Progress summary */
+.level-selector__progress-summary {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-xl, 32px);
+    padding: var(--spacing-lg, 24px);
+    background: var(--md-sys-color-surface);
+    border-radius: var(--md-sys-shape-corner-large);
+    box-shadow: var(--md-sys-elevation-1);
+}
+
+[data-theme="dark"] .level-selector__progress-summary {
+    background: var(--md-sys-color-surface-container);
+}
+
+.progress-summary__stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.progress-summary__value {
+    font-size: var(--md-sys-typescale-headline-small-size, 1.5rem);
+    font-weight: var(--md-sys-typescale-headline-small-weight, 700);
+    color: var(--md-sys-color-primary);
+}
+
+.progress-summary__label {
+    font-size: var(--md-sys-typescale-label-small-size, 0.75rem);
+    color: var(--md-sys-color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .level-selector {
+        padding: var(--spacing-md, 16px);
+    }
+
+    .level-selector__grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: var(--spacing-md, 16px);
+    }
+
+    .level-selector__title {
+        font-size: var(--md-sys-typescale-headline-small-size, 1.5rem);
+    }
+}
+
+@media (max-width: 480px) {
+    .level-selector__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .level-selector__progress-summary {
+        flex-direction: column;
+        gap: var(--spacing-md, 16px);
+    }
+}

@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
     LEARNING_PROGRESS: 'asl_learn_progress',
     LEARNING_SETTINGS: 'asl_learn_settings',
     LEARNING_STATS: 'asl_learn_stats',
+    LEVEL_PROGRESS: 'asl_level_progress',
 } as const;
 
 // Learning feature types
@@ -33,6 +34,11 @@ interface LearningStats {
 interface LearningSettings {
     animationSpeed: number;
     difficulty: 'beginner' | 'intermediate' | 'all';
+}
+
+interface LevelProgressData {
+    unlockedLevels: number[];
+    currentLevel: number;
 }
 
 export const storage = {
@@ -100,16 +106,18 @@ export const storage = {
     },
 
     // Theme
-    getTheme(): 'light' | 'dark' | 'high-contrast' {
+    getTheme(): 'auto' | 'light' | 'dark' | 'high-contrast' {
         try {
             const theme = localStorage.getItem(STORAGE_KEYS.THEME);
-            return (theme as 'light' | 'dark' | 'high-contrast') || 'light';
+            // Default to 'auto' for new users
+            if (!theme) return 'auto';
+            return theme as 'auto' | 'light' | 'dark' | 'high-contrast';
         } catch {
-            return 'light';
+            return 'auto';
         }
     },
 
-    setTheme(theme: 'light' | 'dark' | 'high-contrast'): void {
+    setTheme(theme: 'auto' | 'light' | 'dark' | 'high-contrast'): void {
         try {
             localStorage.setItem(STORAGE_KEYS.THEME, theme);
         } catch (error) {
@@ -281,8 +289,55 @@ export const storage = {
             localStorage.removeItem(STORAGE_KEYS.LEARNING_PROGRESS);
             localStorage.removeItem(STORAGE_KEYS.LEARNING_STATS);
             localStorage.removeItem(STORAGE_KEYS.LEARNING_SETTINGS);
+            localStorage.removeItem(STORAGE_KEYS.LEVEL_PROGRESS);
         } catch (error) {
             console.error('Failed to clear learning data:', error);
         }
+    },
+
+    // Level Progress
+    getLevelProgress(): LevelProgressData {
+        try {
+            const data = localStorage.getItem(STORAGE_KEYS.LEVEL_PROGRESS);
+            return data ? JSON.parse(data) : {
+                unlockedLevels: [1], // Level 1 is always unlocked
+                currentLevel: 1,
+            };
+        } catch {
+            return {
+                unlockedLevels: [1],
+                currentLevel: 1,
+            };
+        }
+    },
+
+    unlockLevel(levelId: number): void {
+        try {
+            const progress = this.getLevelProgress();
+            if (!progress.unlockedLevels.includes(levelId)) {
+                progress.unlockedLevels.push(levelId);
+                progress.unlockedLevels.sort((a, b) => a - b);
+                localStorage.setItem(STORAGE_KEYS.LEVEL_PROGRESS, JSON.stringify(progress));
+            }
+        } catch (error) {
+            console.error('Failed to unlock level:', error);
+        }
+    },
+
+    setCurrentLevel(levelId: number): void {
+        try {
+            const progress = this.getLevelProgress();
+            if (progress.unlockedLevels.includes(levelId)) {
+                progress.currentLevel = levelId;
+                localStorage.setItem(STORAGE_KEYS.LEVEL_PROGRESS, JSON.stringify(progress));
+            }
+        } catch (error) {
+            console.error('Failed to set current level:', error);
+        }
+    },
+
+    isLevelUnlocked(levelId: number): boolean {
+        const progress = this.getLevelProgress();
+        return progress.unlockedLevels.includes(levelId);
     },
 };

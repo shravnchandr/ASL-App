@@ -3,7 +3,7 @@
  * Two modes: Text to Signs (Dictionary) and Learn Signs (Animations)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { SearchBar } from './components/SearchBar';
 import { SignCard } from './components/SignCard';
 import { FeedbackWidget } from './components/FeedbackWidget';
@@ -12,16 +12,25 @@ import { LoadingState } from './components/LoadingState';
 import { LearningDisclaimer } from './components/LearningDisclaimer';
 import { SearchHistory } from './components/features/SearchHistory';
 import { ApiKeyModal } from './components/features/ApiKeyModal';
-import { ThemeSwitcher } from './components/features/ThemeSwitcher';
 import { SessionTimeoutWarning } from './components/features/SessionTimeoutWarning';
 import { ActionButtons } from './components/features/ActionButtons';
 import { WelcomeBanner } from './components/features/WelcomeBanner';
 import { GeneralFeedbackModal } from './components/features/GeneralFeedbackModal';
 import { FloatingFeedbackButton } from './components/features/FloatingFeedbackButton';
 import { RateLimitBanner } from './components/features/RateLimitBanner';
-import { Admin } from './components/Admin';
-import { LearnPage } from './components/learn/LearnPage';
 import { HomePage } from './components/HomePage';
+
+// Lazy load heavy components for better initial load performance
+const Admin = lazy(() => import('./components/Admin').then(m => ({ default: m.Admin })));
+const LearnPage = lazy(() => import('./components/learn/LearnPage').then(m => ({ default: m.LearnPage })));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="page-loader">
+    <div className="page-loader__spinner" />
+    <p className="page-loader__text">Loading...</p>
+  </div>
+);
 import { translateToASL, submitFeedback, submitGeneralFeedback, setCustomApiKey } from './services/api';
 import { announceToScreenReader } from './utils/accessibility';
 import { print } from './utils/print';
@@ -178,7 +187,11 @@ function App() {
 
   // If admin route, show admin panel (after all hooks are called)
   if (isAdminRoute) {
-    return <Admin />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Admin />
+      </Suspense>
+    );
   }
 
   // Show home page
@@ -188,7 +201,11 @@ function App() {
 
   // Show learn page
   if (currentMode === 'learn') {
-    return <LearnPage onBack={handleBackToHome} />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <LearnPage onBack={handleBackToHome} />
+      </Suspense>
+    );
   }
 
   // Dictionary mode
@@ -232,7 +249,6 @@ function App() {
                   </svg>
                   {customApiKey && <span className="api-key-indicator" />}
                 </button>
-                <ThemeSwitcher />
               </div>
             </div>
             <p className="app-subtitle">

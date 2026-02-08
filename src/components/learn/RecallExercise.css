@@ -1,5 +1,6 @@
 /**
  * RecallExercise Component Styles
+ * M3 Expressive with spring animations and status feedback
  */
 
 .recall-exercise {
@@ -11,15 +12,11 @@
 }
 
 .recall-exercise__prompt {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--on-surface, #333);
+    font-size: var(--md-sys-typescale-title-large-size, 1.25rem);
+    font-weight: var(--md-sys-typescale-title-large-weight, 600);
+    color: var(--md-sys-color-on-surface);
     text-align: center;
     margin: 0;
-}
-
-[data-theme="dark"] .recall-exercise__prompt {
-    color: var(--on-surface, #eee);
 }
 
 .recall-exercise__animation {
@@ -48,32 +45,38 @@
 .recall-exercise__input {
     width: 100%;
     padding: var(--spacing-md, 16px);
-    border: 2px solid var(--outline, #ccc);
-    border-radius: var(--radius-md, 12px);
-    background: var(--surface, #fff);
-    color: var(--on-surface, #333);
-    font-size: 1.125rem;
-    font-weight: 500;
+    border: 2px solid var(--md-sys-color-outline);
+    border-radius: var(--md-sys-shape-corner-medium);
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    font-size: var(--md-sys-typescale-title-medium-size, 1.125rem);
+    font-weight: var(--md-sys-typescale-label-large-weight, 500);
     text-align: center;
     text-transform: lowercase;
-    transition: all 0.2s ease;
+    transition:
+        border-color var(--duration-quick) ease,
+        background-color var(--duration-quick) ease,
+        box-shadow var(--duration-quick) ease;
 }
 
 [data-theme="dark"] .recall-exercise__input {
-    background: var(--surface-container, #2a2a3e);
-    border-color: var(--outline, #444);
-    color: var(--on-surface, #eee);
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 .recall-exercise__input::placeholder {
-    color: var(--on-surface-variant, #999);
+    color: var(--md-sys-color-on-surface-variant);
     text-transform: none;
 }
 
 .recall-exercise__input:focus {
     outline: none;
-    border-color: var(--primary, #0077b6);
-    box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.2);
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 3px hsla(205, 87%, 45%, 0.2);
+}
+
+[data-theme="dark"] .recall-exercise__input:focus {
+    box-shadow: 0 0 0 3px hsla(205, 90%, 70%, 0.2);
 }
 
 .recall-exercise__input:disabled {
@@ -83,29 +86,24 @@
 
 /* Correct state */
 .recall-exercise__input--correct {
-    border-color: #4caf50;
-    background: #e8f5e9;
-    color: #2e7d32;
+    border-color: var(--md-sys-color-success);
+    background: var(--md-sys-color-success-container);
+    color: var(--md-sys-color-on-success-container);
+    animation: correctPulse var(--duration-smooth) var(--spring-smooth);
 }
 
-[data-theme="dark"] .recall-exercise__input--correct {
-    background: rgba(76, 175, 80, 0.2);
-    border-color: #4caf50;
-    color: #81c784;
+@keyframes correctPulse {
+    0% { box-shadow: 0 0 0 0 hsla(174, 62%, 47%, 0.4); }
+    50% { box-shadow: 0 0 0 8px hsla(174, 62%, 47%, 0); }
+    100% { box-shadow: 0 0 0 0 hsla(174, 62%, 47%, 0); }
 }
 
 /* Incorrect state */
 .recall-exercise__input--incorrect {
-    border-color: #f44336;
-    background: #ffebee;
-    color: #c62828;
-    animation: shake 0.4s ease;
-}
-
-[data-theme="dark"] .recall-exercise__input--incorrect {
-    background: rgba(244, 67, 54, 0.2);
-    border-color: #f44336;
-    color: #ef9a9a;
+    border-color: var(--md-sys-color-error);
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    animation: shake 0.4s var(--spring-bounce);
 }
 
 @keyframes shake {
@@ -119,16 +117,12 @@
 /* Correct answer reveal */
 .recall-exercise__correct-answer {
     text-align: center;
-    font-size: 0.875rem;
-    color: var(--on-surface-variant, #666);
-}
-
-[data-theme="dark"] .recall-exercise__correct-answer {
-    color: var(--on-surface-variant, #aaa);
+    font-size: var(--md-sys-typescale-body-small-size, 0.875rem);
+    color: var(--md-sys-color-on-surface-variant);
 }
 
 .recall-exercise__correct-answer strong {
-    color: var(--primary, #0077b6);
+    color: var(--md-sys-color-primary);
     text-transform: capitalize;
 }
 
@@ -136,22 +130,27 @@
 .recall-exercise__submit-btn {
     padding: var(--spacing-md, 16px) var(--spacing-xl, 32px);
     border: none;
-    border-radius: var(--radius-full, 9999px);
-    background: var(--primary, #0077b6);
-    color: var(--on-primary, #fff);
-    font-size: 1rem;
-    font-weight: 600;
+    border-radius: var(--md-sys-shape-corner-pill);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    font-size: var(--md-sys-typescale-body-large-size, 1rem);
+    font-weight: var(--md-sys-typescale-label-large-weight, 600);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        background-color var(--duration-quick) ease,
+        transform var(--duration-quick) var(--spring-bounce),
+        box-shadow var(--duration-quick) ease;
 }
 
 .recall-exercise__submit-btn:hover:not(:disabled) {
-    background: var(--primary-hover, #005f8a);
-    transform: scale(1.02);
+    background: var(--md-sys-color-tertiary);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-primary);
 }
 
 .recall-exercise__submit-btn:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: translateY(0) scale(0.98);
+    transition: all var(--duration-instant) var(--spring-gentle);
 }
 
 .recall-exercise__submit-btn:disabled {
@@ -161,25 +160,42 @@
 
 /* Hint text */
 .recall-exercise__hint {
-    font-size: 0.875rem;
-    color: var(--on-surface-variant, #666);
+    font-size: var(--md-sys-typescale-body-small-size, 0.875rem);
+    color: var(--md-sys-color-on-surface-variant);
     text-align: center;
     margin: 0;
-}
-
-[data-theme="dark"] .recall-exercise__hint {
-    color: var(--on-surface-variant, #aaa);
 }
 
 /* Responsive adjustments */
 @media (max-width: 480px) {
     .recall-exercise__input {
         padding: var(--spacing-sm, 12px);
-        font-size: 1rem;
+        font-size: var(--md-sys-typescale-body-large-size, 1rem);
     }
 
     .recall-exercise__submit-btn {
         width: 100%;
         padding: var(--spacing-sm, 12px);
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .recall-exercise__input,
+    .recall-exercise__submit-btn {
+        transition: none;
+    }
+
+    .recall-exercise__submit-btn:hover:not(:disabled),
+    .recall-exercise__submit-btn:active:not(:disabled) {
+        transform: none;
+    }
+
+    .recall-exercise__input--correct {
+        animation: none;
+    }
+
+    .recall-exercise__input--incorrect {
+        animation: none;
     }
 }

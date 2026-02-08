@@ -11,6 +11,7 @@ services:
     environment:
       - ENVIRONMENT=development
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
       - PORT=8000
       - RATE_LIMIT=10/minute
     volumes:

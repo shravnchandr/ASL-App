@@ -12,6 +12,7 @@ import {
     getDistractors,
     preloadSigns,
 } from '../utils/signDataLoader';
+import { LEVELS, MASTERY_THRESHOLD, getLevelById, type LevelInfo } from '../constants/levels';
 
 // State types
 interface LearnState {
@@ -26,6 +27,12 @@ interface LearnState {
     totalXP: number;
     level: number;
     streak: number;
+
+    // Level progression
+    unlockedLevels: number[];
+    currentLevel: number;
+    selectedLevel: number | null;
+    justUnlockedLevel: number | null;
 
     // Settings
     animationSpeed: number;
@@ -52,7 +59,11 @@ type LearnAction =
     | { type: 'UPDATE_PROGRESS'; payload: { sign: string; progress: SignProgress } }
     | { type: 'UPDATE_STATS'; payload: { totalXP: number; level: number; streak: number } }
     | { type: 'SET_SETTING'; payload: Partial<{ animationSpeed: number; difficulty: 'beginner' | 'intermediate' | 'all' }> }
-    | { type: 'RESTORE_STATE'; payload: Partial<LearnState> };
+    | { type: 'RESTORE_STATE'; payload: Partial<LearnState> }
+    | { type: 'SET_CURRENT_LEVEL'; payload: number }
+    | { type: 'SELECT_LEVEL'; payload: number | null }
+    | { type: 'UNLOCK_LEVEL'; payload: number }
+    | { type: 'CLEAR_JUST_UNLOCKED' };
 
 // Initial state
 const initialState: LearnState = {
@@ -64,6 +75,10 @@ const initialState: LearnState = {
     totalXP: 0,
     level: 1,
     streak: 0,
+    unlockedLevels: [1],
+    currentLevel: 1,
+    selectedLevel: null,
+    justUnlockedLevel: null,
     animationSpeed: 1,
     difficulty: 'beginner',
     isLoading: false,
@@ -153,6 +168,34 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
                 ...action.payload,
             };
 
+        case 'SET_CURRENT_LEVEL':
+            return {
+                ...state,
+                currentLevel: action.payload,
+            };
+
+        case 'SELECT_LEVEL':
+            return {
+                ...state,
+                selectedLevel: action.payload,
+            };
+
+        case 'UNLOCK_LEVEL':
+            if (state.unlockedLevels.includes(action.payload)) {
+                return state;
+            }
+            return {
+                ...state,
+                unlockedLevels: [...state.unlockedLevels, action.payload].sort((a, b) => a - b),
+                justUnlockedLevel: action.payload,
+            };
+
+        case 'CLEAR_JUST_UNLOCKED':
+            return {
+                ...state,
+                justUnlockedLevel: null,
+            };
+
         default:
             return state;
     }
@@ -162,6 +205,7 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
 interface LearnContextType {
     state: LearnState;
     startSession: (exerciseCount?: number) => Promise<void>;
+    startLevelSession: (levelId: number, exerciseCount?: number) => Promise<void>;
     endSession: () => void;
     answerExercise: (answer: string, isCorrect: boolean) => void;
     skipExercise: () => void;
@@ -171,6 +215,11 @@ interface LearnContextType {
     setDifficulty: (difficulty: 'beginner' | 'intermediate' | 'all') => void;
     getCurrentExercise: () => Exercise | null;
     isLastExercise: () => boolean;
+    selectLevel: (levelId: number | null) => void;
+    calculateLevelMastery: (levelId: number) => number;
+    canUnlockLevel: (levelId: number) => boolean;
+    clearJustUnlocked: () => void;
+    levels: LevelInfo[];
 }
 
 const LearnContext = createContext<LearnContextType | null>(null);
@@ -189,6 +238,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const progress = storage.getLearningProgress();
         const stats = storage.getLearningStats();
         const settings = storage.getLearningSettings();
+        const levelProgress = storage.getLevelProgress();
 
         dispatch({
             type: 'RESTORE_STATE',
@@ -199,6 +249,8 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 streak: stats.streak,
                 animationSpeed: settings.animationSpeed,
                 difficulty: settings.difficulty,
+                unlockedLevels: levelProgress.unlockedLevels,
+                currentLevel: levelProgress.currentLevel,
             },
         });
     }, []);
@@ -309,8 +361,184 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dispatch({ type: 'END_SESSION' });
     }, []);
 
-    // Answer the current exercise
-    const answerExercise = useCallback((_answer: string, isCorrect: boolean) => {
+    // Skip the current exercise
+    const skipExercise = useCallback(() => {
+        dispatch({ type: 'SKIP_EXERCISE' });
+    }, []);
+
+    // Move to next exercise
+    const nextExercise = useCallback(() => {
+        dispatch({ type: 'NEXT_EXERCISE' });
+    }, []);
+
+    // Set animation speed
+    const setAnimationSpeed = useCallback((speed: number) => {
+        dispatch({ type: 'SET_SETTING', payload: { animationSpeed: speed } });
+        storage.setLearningSettings({ animationSpeed: speed });
+    }, []);
+
+    // Set difficulty
+    const setDifficulty = useCallback((difficulty: 'beginner' | 'intermediate' | 'all') => {
+        dispatch({ type: 'SET_SETTING', payload: { difficulty } });
+        storage.setLearningSettings({ difficulty });
+    }, []);
+
+    // Get current exercise
+    const getCurrentExercise = useCallback((): Exercise | null => {
+        return state.exercises[state.currentIndex] || null;
+    }, [state.exercises, state.currentIndex]);
+
+    // Check if on last exercise
+    const isLastExercise = useCallback((): boolean => {
+        return state.currentIndex >= state.exercises.length - 1;
+    }, [state.currentIndex, state.exercises.length]);
+
+    // Calculate mastery for a specific level
+    const calculateLevelMastery = useCallback((levelId: number): number => {
+        const level = getLevelById(levelId);
+        if (!level) return 0;
+
+        const masteries = level.signs.map(sign => {
+            const progress = state.signProgress[sign];
+            return progress?.mastery ?? 0;
+        });
+
+        if (masteries.length === 0) return 0;
+        return Math.round(masteries.reduce((a, b) => a + b, 0) / masteries.length);
+    }, [state.signProgress]);
+
+    // Check if a level can be unlocked
+    const canUnlockLevel = useCallback((levelId: number): boolean => {
+        if (levelId === 1) return true; // Level 1 is always unlocked
+        if (state.unlockedLevels.includes(levelId)) return true;
+
+        // Check if previous level has 80% mastery
+        const previousLevelMastery = calculateLevelMastery(levelId - 1);
+        return previousLevelMastery >= MASTERY_THRESHOLD;
+    }, [state.unlockedLevels, calculateLevelMastery]);
+
+    // Check for level unlocks after answering
+    const checkLevelUnlock = useCallback(() => {
+        const currentLevelMastery = calculateLevelMastery(state.currentLevel);
+        const nextLevel = state.currentLevel + 1;
+
+        if (
+            currentLevelMastery >= MASTERY_THRESHOLD &&
+            nextLevel <= LEVELS.length &&
+            !state.unlockedLevels.includes(nextLevel)
+        ) {
+            dispatch({ type: 'UNLOCK_LEVEL', payload: nextLevel });
+            storage.unlockLevel(nextLevel);
+        }
+    }, [state.currentLevel, state.unlockedLevels, calculateLevelMastery]);
+
+    // Generate exercises for a specific level
+    const generateLevelExercises = useCallback(async (levelId: number, count: number): Promise<Exercise[]> => {
+        const level = getLevelById(levelId);
+        if (!level) {
+            throw new Error('Level not found');
+        }
+
+        const levelSigns = level.signs;
+        if (levelSigns.length === 0) {
+            throw new Error('No signs available for this level');
+        }
+
+        const exercises: Exercise[] = [];
+        const usedSigns = new Set<string>();
+
+        for (let i = 0; i < count; i++) {
+            // Pick a sign (allow repeats if we've used all signs)
+            let sign: string;
+            if (usedSigns.size >= levelSigns.length) {
+                // All signs used, pick randomly from all
+                sign = levelSigns[Math.floor(Math.random() * levelSigns.length)];
+            } else {
+                const availableForPick = levelSigns.filter(s => !usedSigns.has(s));
+                sign = availableForPick[Math.floor(Math.random() * availableForPick.length)];
+                usedSigns.add(sign);
+            }
+
+            // Determine exercise type based on mastery
+            const progress = state.signProgress[sign];
+            let type: Exercise['type'] = 'sign-to-word';
+
+            if (progress) {
+                if (progress.mastery >= 80 && progress.timesStudied >= 5) {
+                    type = 'recall';
+                } else if (progress.mastery >= 50 && progress.timesStudied >= 3) {
+                    type = Math.random() > 0.5 ? 'word-to-sign' : 'sign-to-word';
+                }
+            }
+
+            // Generate options for multiple choice exercises (use level signs as distractors)
+            let options: string[] | undefined;
+            if (type !== 'recall') {
+                const otherSigns = levelSigns.filter(s => s !== sign);
+                const distractors = otherSigns.sort(() => Math.random() - 0.5).slice(0, 3);
+                // If not enough distractors in level, get from global
+                if (distractors.length < 3) {
+                    const moreDistractors = await getDistractors(sign, 3 - distractors.length);
+                    distractors.push(...moreDistractors);
+                }
+                options = [sign, ...distractors.slice(0, 3)].sort(() => Math.random() - 0.5);
+            }
+
+            exercises.push({
+                id: `${sign}-${i}-${Date.now()}`,
+                type,
+                sign,
+                options,
+                correctAnswer: sign,
+            });
+        }
+
+        return exercises;
+    }, [state.signProgress]);
+
+    // Start a level-specific session
+    const startLevelSession = useCallback(async (levelId: number, exerciseCount: number = 10) => {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        dispatch({ type: 'SET_ERROR', payload: null });
+        dispatch({ type: 'SELECT_LEVEL', payload: levelId });
+        dispatch({ type: 'SET_CURRENT_LEVEL', payload: levelId });
+        storage.setCurrentLevel(levelId);
+
+        try {
+            const exercises = await generateLevelExercises(levelId, exerciseCount);
+
+            // Preload sign data for all exercises
+            const signsToLoad = [...new Set(exercises.map(e => e.sign))];
+            await preloadSigns(signsToLoad);
+
+            // Load signs into state
+            for (const sign of signsToLoad) {
+                await loadSign(sign);
+            }
+
+            dispatch({ type: 'START_SESSION', payload: exercises });
+        } catch (error) {
+            dispatch({
+                type: 'SET_ERROR',
+                payload: error instanceof Error ? error.message : 'Failed to start session',
+            });
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: false });
+        }
+    }, [generateLevelExercises, loadSign]);
+
+    // Select a level (for viewing details before starting)
+    const selectLevel = useCallback((levelId: number | null) => {
+        dispatch({ type: 'SELECT_LEVEL', payload: levelId });
+    }, []);
+
+    // Clear the just unlocked notification
+    const clearJustUnlocked = useCallback(() => {
+        dispatch({ type: 'CLEAR_JUST_UNLOCKED' });
+    }, []);
+
+    // Modified answerExercise to check for level unlocks
+    const answerExerciseWithLevelCheck = useCallback((_answer: string, isCorrect: boolean) => {
         const currentExercise = state.exercises[state.currentIndex];
         if (!currentExercise) return;
 
@@ -344,45 +572,17 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         dispatch({ type: 'ANSWER_EXERCISE', payload: { isCorrect, xp } });
-    }, [state.exercises, state.currentIndex, state.sessionScore]);
 
-    // Skip the current exercise
-    const skipExercise = useCallback(() => {
-        dispatch({ type: 'SKIP_EXERCISE' });
-    }, []);
-
-    // Move to next exercise
-    const nextExercise = useCallback(() => {
-        dispatch({ type: 'NEXT_EXERCISE' });
-    }, []);
-
-    // Set animation speed
-    const setAnimationSpeed = useCallback((speed: number) => {
-        dispatch({ type: 'SET_SETTING', payload: { animationSpeed: speed } });
-        storage.setLearningSettings({ animationSpeed: speed });
-    }, []);
-
-    // Set difficulty
-    const setDifficulty = useCallback((difficulty: 'beginner' | 'intermediate' | 'all') => {
-        dispatch({ type: 'SET_SETTING', payload: { difficulty } });
-        storage.setLearningSettings({ difficulty });
-    }, []);
-
-    // Get current exercise
-    const getCurrentExercise = useCallback((): Exercise | null => {
-        return state.exercises[state.currentIndex] || null;
-    }, [state.exercises, state.currentIndex]);
-
-    // Check if on last exercise
-    const isLastExercise = useCallback((): boolean => {
-        return state.currentIndex >= state.exercises.length - 1;
-    }, [state.currentIndex, state.exercises.length]);
+        // Check for level unlock after updating progress
+        setTimeout(() => checkLevelUnlock(), 100);
+    }, [state.exercises, state.currentIndex, state.sessionScore, checkLevelUnlock]);
 
     const value: LearnContextType = {
         state,
         startSession,
+        startLevelSession,
         endSession,
-        answerExercise,
+        answerExercise: answerExerciseWithLevelCheck,
         skipExercise,
         nextExercise,
         loadSign,
@@ -390,6 +590,11 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setDifficulty,
         getCurrentExercise,
         isLastExercise,
+        selectLevel,
+        calculateLevelMastery,
+        canUnlockLevel,
+        clearJustUnlocked,
+        levels: LEVELS,
     };
 
     return (

@@ -157,3 +157,12 @@ export interface LearnSession {
     score: number;
     startTime: string;
 }
+
+export interface LevelProgress {
+    levelId: number;
+    mastery: number;
+    signsLearned: number;
+    totalSigns: number;
+    unlocked: boolean;
+    completed: boolean;
+}

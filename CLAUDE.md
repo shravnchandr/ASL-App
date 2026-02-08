@@ -162,6 +162,7 @@ ENVIRONMENT=development                # or "production"
 PORT=8000
 RATE_LIMIT=10/minute                  # 100/minute in production
 DATABASE_URL=sqlite+aiosqlite:///./asl_feedback.db
+ADMIN_PASSWORD=your_secure_password   # For admin dashboard access
 ```
 
 Frontend env (optional):
@@ -272,14 +273,32 @@ Modify CSP if adding external scripts or resources.
 
 ## Key Files Reference
 
+**Backend:**
 - `app.py`: FastAPI application, routes, middleware
 - `python_code/asl_dict_langgraph.py`: AI translation workflow
 - `config.py`: Environment configuration
 - `database.py`: Database models and operations
-- `src/App.tsx`: Main React component
+
+**Frontend Core:**
+- `src/App.tsx`: Main React component with lazy loading
+- `src/main.tsx`: Entry point with ErrorBoundary
 - `src/services/api.ts`: API client
+- `src/components/ErrorBoundary.tsx`: Global error handling
+
+**Learning Feature:**
+- `src/components/learn/LearnPage.tsx`: Main learning page
+- `src/components/learn/LevelCard.tsx`: Level card component
+- `src/components/learn/LevelSelector.tsx`: Level selection grid
+- `src/constants/levels.ts`: Level definitions
+
+**Utilities:**
+- `src/utils/sanitize.ts`: XSS protection with DOMPurify
+- `src/utils/storage.ts`: LocalStorage with level persistence
+
+**Configuration:**
 - `vite.config.ts`: Build configuration, dev proxy
 - `Dockerfile`: Multi-stage production build
+- `docker-compose.yml`: Development environment
 - `render.yaml`: Render.com deployment config
 
 ## Tech Stack Summary
@@ -317,8 +336,12 @@ The app has three modes accessible from the home page (`/`):
 - `WordToSignExercise.tsx` - Show word, pick animation (medium)
 - `RecallExercise.tsx` - Show animation, type word (hardest)
 
+**Level Components:**
+- `LevelCard.tsx` - Individual level card with progress, lock state, mastery display
+- `LevelSelector.tsx` - Grid of all 10 levels with visual progression path
+
 **State Management:**
-- `src/contexts/LearnContext.tsx` - Learning session state, progress tracking, XP system
+- `src/contexts/LearnContext.tsx` - Learning session state, progress tracking, XP system, level unlocking
 
 ### Sign Data (100 Signs)
 
@@ -338,6 +361,31 @@ public/sign-data/
 - `numbers` - one through ten (10 signs)
 - `months` - January through December (12 signs)
 - `common` - Greetings, feelings, family, actions, etc. (52 signs)
+
+### Level-Based Learning System
+
+The learning feature uses a 10-level progression system defined in `src/constants/levels.ts`:
+
+| Level | Name | Signs | Count |
+|-------|------|-------|-------|
+| 1 | Alphabet | A-Z | 26 |
+| 2 | Numbers | one-ten | 10 |
+| 3 | Greetings & Basics | hello, goodbye, please, thank_you, etc. | 8 |
+| 4 | Family & People | mother, family, friend, etc. | 5 |
+| 5 | Feelings | happy, sad, angry, scared, etc. | 7 |
+| 6 | Actions | sit, stand, wait, read, write, etc. | 8 |
+| 7 | Questions | how, when, where, which, who, why | 6 |
+| 8 | Time | now, later, today, tomorrow, etc. | 6 |
+| 9 | Places & Things | home, school, hospital, etc. | 8 |
+| 10 | Months & Essentials | January-December + want, need, etc. | 16 |
+
+**Unlock Mechanic:** 80% average mastery on current level unlocks the next level.
+
+**Key Files:**
+- `src/constants/levels.ts` - Level definitions with sign lists
+- `src/components/learn/LevelCard.tsx` - Level card UI component
+- `src/components/learn/LevelSelector.tsx` - Level selection grid
+- `src/utils/storage.ts` - Level progress persistence
 
 **Sign JSON Structure:**
 ```json
@@ -441,3 +489,210 @@ LEARNING_STATS: 'asl_learn_stats',        // Total XP, level, streak
 - Face estimation from shoulders when face not detected
 - Dark/light mode support
 - Mobile responsive (hand zoom scales/hides on small screens)
+
+---
+
+## Error Handling & Resilience
+
+### React Error Boundary
+
+The app uses a global Error Boundary (`src/components/ErrorBoundary.tsx`) to catch React rendering errors:
+
+```tsx
+// Wrapped in src/main.tsx
+<ErrorBoundary>
+  <ThemeProvider>
+    <AppProvider>
+      <App />
+    </AppProvider>
+  </ThemeProvider>
+</ErrorBoundary>
+```
+
+**Features:**
+- Catches rendering errors and displays recovery UI
+- Shows error details in development mode only
+- Three recovery options: Refresh Page, Go to Home, Try Again
+- Styled with M3E glassmorphism
+
+### Code Splitting & Lazy Loading
+
+Heavy components are lazy-loaded for faster initial page load:
+
+```tsx
+// src/App.tsx
+const Admin = lazy(() => import('./components/Admin'));
+const LearnPage = lazy(() => import('./components/learn/LearnPage'));
+
+// Usage with Suspense
+<Suspense fallback={<PageLoader />}>
+  <Admin />
+</Suspense>
+```
+
+**Lazy-loaded components:**
+- `Admin` - Admin dashboard (~11KB gzipped)
+- `LearnPage` - Learning feature (~12KB gzipped)
+
+### Memory Leak Prevention
+
+Components use proper cleanup patterns:
+
+```tsx
+// Timer cleanup with refs
+const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const isMountedRef = useRef(true);
+
+useEffect(() => {
+  isMountedRef.current = true;
+  return () => {
+    isMountedRef.current = false;
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
+}, []);
+
+// AbortController for fetch requests
+const abortControllerRef = useRef<AbortController | null>(null);
+
+useEffect(() => {
+  abortControllerRef.current = new AbortController();
+  fetch(url, { signal: abortControllerRef.current.signal });
+  return () => abortControllerRef.current?.abort();
+}, []);
+```
+
+### Virtualization
+
+SignBrowser uses IntersectionObserver for lazy rendering:
+
+```tsx
+const SignCard = memo(({ sign }) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+    // ...
+  }, []);
+});
+```
+
+---
+
+## Security Utilities
+
+### XSS Protection with DOMPurify
+
+The app includes sanitization utilities in `src/utils/sanitize.ts`:
+
+```typescript
+import { sanitizeHtml, sanitizeText, sanitizeUrl } from './utils/sanitize';
+
+// Allow limited HTML tags
+sanitizeHtml(userContent);  // Allows b, i, em, strong, br, p, span
+
+// Strip all HTML
+sanitizeText(userContent);  // Returns plain text only
+
+// Block dangerous protocols
+sanitizeUrl(url);  // Blocks javascript:, data:, vbscript:
+```
+
+**Usage:** Apply sanitization to any user-generated or API-provided content before rendering.
+
+---
+
+## Accessibility Features
+
+### Focus Indicators
+
+Global focus styles in `src/styles/global.css`:
+
+```css
+:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsla(205, 90%, 55%, 0.2);
+}
+```
+
+### ARIA Support
+
+- `aria-disabled` used instead of `disabled` for locked levels (allows focus for screen readers)
+- `aria-label` on all interactive elements
+- `aria-live` regions for dynamic content updates
+- Proper heading hierarchy
+
+### Keyboard Navigation
+
+- All interactive elements are keyboard accessible
+- Skip links for main content
+- Escape key closes modals
+- Arrow key navigation in grids
+
+### Reduced Motion
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+```
+
+---
+
+## Theme System
+
+### Auto Theme Detection
+
+The app automatically follows system preference with manual override option:
+
+```tsx
+// src/contexts/ThemeContext.tsx
+const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>('auto');
+
+// System preference detection
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+```
+
+**Theme Options:**
+- `auto` - Follows system preference (default)
+- `light` - Force light mode
+- `dark` - Force dark mode
+- `high-contrast` - Enhanced contrast for accessibility
+
+### Theme Controls on Home Page
+
+ThemeSwitcher is displayed on the home page header for easy access:
+
+```tsx
+// src/components/HomePage.tsx
+<div className="home-page__controls">
+  <ThemeSwitcher />
+</div>
+```
+
+---
+
+## Admin Dashboard
+
+### Access
+
+- URL: `/admin` or append `?admin=true` to any URL
+- Password: Set via `ADMIN_PASSWORD` environment variable (default: `admin123` in development)
+
+### Features
+
+- **Feedback Management** - View, filter, search all user feedback
+- **Analytics Dashboard** - Unique users, popular searches, usage patterns
+- **Privacy-Preserving** - All user data anonymized with IP hashing
+
+### Styling
+
+Admin uses M3 Expressive design with glassmorphism effects matching the rest of the app. See `src/components/Admin.css` for styling.

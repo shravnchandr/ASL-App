@@ -25,31 +25,36 @@ A modern, production-ready web application that helps you learn American Sign La
 - 📊 **User Analytics** - Privacy-preserving analytics tracking unique users, popular searches, and usage patterns with IP hashing
 
 ### Interactive Learning
-- 🎓 **Learn Signs Mode** - Duolingo-style exercises with animated sign demonstrations
+- 🎓 **Level-Based Learning** - 10 progressive levels with unlock mechanics (80% mastery to advance)
 - 🤖 **100 Animated Signs** - MediaPipe landmark-based stick figure animations (26 letters, 10 numbers, 12 months, 52 common signs)
-- 📖 **Sign Library** - Browse all available signs with search and category filters
+- 📖 **Sign Library** - Browse all available signs with search, category filters, and lazy loading
 - 🎮 **Three Exercise Types** - Sign-to-Word (easiest), Word-to-Sign (medium), and Recall (hardest)
-- 📈 **Progress Tracking** - XP system, mastery levels, and learning streaks
+- 📈 **Progress Tracking** - XP system, per-sign mastery, level completion, and day streaks
 - ⚡ **Playback Controls** - Adjustable animation speed (0.5x, 1x, 1.5x) with play/pause
+- 🏆 **Level Progression** - Alphabet → Numbers → Greetings → Family → Feelings → Actions → Questions → Time → Places → Months
 
 ### User Experience
-- 🎨 **Material 3 Expressive UI** - Stunning Ocean Blue & Teal design with fluid animations and micro-interactions
-- 🌙 **Multiple Themes** - Light, Dark, and High Contrast modes for all lighting conditions
-- 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
-- ⚡ **Fast & Optimized** - Production-optimized builds with code splitting, lazy loading, and Redis caching
+- 🎨 **Material 3 Expressive UI** - Glassmorphism, colored shadows, gradient accents, and spring physics animations
+- 🌙 **Auto Theme** - Automatically follows system preference, or choose Light, Dark, and High Contrast modes
+- 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile (single-column on small phones)
+- ⚡ **Fast & Optimized** - Lazy loading, code splitting, memoization, and Redis caching
 - 📄 **PDF Export** - Download lightweight (~16KB), professionally formatted PDFs of translation results for offline reference
+- 🛡️ **Error Recovery** - React Error Boundary catches crashes with recovery UI
 
 ### Security & Privacy
 - 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally)
 - 🔒 **Security Headers** - Comprehensive security headers (CSP, HSTS, X-Frame-Options)
+- 🧹 **XSS Protection** - DOMPurify sanitization utilities for user content
 - 🚫 **No Data Collection** - All data stays in your browser or your own database
 - 🛡️ **Rate Limiting** - Built-in API rate limiting to prevent abuse
 
 ### Accessibility
-- ♿ **WCAG AAA Compliant** - Full keyboard navigation and screen reader support
+- ♿ **WCAG Compliant** - Full keyboard navigation and screen reader support
+- 🎯 **Visible Focus Indicators** - Clear focus rings for keyboard navigation
+- 👁️ **High Contrast Mode** - Enhanced contrast for visual accessibility
 - 🔍 **Text Resizing** - Support for browser zoom and text resizing
-- 🎯 **High Contrast Mode** - Enhanced contrast for visual accessibility
-- ⌨️ **Keyboard Shortcuts** - Quick access to all features via keyboard
+- 🔊 **Screen Reader Friendly** - Proper ARIA labels, roles, and live regions
+- ⚡ **Reduced Motion** - Respects `prefers-reduced-motion` preference
 
 ### Developer Features
 - 🐳 **Docker Support** - Multi-stage Docker build for easy deployment
@@ -209,15 +214,19 @@ This app is production-ready with:
 - ✅ **Health Checks** - `/health` endpoint for monitoring
 - ✅ **Docker Optimized** - Multi-stage builds for small images
 
-**Bundle Size:**
+**Bundle Size (with code splitting):**
 ```
-dist/index.html            0.80 kB │ gzip:   0.43 kB
-dist/assets/index.css     61.24 kB │ gzip:   9.53 kB
-dist/assets/purify.js     22.58 kB │ gzip:   8.47 kB
-dist/assets/api.js        35.79 kB │ gzip:  14.00 kB
-dist/assets/vendor.js    139.10 kB │ gzip:  44.89 kB
-dist/assets/index.js     633.40 kB │ gzip: 182.31 kB
-Total (gzipped):        ~260 kB
+dist/index.html              0.84 kB │ gzip:   0.46 kB
+dist/assets/Admin.css       20.89 kB │ gzip:   3.40 kB  (lazy)
+dist/assets/LearnPage.css   55.19 kB │ gzip:   6.48 kB  (lazy)
+dist/assets/index.css       86.35 kB │ gzip:  13.32 kB
+dist/assets/Admin.js        11.25 kB │ gzip:   2.72 kB  (lazy)
+dist/assets/LearnPage.js    44.15 kB │ gzip:  12.20 kB  (lazy)
+dist/assets/purify.js       22.58 kB │ gzip:   8.47 kB
+dist/assets/api.js          35.79 kB │ gzip:  14.00 kB
+dist/assets/vendor.js      139.10 kB │ gzip:  44.89 kB
+dist/assets/index.js       442.78 kB │ gzip: 139.23 kB
+Initial load (gzipped):   ~220 kB (Admin & Learn lazy loaded)
 ```
 
 ---

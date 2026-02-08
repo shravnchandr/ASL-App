@@ -1,5 +1,6 @@
 /**
  * SignToWordExercise Component Styles
+ * M3 Expressive with spring animations and status feedback
  */
 
 .sign-to-word {
@@ -11,15 +12,11 @@
 }
 
 .sign-to-word__prompt {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--on-surface, #333);
+    font-size: var(--md-sys-typescale-title-large-size, 1.25rem);
+    font-weight: var(--md-sys-typescale-title-large-weight, 600);
+    color: var(--md-sys-color-on-surface);
     text-align: center;
     margin: 0;
-}
-
-[data-theme="dark"] .sign-to-word__prompt {
-    color: var(--on-surface, #eee);
 }
 
 .sign-to-word__animation {
@@ -38,62 +35,63 @@
 
 .sign-to-word__option {
     padding: var(--spacing-md, 16px) var(--spacing-lg, 24px);
-    border: 2px solid var(--outline, #ccc);
-    border-radius: var(--radius-md, 12px);
-    background: var(--surface, #fff);
-    color: var(--on-surface, #333);
-    font-size: 1rem;
-    font-weight: 500;
+    border: 2px solid var(--md-sys-color-outline);
+    border-radius: var(--md-sys-shape-corner-medium);
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    font-size: var(--md-sys-typescale-body-large-size, 1rem);
+    font-weight: var(--md-sys-typescale-label-large-weight, 500);
     text-transform: capitalize;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        border-color var(--duration-quick) ease,
+        background-color var(--duration-quick) ease,
+        transform var(--duration-quick) var(--spring-bounce),
+        box-shadow var(--duration-quick) ease;
 }
 
 [data-theme="dark"] .sign-to-word__option {
-    background: var(--surface-container, #2a2a3e);
-    border-color: var(--outline, #444);
-    color: var(--on-surface, #eee);
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 .sign-to-word__option:hover:not(:disabled) {
-    border-color: var(--primary, #0077b6);
-    background: var(--primary-container, #e3f2fd);
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--md-sys-elevation-1);
 }
 
 [data-theme="dark"] .sign-to-word__option:hover:not(:disabled) {
-    background: rgba(0, 119, 182, 0.2);
+    background: hsla(205, 90%, 70%, 0.15);
 }
 
 .sign-to-word__option:focus-visible {
-    outline: 2px solid var(--primary, #0077b6);
+    outline: 2px solid var(--md-sys-color-primary);
     outline-offset: 2px;
 }
 
 /* Correct answer state */
 .sign-to-word__option--correct {
-    border-color: #4caf50;
-    background: #e8f5e9;
-    color: #2e7d32;
+    border-color: var(--md-sys-color-success);
+    background: var(--md-sys-color-success-container);
+    color: var(--md-sys-color-on-success-container);
+    animation: correctPop var(--duration-smooth) var(--spring-energetic);
 }
 
-[data-theme="dark"] .sign-to-word__option--correct {
-    background: rgba(76, 175, 80, 0.2);
-    border-color: #4caf50;
-    color: #81c784;
+@keyframes correctPop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.08); }
+    60% { transform: scale(0.98); }
+    100% { transform: scale(1); }
 }
 
 /* Incorrect answer state */
 .sign-to-word__option--incorrect {
-    border-color: #f44336;
-    background: #ffebee;
-    color: #c62828;
-    animation: shake 0.4s ease;
-}
-
-[data-theme="dark"] .sign-to-word__option--incorrect {
-    background: rgba(244, 67, 54, 0.2);
-    border-color: #f44336;
-    color: #ef9a9a;
+    border-color: var(--md-sys-color-error);
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    animation: shake 0.4s var(--spring-bounce);
 }
 
 @keyframes shake {
@@ -122,5 +120,24 @@
 
     .sign-to-word__option {
         padding: var(--spacing-sm, 12px) var(--spacing-md, 16px);
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .sign-to-word__option {
+        transition: none;
+    }
+
+    .sign-to-word__option:hover:not(:disabled) {
+        transform: none;
+    }
+
+    .sign-to-word__option--correct {
+        animation: none;
+    }
+
+    .sign-to-word__option--incorrect {
+        animation: none;
     }
 }
