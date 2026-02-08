@@ -23,7 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.gemini
+.gemini/
 
 # Virtual Environment
 .venv/
