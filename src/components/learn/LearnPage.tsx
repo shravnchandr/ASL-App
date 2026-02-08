@@ -48,15 +48,18 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
     const [signData, setSignData] = useState<SignData | null>(null);
     const [optionSignData, setOptionSignData] = useState<Array<{ sign: string; data: SignData | null }>>([]);
     const [showSignBrowser, setShowSignBrowser] = useState(false);
-    const [showUnlockCelebration, setShowUnlockCelebration] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
     // Refs for cleanup
     const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const unlockCelebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isMountedRef = useRef(true);
 
     const currentExercise = getCurrentExercise();
     const selectedLevelInfo = state.selectedLevel ? getLevelById(state.selectedLevel) : null;
+
+    // Show unlock celebration when justUnlockedLevel is set in context
+    const showUnlockCelebration = state.justUnlockedLevel !== null;
 
     // Cleanup timers on unmount
     useEffect(() => {
@@ -66,18 +69,23 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
             if (autoAdvanceTimerRef.current) {
                 clearTimeout(autoAdvanceTimerRef.current);
             }
+            if (unlockCelebrationTimerRef.current) {
+                clearTimeout(unlockCelebrationTimerRef.current);
+            }
         };
     }, []);
 
-    // Show unlock celebration when a new level is unlocked
+    // Auto-dismiss unlock celebration after 3 seconds
     useEffect(() => {
-        if (state.justUnlockedLevel) {
-            setShowUnlockCelebration(true);
-            const timer = setTimeout(() => {
-                setShowUnlockCelebration(false);
+        if (state.justUnlockedLevel !== null) {
+            unlockCelebrationTimerRef.current = setTimeout(() => {
                 clearJustUnlocked();
             }, 3000);
-            return () => clearTimeout(timer);
+            return () => {
+                if (unlockCelebrationTimerRef.current) {
+                    clearTimeout(unlockCelebrationTimerRef.current);
+                }
+            };
         }
     }, [state.justUnlockedLevel, clearJustUnlocked]);
 
@@ -102,7 +110,8 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
         };
 
         loadCurrentSignData();
-        setFeedback(null);
+        // Feedback is cleared in handleAnswer and handleSkip event handlers
+        // to avoid synchronous setState in effect
     }, [currentExercise, loadSign]);
 
     const handleAnswer = useCallback((answer: string, isCorrect: boolean) => {
@@ -334,6 +343,7 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                     >
                         {currentExercise.type === 'sign-to-word' && (
                             <SignToWordExercise
+                                key={`${currentExercise.correctAnswer}-${state.currentIndex}`}
                                 signData={signData}
                                 options={currentExercise.options || []}
                                 correctAnswer={currentExercise.correctAnswer}
@@ -344,6 +354,7 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
 
                         {currentExercise.type === 'word-to-sign' && (
                             <WordToSignExercise
+                                key={`${currentExercise.correctAnswer}-${state.currentIndex}`}
                                 targetWord={currentExercise.correctAnswer}
                                 options={optionSignData}
                                 correctAnswer={currentExercise.correctAnswer}
@@ -354,6 +365,7 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
 
                         {currentExercise.type === 'recall' && (
                             <RecallExercise
+                                key={`${currentExercise.correctAnswer}-${state.currentIndex}`}
                                 signData={signData}
                                 correctAnswer={currentExercise.correctAnswer}
                                 onAnswer={handleAnswer}

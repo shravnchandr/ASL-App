@@ -4,7 +4,7 @@
  * Medium difficulty
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { SignAnimator } from './SignAnimator';
 import { formatSignName } from '../../utils/format';
 import type { SignData } from '../../types';
@@ -30,16 +30,10 @@ export const WordToSignExercise: React.FC<WordToSignExerciseProps> = ({
     onAnswer,
     disabled = false,
 }) => {
+    // State resets automatically when component remounts (via key prop in parent)
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [hasAnswered, setHasAnswered] = useState(false);
     const [playingIndex, setPlayingIndex] = useState<number | null>(null);
-
-    // Reset state when exercise changes
-    useEffect(() => {
-        setSelectedAnswer(null);
-        setHasAnswered(false);
-        setPlayingIndex(null);
-    }, [correctAnswer, targetWord]);
 
     const handleOptionClick = useCallback((sign: string) => {
         if (hasAnswered || disabled) return;

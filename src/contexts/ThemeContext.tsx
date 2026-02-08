@@ -4,7 +4,7 @@
  * Manages theme state (auto, light, dark, high-contrast) and text size
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useSyncExternalStore, type ReactNode } from 'react';
 import { storage } from '../utils/storage';
 
 type ThemePreference = 'auto' | 'light' | 'dark' | 'high-contrast';
@@ -25,21 +25,23 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Get system preference
-const getSystemTheme = (): 'light' | 'dark' => {
+// Subscribe to system theme changes
+const subscribeToSystemTheme = (callback: () => void) => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', callback);
+    return () => mediaQuery.removeEventListener('change', callback);
+};
+
+// Get current system theme
+const getSystemThemeSnapshot = (): 'light' | 'dark' => {
     if (typeof window !== 'undefined' && window.matchMedia) {
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     return 'light';
 };
 
-// Resolve effective theme from preference
-const resolveTheme = (preference: ThemePreference): EffectiveTheme => {
-    if (preference === 'auto') {
-        return getSystemTheme();
-    }
-    return preference;
-};
+// Server snapshot (SSR fallback)
+const getServerSnapshot = (): 'light' | 'dark' => 'light';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
@@ -47,35 +49,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         // Migrate old 'light'/'dark' to support new 'auto' option
         return (stored as ThemePreference) || 'auto';
     });
-    const [effectiveTheme, setEffectiveTheme] = useState<EffectiveTheme>(() =>
-        resolveTheme(themePreference)
-    );
     const [textSize, setTextSizeState] = useState<TextSize>('normal');
 
-    // Listen for system theme changes when in auto mode
-    useEffect(() => {
-        if (themePreference !== 'auto') return;
+    // Use useSyncExternalStore to track system theme without setState in effect
+    const systemTheme = useSyncExternalStore(
+        subscribeToSystemTheme,
+        getSystemThemeSnapshot,
+        getServerSnapshot
+    );
 
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-        const handleChange = (e: MediaQueryListEvent) => {
-            setEffectiveTheme(e.matches ? 'dark' : 'light');
-        };
-
-        // Set initial value
-        setEffectiveTheme(mediaQuery.matches ? 'dark' : 'light');
-
-        // Listen for changes
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-    }, [themePreference]);
-
-    // Update effective theme when preference changes
-    useEffect(() => {
-        if (themePreference !== 'auto') {
-            setEffectiveTheme(themePreference);
-        }
-    }, [themePreference]);
+    // Compute effective theme from preference and system theme
+    const effectiveTheme: EffectiveTheme = themePreference === 'auto' ? systemTheme : themePreference;
 
     // Apply theme to document
     useEffect(() => {

@@ -4,7 +4,7 @@
  * Easiest exercise type
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { SignAnimator } from './SignAnimator';
 import { PlaybackControls } from './PlaybackControls';
 import { formatSignName } from '../../utils/format';
@@ -26,19 +26,12 @@ export const SignToWordExercise: React.FC<SignToWordExerciseProps> = ({
     onAnswer,
     disabled = false,
 }) => {
+    // State resets automatically when component remounts (via key prop in parent)
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [currentFrame, setCurrentFrame] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [hasAnswered, setHasAnswered] = useState(false);
-
-    // Reset state when exercise changes
-    useEffect(() => {
-        setSelectedAnswer(null);
-        setHasAnswered(false);
-        setCurrentFrame(0);
-        setIsPlaying(true);
-    }, [correctAnswer, signData]);
 
     const handlePlayPause = useCallback(() => {
         setIsPlaying(prev => !prev);

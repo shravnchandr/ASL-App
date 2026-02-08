@@ -24,6 +24,7 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
     onAnswer,
     disabled = false,
 }) => {
+    // State resets automatically when component remounts (via key prop in parent)
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [currentFrame, setCurrentFrame] = useState(0);
@@ -31,6 +32,13 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
     const [hasAnswered, setHasAnswered] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // Focus input on mount
+    useEffect(() => {
+        if (inputRef.current && !disabled) {
+            inputRef.current.focus();
+        }
+    }, [disabled]);
 
     const handlePlayPause = useCallback(() => {
         setIsPlaying(prev => !prev);
@@ -67,18 +75,6 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
             handleSubmit(e);
         }
     }, [handleSubmit]);
-
-    // Reset state when exercise changes
-    useEffect(() => {
-        setInputValue('');
-        setHasAnswered(false);
-        setIsCorrect(false);
-        setCurrentFrame(0);
-        setIsPlaying(true);
-        if (inputRef.current && !disabled) {
-            inputRef.current.focus();
-        }
-    }, [correctAnswer, signData, disabled]);
 
     const getInputClassName = () => {
         let className = 'recall-exercise__input';

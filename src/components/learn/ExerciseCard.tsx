@@ -3,7 +3,7 @@
  * Common wrapper for all exercise types with progress, feedback, and XP display
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import './ExerciseCard.css';
 
 interface ExerciseCardProps {
@@ -28,16 +28,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     xpEarned = 0,
     showXpAnimation = false,
 }) => {
-    const [showXp, setShowXp] = useState(false);
     const progress = ((currentIndex + 1) / totalExercises) * 100;
-
-    useEffect(() => {
-        if (showXpAnimation && xpEarned > 0) {
-            setShowXp(true);
-            const timer = setTimeout(() => setShowXp(false), 1500);
-            return () => clearTimeout(timer);
-        }
-    }, [showXpAnimation, xpEarned]);
+    // XP animation is controlled by parent via showXpAnimation prop
+    // CSS animation handles the fade-out timing
+    const showXp = showXpAnimation && xpEarned > 0;
 
     return (
         <div className="exercise-card">
