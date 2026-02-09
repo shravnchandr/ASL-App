@@ -90,7 +90,9 @@ saved_models/
 
 # Python training/experiment scripts (local development only)
 alphabet_translate/
-live_recognition.py
+
+# Download scripts (kept local due to ToS considerations)
+python_code/download_signing_savvy.py
 
 # TensorFlow/Keras artifacts
 *.h5

@@ -426,26 +426,20 @@ The learning feature uses a 10-level progression system defined in `src/constant
 
 ### Adding New Signs
 
-**Step 1: Download videos from Signing Savvy**
+**Step 1: Download ASL videos**
+
+Download videos manually from ASL education sources:
+- Signing Savvy: https://www.signingsavvy.com/search/{sign_name}
+- HandSpeak: https://www.handspeak.com
+- ASLU/Lifeprint: https://www.lifeprint.com
+
+Save videos as `data/videos/{sign_name}.mp4` (lowercase, underscores for spaces).
+
+**Step 2: Extract landmarks**
 ```bash
 # Activate extraction environment
 source python_code/.venv-extraction/bin/activate
 
-# Download specific signs
-python python_code/download_signing_savvy.py --signs hello goodbye
-
-# Download categories
-python python_code/download_signing_savvy.py --alphabet
-python python_code/download_signing_savvy.py --numbers
-python python_code/download_signing_savvy.py --months
-python python_code/download_signing_savvy.py --common
-python python_code/download_signing_savvy.py --all
-```
-
-Videos are saved to `data/videos/{sign_name}.mp4`
-
-**Step 2: Extract landmarks**
-```bash
 # Extract from all videos in folder
 python python_code/extract_landmarks_from_video.py --folder data/videos/
 
@@ -454,11 +448,6 @@ python python_code/extract_landmarks_from_video.py --video data/videos/hello.mp4
 ```
 
 This creates JSON files in `public/sign-data/signs/` and updates `metadata.json`.
-
-**Manual Video Download:**
-For signs not available via script, download from:
-- Signing Savvy: https://www.signingsavvy.com/search/{sign_name}
-- Save video as `data/videos/{sign_name}.mp4` (lowercase, underscores)
 
 ### Extraction Environment Setup
 
@@ -494,9 +483,9 @@ TUTORIAL_KEY: 'asl_camera_tutorial_seen',        // Tutorial completed
 
 | Script | Purpose |
 |--------|---------|
-| `python_code/download_signing_savvy.py` | Download ASL videos from Signing Savvy |
 | `python_code/extract_landmarks_from_video.py` | Extract MediaPipe landmarks from videos |
 | `python_code/convert_landmarks.py` | Convert parquet data to JSON (legacy) |
+| `python_code/convert_to_tfjs.py` | Convert PyTorch model to TensorFlow.js format |
 
 ### Sign Browser Features
 
