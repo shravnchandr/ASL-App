@@ -289,7 +289,25 @@ Modify CSP if adding external scripts or resources.
 - `src/components/learn/LearnPage.tsx`: Main learning page
 - `src/components/learn/LevelCard.tsx`: Level card component
 - `src/components/learn/LevelSelector.tsx`: Level selection grid
+- `src/components/learn/CameraPracticeExercise.tsx`: Camera practice integration
 - `src/constants/levels.ts`: Level definitions
+
+**Camera Feature:**
+- `src/components/camera/CameraPage.tsx`: Main camera page orchestrator
+- `src/components/camera/CameraView.tsx`: Video + canvas landmark overlay
+- `src/components/camera/PredictionDisplay.tsx`: Floating prediction card
+- `src/components/camera/SpellingDisplay.tsx`: Letter accumulation display
+- `src/components/camera/CameraControls.tsx`: Bottom control bar
+- `src/components/camera/HandGuide.tsx`: Hand positioning guide
+- `src/components/camera/SessionStats.tsx`: Session statistics
+- `src/components/camera/CameraTutorial.tsx`: Onboarding tutorial
+- `src/hooks/useCamera.ts`: Camera stream management
+- `src/hooks/useHandDetection.ts`: MediaPipe Hands integration
+- `src/hooks/useASLClassifier.ts`: TensorFlow.js inference
+- `src/hooks/useSoundEffects.ts`: Web Audio API sounds
+- `src/utils/predictionBuffer.ts`: Rolling window smoothing
+- `src/utils/handLandmarks.ts`: Landmark normalization
+- `public/models/asl-classifier/`: TensorFlow.js model files
 
 **Utilities:**
 - `src/utils/sanitize.ts`: XSS protection with DOMPurify
@@ -306,6 +324,7 @@ Modify CSP if adding external scripts or resources.
 - **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Material 3 Design
 - **Backend**: FastAPI, Python 3.11+, uvicorn
 - **AI**: Google Gemini 2.5 Flash, LangGraph, LangChain
+- **Browser ML**: TensorFlow.js, MediaPipe Hands (Tasks Vision API)
 - **Database**: SQLAlchemy (async), aiosqlite/PostgreSQL
 - **Deployment**: Docker, Render.com
 
@@ -320,6 +339,7 @@ The app includes a Duolingo-style learning feature with animated sign demonstrat
 The app has three modes accessible from the home page (`/`):
 1. **Text to Signs** (`/dictionary`) - AI-powered text translation to ASL instructions
 2. **Learn Signs** (`/learn`) - Interactive exercises with animated sign demonstrations
+3. **Live Camera** (`/camera`) - Real-time ASL fingerspelling recognition using browser camera
 
 ### Learning Feature Architecture
 
@@ -464,6 +484,10 @@ MediaPipe models are auto-downloaded to `mediapipe_models/` on first run.
 LEARNING_PROGRESS: 'asl_learn_progress',  // Per-sign mastery
 LEARNING_SETTINGS: 'asl_learn_settings',  // Animation speed, difficulty
 LEARNING_STATS: 'asl_learn_stats',        // Total XP, level, streak
+
+// Camera feature keys
+SOUND_EFFECTS_KEY: 'asl_sound_effects_enabled',  // Sound toggle
+TUTORIAL_KEY: 'asl_camera_tutorial_seen',        // Tutorial completed
 ```
 
 ### Python Scripts Reference
@@ -489,6 +513,240 @@ LEARNING_STATS: 'asl_learn_stats',        // Total XP, level, streak
 - Face estimation from shoulders when face not detected
 - Dark/light mode support
 - Mobile responsive (hand zoom scales/hides on small screens)
+
+---
+
+## Live Camera ASL Recognition
+
+The app includes a browser-based live camera feature for real-time ASL fingerspelling and number recognition.
+
+### Camera Feature Architecture
+
+**Entry Point:** `src/components/camera/CameraPage.tsx`
+
+The camera feature runs entirely in the browser using:
+- **MediaPipe Hands** - Real-time hand landmark detection (21 3D landmarks per hand)
+- **TensorFlow.js** - Browser-based ML inference for ASL classification
+- **getUserMedia API** - Camera access with front/back switching
+
+### Model Details
+
+**Location:** `public/models/asl-classifier/`
+```
+public/models/asl-classifier/
+├── model.json          # TensorFlow.js model topology
+├── group1-shard1of1.bin  # Model weights (~150KB)
+├── labels.json         # Class labels ["0", "1", ..., "9", "a", "b", ..., "z"]
+└── scaler.json         # StandardScaler params {mean: [], scale: []}
+```
+
+**Model Specifications:**
+- Input: 63 features (21 landmarks × 3 coordinates)
+- Output: 36 classes (digits 0-9 + letters A-Z)
+- Test Accuracy: 95.5%
+- Format: TensorFlow.js LayersModel (converted from PyTorch)
+
+### Camera Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| CameraPage | `CameraPage.tsx` | Main orchestrator, state management |
+| CameraView | `CameraView.tsx` | Video element + landmark canvas overlay |
+| PredictionDisplay | `PredictionDisplay.tsx` | Floating card showing current prediction |
+| SpellingDisplay | `SpellingDisplay.tsx` | Accumulated letters with copy/speak buttons |
+| CameraControls | `CameraControls.tsx` | Bottom bar: back, sound toggle, flip camera |
+| HandGuide | `HandGuide.tsx` | Visual positioning guide when no hand detected |
+| SessionStats | `SessionStats.tsx` | Signs recognized + session time counter |
+| CameraTutorial | `CameraTutorial.tsx` | First-time user onboarding (4 steps) |
+
+### Camera Hooks
+
+| Hook | File | Purpose |
+|------|------|---------|
+| useCamera | `useCamera.ts` | getUserMedia management, front/back switching |
+| useHandDetection | `useHandDetection.ts` | MediaPipe Hands integration, landmark extraction |
+| useASLClassifier | `useASLClassifier.ts` | TensorFlow.js model loading and inference |
+| useSoundEffects | `useSoundEffects.ts` | Web Audio API sound effects |
+
+### Prediction Pipeline
+
+```
+1. Video Frame → useCamera (15 FPS throttled)
+2. Frame → MediaPipe Hands → 21 3D landmarks
+3. Landmarks → Normalize with scaler.json (StandardScaler)
+4. Normalized features → TensorFlow.js model → prediction + confidence
+5. Prediction → PredictionBuffer (5-frame rolling window, 60% threshold)
+6. Stable prediction → Display + spelling logic
+```
+
+### Spelling Mode
+
+Hold a sign steady for 1 second to add it to the spelled word:
+
+```typescript
+// CameraPage.tsx - Timestamp-based hold detection
+const letterHoldStartRef = useRef<number | null>(null);
+const LETTER_HOLD_THRESHOLD = 1000; // 1 second
+
+// When stable prediction matches last prediction
+if (stablePrediction === lastStablePredictionRef.current) {
+  if (letterHoldStartRef.current !== null && confidence > 0.8) {
+    const elapsed = Date.now() - letterHoldStartRef.current;
+    setHoldProgress(Math.min(elapsed / LETTER_HOLD_THRESHOLD, 1));
+
+    if (elapsed >= LETTER_HOLD_THRESHOLD) {
+      setSpelledLetters(prev => [...prev, stablePrediction]);
+      // Reset and play sound
+    }
+  }
+}
+```
+
+**Spelling Controls:**
+- Copy to clipboard
+- Text-to-speech (speak spelled word)
+- Backspace (remove last letter)
+- Clear all
+
+### Prediction Smoothing
+
+`src/utils/predictionBuffer.ts`:
+
+```typescript
+class PredictionBuffer {
+  private buffer: string[] = [];
+  private size = 5;          // Window size
+  private threshold = 0.6;   // 60% agreement needed
+
+  add(prediction: string): void { ... }
+
+  getStablePrediction(): string | null {
+    // Returns mode if it appears in 60%+ of buffer
+    // Prevents flickering between predictions
+  }
+}
+```
+
+### Camera State Machine
+
+```typescript
+type CameraState = 'loading' | 'permission' | 'active' | 'error';
+
+// State is derived from other values (no useEffect)
+const state: CameraState = (() => {
+  if (isLoading) return 'loading';    // Models loading
+  if (error) return 'error';          // Camera/model error
+  if (!cameraReady) return 'permission';  // Requesting camera
+  return 'active';                    // Recognition running
+})();
+```
+
+### Sound Effects
+
+`src/hooks/useSoundEffects.ts`:
+- Web Audio API oscillator-based sounds
+- `letterAdded`: Short beep when letter added to spelling
+- `success`: Ascending chord for achievements
+- `error`: Low tone for errors
+- Toggle stored in localStorage (`asl_sound_effects_enabled`)
+
+### Tutorial System
+
+`src/components/camera/CameraTutorial.tsx`:
+- 4-step onboarding for first-time users
+- Tracks completion in localStorage (`asl_camera_tutorial_seen`)
+- Steps: Show Hand → Sign Letters → Hold to Spell → Copy & Speak
+
+### Camera Practice in Learn Module
+
+The camera recognition integrates with Levels 1 (Alphabet) and 2 (Numbers):
+
+**File:** `src/components/learn/CameraPracticeExercise.tsx`
+
+```typescript
+// Shows target sign, user must perform it on camera
+interface CameraPracticeExerciseProps {
+  targetSign: string;  // e.g., "a" or "one"
+  onComplete: () => void;
+}
+
+// Maps classifier output to level 2 word labels
+const NUMBER_LABEL_MAP: Record<string, string> = {
+  '1': 'one', '2': 'two', // ... etc
+};
+```
+
+### Performance Optimizations
+
+- **Frame Rate Throttling**: 15 FPS (configurable via `TARGET_FPS`)
+- **requestAnimationFrame**: Smooth animation loop with cleanup
+- **Lazy Loading**: Camera page is lazy-loaded (~400KB gzipped for TensorFlow.js)
+- **Model Caching**: TensorFlow.js caches model in browser storage
+- **Mounted Check**: `isMountedRef` prevents state updates after unmount
+
+### LocalStorage Keys
+
+```typescript
+SOUND_EFFECTS_KEY: 'asl_sound_effects_enabled'  // Sound toggle
+TUTORIAL_KEY: 'asl_camera_tutorial_seen'        // Tutorial completed
+```
+
+### Accessibility
+
+- Screen reader announcements via `announceToScreenReader()`
+- ARIA live regions for prediction updates
+- Keyboard-accessible controls
+- Focus management on state changes
+- Reduced motion support
+
+### Model Conversion (Development)
+
+The TensorFlow.js model was converted from PyTorch:
+
+```bash
+# Training scripts (not committed, in .gitignore)
+alphabet_translate/
+├── data_processing.py    # Dataset preparation
+├── model_training.py     # PyTorch model training
+└── live_recognition.py   # Local testing script
+
+# Saved artifacts (not committed, in .gitignore)
+saved_models/
+├── hand_landmark_model_state.pth  # PyTorch weights
+└── scaler.pkl                     # sklearn StandardScaler
+```
+
+**Conversion Pipeline:**
+```
+PyTorch (.pth) → ONNX (.onnx) → TensorFlow SavedModel → TensorFlow.js
+```
+
+### Adding Support for More Signs
+
+To extend beyond 36 classes (A-Z, 0-9):
+
+1. **Collect training data** with additional signs
+2. **Retrain PyTorch model** with new classes
+3. **Update labels.json** with new class names
+4. **Convert to TensorFlow.js** format
+5. **Replace files** in `public/models/asl-classifier/`
+6. **No code changes needed** - labels loaded dynamically
+
+### Troubleshooting
+
+**Camera Permission Denied:**
+- Check browser settings for camera permissions
+- Ensure HTTPS in production (required for getUserMedia)
+
+**Model Load Failed:**
+- Verify model files exist in `public/models/asl-classifier/`
+- Check browser console for TensorFlow.js errors
+- Ensure WebGL is enabled
+
+**Low Recognition Accuracy:**
+- Improve lighting conditions
+- Position hand clearly in frame
+- Check for webcam quality issues
 
 ---
 
@@ -523,6 +781,7 @@ Heavy components are lazy-loaded for faster initial page load:
 // src/App.tsx
 const Admin = lazy(() => import('./components/Admin'));
 const LearnPage = lazy(() => import('./components/learn/LearnPage'));
+const CameraPage = lazy(() => import('./components/camera/CameraPage'));
 
 // Usage with Suspense
 <Suspense fallback={<PageLoader />}>
@@ -533,6 +792,7 @@ const LearnPage = lazy(() => import('./components/learn/LearnPage'));
 **Lazy-loaded components:**
 - `Admin` - Admin dashboard (~11KB gzipped)
 - `LearnPage` - Learning feature (~12KB gzipped)
+- `CameraPage` - Camera recognition (~400KB gzipped, includes TensorFlow.js)
 
 ### Memory Leak Prevention
 

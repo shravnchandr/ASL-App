@@ -1,0 +1,139 @@
+/**
+ * CameraView Styles
+ * Full-screen video element with viewfinder overlay
+ */
+
+.camera-view {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.camera-view__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Mirror front camera for natural selfie view */
+.camera-view__video--mirrored {
+  transform: scaleX(-1);
+}
+
+/* Canvas overlay for hand landmark visualization */
+.camera-view__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Loading overlay */
+.camera-view__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.camera-view__spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Viewfinder corners */
+.camera-view__viewfinder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.camera-view__corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.6);
+}
+
+.camera-view__corner--tl {
+  top: 20%;
+  left: 15%;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 8px 0 0 0;
+}
+
+.camera-view__corner--tr {
+  top: 20%;
+  right: 15%;
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 8px 0 0;
+}
+
+.camera-view__corner--bl {
+  bottom: 20%;
+  left: 15%;
+  border-right: none;
+  border-top: none;
+  border-radius: 0 0 0 8px;
+}
+
+.camera-view__corner--br {
+  bottom: 20%;
+  right: 15%;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 8px 0;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .camera-view__corner {
+    width: 30px;
+    height: 30px;
+    border-width: 2px;
+  }
+
+  .camera-view__corner--tl,
+  .camera-view__corner--tr {
+    top: 15%;
+  }
+
+  .camera-view__corner--bl,
+  .camera-view__corner--br {
+    bottom: 25%;
+  }
+
+  .camera-view__corner--tl,
+  .camera-view__corner--bl {
+    left: 10%;
+  }
+
+  .camera-view__corner--tr,
+  .camera-view__corner--br {
+    right: 10%;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .camera-view__spinner {
+    animation: none;
+  }
+}

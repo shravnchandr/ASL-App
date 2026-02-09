@@ -145,7 +145,7 @@ export interface SignProgress {
 
 export interface Exercise {
     id: string;
-    type: 'sign-to-word' | 'word-to-sign' | 'recall';
+    type: 'sign-to-word' | 'word-to-sign' | 'recall' | 'camera-practice';
     sign: string;
     options?: string[];
     correctAnswer: string;

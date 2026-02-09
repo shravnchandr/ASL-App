@@ -28,10 +28,22 @@ A modern, production-ready web application that helps you learn American Sign La
 - 🎓 **Level-Based Learning** - 10 progressive levels with unlock mechanics (80% mastery to advance)
 - 🤖 **100 Animated Signs** - MediaPipe landmark-based stick figure animations (26 letters, 10 numbers, 12 months, 52 common signs)
 - 📖 **Sign Library** - Browse all available signs with search, category filters, and lazy loading
-- 🎮 **Three Exercise Types** - Sign-to-Word (easiest), Word-to-Sign (medium), and Recall (hardest)
+- 🎮 **Four Exercise Types** - Sign-to-Word (easiest), Word-to-Sign (medium), Recall (hardest), and Camera Practice
 - 📈 **Progress Tracking** - XP system, per-sign mastery, level completion, and day streaks
 - ⚡ **Playback Controls** - Adjustable animation speed (0.5x, 1x, 1.5x) with play/pause
 - 🏆 **Level Progression** - Alphabet → Numbers → Greetings → Family → Feelings → Actions → Questions → Time → Places → Months
+
+### Live Camera Recognition
+- 📸 **Real-Time Detection** - Live ASL fingerspelling and number recognition using your camera
+- 🤖 **TensorFlow.js Classifier** - Browser-based ML model (95.5% accuracy on 36 classes: A-Z letters + 0-9 numbers)
+- 🖐️ **MediaPipe Hands** - Real-time hand landmark detection with visual overlay
+- 📝 **Spelling Mode** - Hold a sign for 1 second to add letters and spell words
+- 🔊 **Sound Effects** - Optional audio feedback when letters are added
+- 📋 **Copy & Speak** - Copy spelled words to clipboard or use text-to-speech
+- 📱 **Mobile Support** - Front/back camera switching for phone use
+- ♿ **Accessible** - Screen reader announcements, keyboard navigation
+- 🎓 **Tutorial** - First-time user onboarding with step-by-step guide
+- 📊 **Session Stats** - Track signs recognized and session duration
 
 ### User Experience
 - 🎨 **Material 3 Expressive UI** - Glassmorphism, colored shadows, gradient accents, and spring physics animations
@@ -181,6 +193,8 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 - **Material 3 Design** - Design system
 - **Axios** - HTTP client
 - **jsPDF** - Lightweight PDF generation
+- **TensorFlow.js** - Browser-based ML inference for ASL classification
+- **MediaPipe Hands** - Real-time hand landmark detection
 
 ### Backend
 - **FastAPI** - Modern Python web framework

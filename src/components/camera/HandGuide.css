@@ -1,0 +1,98 @@
+/**
+ * HandGuide Styles
+ * Visual positioning guide for camera
+ */
+
+.hand-guide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hand-guide__silhouette {
+  width: 200px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+
+.hand-guide__silhouette svg {
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.hand-guide__outline {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+}
+
+.hand-guide__message {
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 24px;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.hand-guide__tips {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.hand-guide__tips span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .hand-guide__silhouette {
+    width: 150px;
+    height: 210px;
+  }
+
+  .hand-guide__message {
+    font-size: 14px;
+    padding: 10px 20px;
+  }
+
+  .hand-guide__tips span {
+    font-size: 11px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hand-guide__silhouette {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .hand-guide {
+    animation: none;
+  }
+}

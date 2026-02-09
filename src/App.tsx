@@ -23,6 +23,7 @@ import { HomePage } from './components/HomePage';
 // Lazy load heavy components for better initial load performance
 const Admin = lazy(() => import('./components/Admin').then(m => ({ default: m.Admin })));
 const LearnPage = lazy(() => import('./components/learn/LearnPage').then(m => ({ default: m.LearnPage })));
+const CameraPage = lazy(() => import('./components/camera/CameraPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -39,7 +40,7 @@ import { useSessionTimeout } from './hooks/useSessionTimeout';
 import type { TranslateResponse } from './types';
 import './App.css';
 
-type AppMode = 'home' | 'dictionary' | 'learn';
+type AppMode = 'home' | 'dictionary' | 'learn' | 'camera';
 
 function App() {
   // Check if we're on special routes
@@ -50,6 +51,7 @@ function App() {
     const path = window.location.pathname;
     if (path === '/learn') return 'learn';
     if (path === '/dictionary' || path === '/translate') return 'dictionary';
+    if (path === '/camera') return 'camera';
     return 'home';
   };
 
@@ -69,10 +71,14 @@ function App() {
   const { showWarning: showTimeoutWarning, timeRemaining, dismissWarning } = useSessionTimeout();
 
   // Handle mode selection from home page
-  const handleSelectMode = (mode: 'dictionary' | 'learn') => {
+  const handleSelectMode = (mode: 'dictionary' | 'learn' | 'camera') => {
     setCurrentMode(mode);
-    const path = mode === 'learn' ? '/learn' : '/dictionary';
-    window.history.pushState({}, '', path);
+    const pathMap: Record<string, string> = {
+      learn: '/learn',
+      dictionary: '/dictionary',
+      camera: '/camera',
+    };
+    window.history.pushState({}, '', pathMap[mode]);
   };
 
   // Handle back to home
@@ -204,6 +210,15 @@ function App() {
     return (
       <Suspense fallback={<PageLoader />}>
         <LearnPage onBack={handleBackToHome} />
+      </Suspense>
+    );
+  }
+
+  // Show camera page
+  if (currentMode === 'camera') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <CameraPage onBack={handleBackToHome} />
       </Suspense>
     );
   }

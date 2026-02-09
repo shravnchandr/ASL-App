@@ -107,9 +107,9 @@
 
 .home-page__cards {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-xl, 32px);
-    max-width: 900px;
+    max-width: 1200px;
     width: 100%;
 }
 
@@ -239,6 +239,40 @@
     box-shadow: var(--shadow-secondary);
 }
 
+/* Camera card specific - Coral/Violet theme */
+.home-card--camera {
+    border-radius: var(--shape-asymmetric-1, 20px 32px 20px 32px);
+}
+
+.home-card--camera::before {
+    background: linear-gradient(90deg, hsl(12, 90%, 62%), hsl(270, 70%, 60%));
+}
+
+.home-card--camera::after {
+    background: radial-gradient(circle, hsla(12, 90%, 55%, 0.4) 0%, transparent 60%);
+}
+
+.home-card--camera:hover {
+    border-color: hsla(12, 90%, 55%, 0.6);
+    box-shadow:
+        0 4px 24px hsla(12, 90%, 50%, 0.2),
+        0 0 40px hsla(12, 90%, 55%, 0.15);
+}
+
+.home-card--camera .home-card__icon {
+    color: hsl(12, 90%, 55%);
+    background: linear-gradient(135deg, hsla(12, 70%, 92%, 1) 0%, hsla(270, 60%, 92%, 1) 100%);
+    box-shadow: 0 4px 16px hsla(12, 90%, 50%, 0.2);
+}
+
+.home-card--camera .home-card__cta {
+    color: hsl(12, 90%, 50%);
+}
+
+.home-card--camera:hover .home-card__cta {
+    background: hsla(12, 90%, 55%, 0.1);
+}
+
 /* Card icon */
 .home-card__icon {
     width: 80px;
@@ -329,7 +363,20 @@
     margin: 0;
 }
 
-/* Responsive */
+/* Responsive - Tablet */
+@media (max-width: 1024px) {
+    .home-page__cards {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 700px;
+    }
+
+    /* Make camera card span full width on tablet */
+    .home-card--camera {
+        grid-column: span 2;
+    }
+}
+
+/* Responsive - Mobile */
 @media (max-width: 768px) {
     .home-page {
         padding: var(--spacing-lg, 24px);
@@ -346,6 +393,10 @@
     .home-page__cards {
         grid-template-columns: 1fr;
         gap: var(--spacing-lg, 24px);
+    }
+
+    .home-card--camera {
+        grid-column: span 1;
     }
 
     .home-card {

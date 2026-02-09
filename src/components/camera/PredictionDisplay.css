@@ -1,0 +1,154 @@
+/**
+ * PredictionDisplay Styles
+ * Floating glassmorphism prediction card
+ */
+
+.prediction-display {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.prediction-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 48px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  min-width: 140px;
+  transition: all var(--duration-quick) ease;
+}
+
+/* Letter display */
+.prediction-card__letter {
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--gradient-ocean);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Confidence indicator */
+.prediction-card__confidence {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+/* Confidence level colors */
+.prediction-card--high .prediction-card__letter {
+  background: linear-gradient(135deg, hsl(145, 70%, 55%) 0%, hsl(160, 60%, 50%) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.prediction-card--high .prediction-card__confidence {
+  color: hsl(145, 70%, 65%);
+}
+
+.prediction-card--medium .prediction-card__letter {
+  background: var(--gradient-ocean);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.prediction-card--medium .prediction-card__confidence {
+  color: hsl(205, 80%, 65%);
+}
+
+.prediction-card--low .prediction-card__letter {
+  background: linear-gradient(135deg, hsl(35, 90%, 55%) 0%, hsl(25, 85%, 50%) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.prediction-card--low .prediction-card__confidence {
+  color: hsl(35, 90%, 65%);
+}
+
+/* Hold progress indicator */
+.prediction-card__progress {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.prediction-card__progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, hsl(145, 70%, 55%), hsl(160, 60%, 50%));
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.prediction-card__hold-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 6px;
+}
+
+/* Empty state */
+.prediction-card--empty {
+  padding: 16px 32px;
+  min-width: unset;
+}
+
+.prediction-card__hint {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .prediction-display {
+    top: 16px;
+  }
+
+  .prediction-card {
+    padding: 16px 32px;
+    border-radius: 20px;
+  }
+
+  .prediction-card__letter {
+    font-size: 56px;
+  }
+
+  .prediction-card__confidence {
+    font-size: 12px;
+  }
+
+  .prediction-card--empty {
+    padding: 12px 24px;
+  }
+
+  .prediction-card__hint {
+    font-size: 14px;
+  }
+}
+
+/* Safe area for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .prediction-display {
+    top: calc(24px + env(safe-area-inset-top));
+  }
+
+  @media (max-width: 480px) {
+    .prediction-display {
+      top: calc(16px + env(safe-area-inset-top));
+    }
+  }
+}

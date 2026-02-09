@@ -1,0 +1,165 @@
+/**
+ * CameraPage Styles
+ * Full-screen camera view with floating overlays
+ */
+
+.camera-page {
+  position: fixed;
+  inset: 0;
+  background: var(--md-sys-color-surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* Loading state */
+.camera-page__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg, 24px);
+  color: var(--md-sys-color-on-surface);
+}
+
+.camera-page__loading p {
+  font-size: var(--md-sys-typescale-body-large-size, 1rem);
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0;
+}
+
+.camera-page__loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 8px);
+  margin-top: var(--spacing-md, 16px);
+}
+
+.camera-page__loading-step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+  font-size: var(--md-sys-typescale-body-medium-size, 0.875rem);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.camera-page__loading-step--done {
+  color: var(--md-sys-color-primary);
+}
+
+.camera-page__loading-step--active {
+  color: var(--md-sys-color-on-surface);
+}
+
+.camera-page__step-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-page__step-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.camera-page__step-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--md-sys-color-surface-variant);
+  border-top-color: var(--md-sys-color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.camera-page__spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--md-sys-color-surface-variant);
+  border-top-color: var(--md-sys-color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.camera-page__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-xl, 32px);
+  max-width: 400px;
+}
+
+.camera-page__error-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--md-sys-color-error);
+  margin-bottom: var(--spacing-lg, 24px);
+}
+
+.camera-page__error-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.camera-page__error h2 {
+  font-size: var(--md-sys-typescale-headline-small-size, 1.5rem);
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 var(--spacing-md, 16px) 0;
+}
+
+.camera-page__error p {
+  font-size: var(--md-sys-typescale-body-medium-size, 1rem);
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0 0 var(--spacing-xl, 32px) 0;
+  line-height: 1.6;
+}
+
+.camera-page__error-actions {
+  display: flex;
+  gap: var(--spacing-md, 16px);
+}
+
+.camera-page__button {
+  padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
+  border-radius: var(--md-sys-shape-corner-full, 9999px);
+  font-size: var(--md-sys-typescale-label-large-size, 1rem);
+  font-weight: var(--md-sys-typescale-label-large-weight, 600);
+  border: 2px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  transition: all var(--duration-quick) ease;
+}
+
+.camera-page__button:hover {
+  background: var(--md-sys-color-surface-variant);
+}
+
+.camera-page__button--primary {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.camera-page__button--primary:hover {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .camera-page__spinner {
+    animation: none;
+    border-top-color: var(--md-sys-color-primary);
+  }
+}

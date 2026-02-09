@@ -1,0 +1,118 @@
+/**
+ * CameraControls Styles
+ * Floating bottom control bar
+ */
+
+.camera-controls {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
+.camera-controls__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: all var(--duration-quick) ease;
+}
+
+.camera-controls__button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.camera-controls__button:active {
+  transform: scale(0.95);
+}
+
+.camera-controls__button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.camera-controls__button svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Flip button with special styling */
+.camera-controls__button--flip {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.camera-controls__button--flip:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Active state (e.g., sound enabled) */
+.camera-controls__button--active {
+  background: rgba(0, 255, 136, 0.25);
+  color: #00ff88;
+}
+
+.camera-controls__button--active:hover {
+  background: rgba(0, 255, 136, 0.35);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .camera-controls {
+    bottom: 24px;
+    gap: 16px;
+    padding: 10px 20px;
+  }
+
+  .camera-controls__button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .camera-controls__button svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Safe area for notched devices */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .camera-controls {
+    bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+
+  @media (max-width: 480px) {
+    .camera-controls {
+      bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .camera-controls__button {
+    transition: none;
+  }
+
+  .camera-controls__button:hover,
+  .camera-controls__button:active {
+    transform: none;
+  }
+}

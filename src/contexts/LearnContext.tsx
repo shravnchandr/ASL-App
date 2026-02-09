@@ -206,7 +206,7 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
 interface LearnContextType {
     state: LearnState;
     startSession: (exerciseCount?: number) => Promise<void>;
-    startLevelSession: (levelId: number, exerciseCount?: number) => Promise<void>;
+    startLevelSession: (levelId: number, exerciseCount?: number, cameraPractice?: boolean) => Promise<void>;
     endSession: () => void;
     answerExercise: (answer: string, isCorrect: boolean) => void;
     skipExercise: () => void;
@@ -434,7 +434,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, [state.currentLevel, state.unlockedLevels, calculateLevelMastery]);
 
     // Generate exercises for a specific level
-    const generateLevelExercises = useCallback(async (levelId: number, count: number): Promise<Exercise[]> => {
+    const generateLevelExercises = useCallback(async (levelId: number, count: number, cameraPractice: boolean = false): Promise<Exercise[]> => {
         const level = getLevelById(levelId);
         if (!level) {
             throw new Error('Level not found');
@@ -458,6 +458,17 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const availableForPick = levelSigns.filter(s => !usedSigns.has(s));
                 sign = availableForPick[Math.floor(Math.random() * availableForPick.length)];
                 usedSigns.add(sign);
+            }
+
+            // If camera practice mode, all exercises are camera-practice type
+            if (cameraPractice) {
+                exercises.push({
+                    id: `${sign}-${i}-${Date.now()}`,
+                    type: 'camera-practice',
+                    sign,
+                    correctAnswer: sign,
+                });
+                continue;
             }
 
             // Determine exercise type based on mastery
@@ -498,7 +509,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, [state.signProgress]);
 
     // Start a level-specific session
-    const startLevelSession = useCallback(async (levelId: number, exerciseCount: number = 10) => {
+    const startLevelSession = useCallback(async (levelId: number, exerciseCount: number = 10, cameraPractice: boolean = false) => {
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'SET_ERROR', payload: null });
         dispatch({ type: 'SELECT_LEVEL', payload: levelId });
@@ -506,7 +517,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         storage.setCurrentLevel(levelId);
 
         try {
-            const exercises = await generateLevelExercises(levelId, exerciseCount);
+            const exercises = await generateLevelExercises(levelId, exerciseCount, cameraPractice);
 
             // Preload sign data for all exercises
             const signsToLoad = [...new Set(exercises.map(e => e.sign))];

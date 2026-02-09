@@ -9,6 +9,7 @@ import { ExerciseCard } from './ExerciseCard';
 import { SignToWordExercise } from './SignToWordExercise';
 import { WordToSignExercise } from './WordToSignExercise';
 import { RecallExercise } from './RecallExercise';
+import { CameraPracticeExercise } from './CameraPracticeExercise';
 import { SignBrowser } from './SignBrowser';
 import { LevelSelector } from './LevelSelector';
 import { GeneralFeedbackModal } from '../features/GeneralFeedbackModal';
@@ -167,6 +168,15 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
         if (levelToStart) {
             setFeedback(null);
             startLevelSession(levelToStart, 10);
+        }
+    }, [startLevelSession, state.selectedLevel, state.currentLevel]);
+
+    const handleStartCameraPractice = useCallback(() => {
+        const levelToStart = state.selectedLevel || state.currentLevel;
+        if (levelToStart) {
+            setFeedback(null);
+            // Start a session with camera-practice type exercises
+            startLevelSession(levelToStart, 10, true);
         }
     }, [startLevelSession, state.selectedLevel, state.currentLevel]);
 
@@ -372,6 +382,17 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                                 disabled={feedback !== null}
                             />
                         )}
+
+                        {currentExercise.type === 'camera-practice' && (
+                            <CameraPracticeExercise
+                                key={`${currentExercise.correctAnswer}-${state.currentIndex}`}
+                                targetSign={currentExercise.correctAnswer}
+                                levelId={state.currentLevel}
+                                onComplete={(isCorrect) => handleAnswer(currentExercise.correctAnswer, isCorrect)}
+                                onSkip={handleSkip}
+                                disabled={feedback !== null}
+                            />
+                        )}
                     </ExerciseCard>
                 </main>
 
@@ -471,6 +492,19 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                                     </>
                                 )}
                             </button>
+                            {/* Camera practice available for Alphabet (level 1) and Numbers (level 2) */}
+                            {(selectedLevelInfo.id === 1 || selectedLevelInfo.id === 2) && (
+                                <button
+                                    className="level-detail__camera-btn"
+                                    onClick={handleStartCameraPractice}
+                                    disabled={state.isLoading}
+                                >
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/>
+                                    </svg>
+                                    Practice with Camera
+                                </button>
+                            )}
                         </div>
 
                         <div className="level-detail__signs-preview">

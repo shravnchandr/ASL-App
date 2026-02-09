@@ -1,0 +1,195 @@
+/**
+ * CameraTutorial Styles
+ * Onboarding modal for first-time users
+ */
+
+.camera-tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.camera-tutorial__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.camera-tutorial__content {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  background: var(--md-sys-color-surface, #1a1a2e);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.camera-tutorial__skip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface-variant, rgba(255, 255, 255, 0.6));
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.camera-tutorial__skip:hover {
+  color: var(--md-sys-color-on-surface, white);
+}
+
+.camera-tutorial__step {
+  text-align: center;
+  padding: 16px 0 24px;
+}
+
+.camera-tutorial__icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: bounce 0.6s ease;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.camera-tutorial__title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface, white);
+  margin: 0 0 12px;
+}
+
+.camera-tutorial__description {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant, rgba(255, 255, 255, 0.7));
+  margin: 0;
+}
+
+.camera-tutorial__progress {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.camera-tutorial__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--md-sys-color-surface-variant, rgba(255, 255, 255, 0.2));
+  transition: all 0.2s ease;
+}
+
+.camera-tutorial__dot--active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--md-sys-color-primary, hsl(205, 90%, 55%));
+}
+
+.camera-tutorial__dot--completed {
+  background: var(--md-sys-color-primary, hsl(205, 90%, 55%));
+}
+
+.camera-tutorial__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.camera-tutorial__btn {
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.camera-tutorial__btn--primary {
+  background: var(--gradient-ocean, linear-gradient(135deg, hsl(205, 90%, 55%), hsl(180, 70%, 45%)));
+  color: white;
+  min-width: 140px;
+}
+
+.camera-tutorial__btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px hsla(205, 90%, 55%, 0.3);
+}
+
+.camera-tutorial__btn--secondary {
+  background: var(--md-sys-color-surface-variant, rgba(255, 255, 255, 0.1));
+  color: var(--md-sys-color-on-surface, white);
+}
+
+.camera-tutorial__btn--secondary:hover {
+  background: var(--md-sys-color-surface-container-highest, rgba(255, 255, 255, 0.15));
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .camera-tutorial {
+    padding: 16px;
+  }
+
+  .camera-tutorial__content {
+    padding: 24px;
+  }
+
+  .camera-tutorial__icon {
+    font-size: 48px;
+  }
+
+  .camera-tutorial__title {
+    font-size: 20px;
+  }
+
+  .camera-tutorial__description {
+    font-size: 14px;
+  }
+
+  .camera-tutorial__btn {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .camera-tutorial__content {
+    animation: none;
+  }
+
+  .camera-tutorial__icon {
+    animation: none;
+  }
+
+  .camera-tutorial__btn--primary:hover {
+    transform: none;
+  }
+}

@@ -8,7 +8,7 @@ import { ThemeSwitcher } from './features/ThemeSwitcher';
 import './HomePage.css';
 
 interface HomePageProps {
-    onSelectMode: (mode: 'dictionary' | 'learn') => void;
+    onSelectMode: (mode: 'dictionary' | 'learn' | 'camera') => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ onSelectMode }) => {
@@ -70,6 +70,29 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectMode }) => {
                     </p>
                     <span className="home-card__cta" aria-hidden="true">
                         Start Learning
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                    </span>
+                </button>
+
+                <button
+                    className="home-card home-card--camera"
+                    onClick={() => onSelectMode('camera')}
+                    aria-label="Live Camera - Use your camera to recognize ASL signs in real-time"
+                >
+                    <div className="home-card__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                        </svg>
+                    </div>
+                    <h2 className="home-card__title">Live Camera</h2>
+                    <p className="home-card__description">
+                        Use your camera to recognize ASL alphabet signs in real-time. Practice fingerspelling and see instant feedback.
+                    </p>
+                    <span className="home-card__cta" aria-hidden="true">
+                        Start Camera
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                             <path d="M5 12h14M12 5l7 7-7 7" />
                         </svg>
