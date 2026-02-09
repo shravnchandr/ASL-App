@@ -180,38 +180,38 @@ export function CameraPracticeExercise({
     }
   }, [status, targetSign]);
 
-  if (status === 'loading') {
-    return (
-      <div className="camera-practice">
+  const showCamera = status === 'ready' || status === 'matched';
+
+  return (
+    <div className="camera-practice">
+      {status === 'loading' && (
         <div className="camera-practice__loading">
           <div className="camera-practice__spinner" />
           <p>Loading camera...</p>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (status === 'error') {
-    return (
-      <div className="camera-practice">
+      {status === 'error' && (
         <div className="camera-practice__error">
           <p>Camera error: {cameraError}</p>
           <button onClick={onSkip} className="camera-practice__skip-btn">
             Skip to next exercise
           </button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="camera-practice">
-      <div className="camera-practice__target">
-        <span className="camera-practice__target-label">Sign this:</span>
-        <span className="camera-practice__target-sign">{formatSignName(targetSign)}</span>
-      </div>
+      {showCamera && (
+        <div className="camera-practice__target">
+          <span className="camera-practice__target-label">Sign this:</span>
+          <span className="camera-practice__target-sign">{formatSignName(targetSign)}</span>
+        </div>
+      )}
 
-      <div className="camera-practice__video-container">
+      {/* Video container - always rendered but hidden during loading so videoRef is available */}
+      <div
+        className="camera-practice__video-container"
+        style={{ display: showCamera ? 'block' : 'none' }}
+      >
         <video
           ref={videoRef}
           className="camera-practice__video"
@@ -254,11 +254,13 @@ export function CameraPracticeExercise({
         </div>
       </div>
 
-      <div className="camera-practice__actions">
-        <button onClick={onSkip} className="camera-practice__skip-btn" disabled={disabled}>
-          Skip
-        </button>
-      </div>
+      {showCamera && (
+        <div className="camera-practice__actions">
+          <button onClick={onSkip} className="camera-practice__skip-btn" disabled={disabled}>
+            Skip
+          </button>
+        </div>
+      )}
     </div>
   );
 }
