@@ -16,6 +16,8 @@ A modern, production-ready web application that helps you learn American Sign La
 
 ### Core Functionality
 - 🔤 **ASL Sign Breakdowns** - Detailed descriptions with beginner-friendly language: "How to Form Your Hands", "Where to Place Your Hands", "How to Move", "Facial Expressions & Body Language"
+- 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU, so descriptions are consistent and accurate rather than purely AI-generated
+- 🔤 **Advanced ASL Grammar Engine** - Grammar Agent applies 10 documented ASL grammar rules: TTC structure, topicalization, wh-question formation, negation placement, conditionals, verb directionality, aspect, and classifiers
 - 🎥 **Video Resource Links** - Direct links to Handspeak, ASL University, and YouTube for each sign to watch proper demonstrations
 - 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
 - 🔗 **Share, Print & Export** - Share sign breakdowns via Web Share API, print-optimized views, or export to PDF
@@ -386,6 +388,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **FastAPI** - Modern Python web framework
 - **React Team** - Excellent UI library
 - **LangGraph** - Agentic workflow orchestration
+- **Bill Vicars / Lifeprint (ASLU)** - ASL education reference used for the verified sign knowledge base
 
 ---
 

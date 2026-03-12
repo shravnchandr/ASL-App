@@ -37,7 +37,7 @@ services:
         value: json
 
       - key: DATABASE_URL
-        sync: false  # Set manually in Render Dashboard (PostgreSQL URL)
+        value: sqlite+aiosqlite:///./asl_feedback.db
 
       - key: REDIS_URL
         sync: false  # Set manually in Render Dashboard (Redis URL)

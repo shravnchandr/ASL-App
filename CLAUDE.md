@@ -87,14 +87,25 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `Feedback` model: Stores translation feedback and general app feedback
 - IP addresses are hashed (SHA-256) for privacy
 - Two feedback types: "translation" and "general"
+- **Currently using SQLite in production** (switched from PostgreSQL when Render trial expired)
+- SQLite file: `asl_feedback.db` — note Render's filesystem is **ephemeral**, so data resets on each deploy
+- All queries use `func.date()` and SQLite-compatible syntax — no code changes needed to switch back
+- To re-enable PostgreSQL: set `DATABASE_URL=postgresql+asyncpg://...` in `render.yaml` and uncomment the `databases:` block
 
 **AI Workflow:** `python_code/asl_dict_langgraph.py`
 - LangGraph state machine with two agents:
-  1. **Grammar Agent**: Analyzes English input, determines if ASL TTC reordering needed
-  2. **Translation Agent**: Generates detailed sign descriptions using structured output
+  1. **Grammar Agent**: Analyzes English input and applies 10 ASL grammar rules — TTC structure, function-word omission, negation placement, topicalization, wh-question formation, yes/no questions, conditionals, verb directionality, aspect, and classifiers
+  2. **Translation Agent**: Generates detailed sign descriptions using structured output, grounded by the verified sign knowledge base (see below)
 - Uses Google Gemini 2.5 Flash model
 - Built at startup and stored in `app.state.asl_graph`
 - Invoked via `asl_graph.invoke({"english_input": text})`
+
+**Sign Knowledge Base:** `python_code/sign_knowledge_base.json`
+- Verified hand shape, location, movement, and non-manual marker descriptions for all 100 signs (A-Z, 0-9, 12 months, 52 common signs)
+- Sourced from Lifeprint/ASLU (Bill Vicars) and Gallaudet conventions
+- Loaded once at module startup into `SIGN_KNOWLEDGE_BASE` dict
+- `_build_knowledge_context()` extracts glosses from the Grammar Agent's output, looks up matches (case-insensitive, handles hyphenated compounds like `THANK-YOU → thank_you`), and injects verified descriptions directly into the Translation Agent's system prompt
+- Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs instruct the LLM to copy descriptions faithfully
 
 **Custom API Keys:**
 - Users can provide their own Google Gemini API key
@@ -202,8 +213,17 @@ The LangGraph workflow in `python_code/asl_dict_langgraph.py`:
 - Two-agent system: Grammar → Translation
 - Uses Pydantic structured output for type safety
 - State flows through `ASLState` TypedDict
-- Modify prompts in `grammar_planner_node()` and `translation_node()`
-- Always test with various phrase types (questions, statements, temporal phrases)
+- Modify Grammar Agent prompt in `grammar_planner_node()` — rules are documented inline
+- Modify Translation Agent prompt in `sign_instructor_node()`
+- Always test with various phrase types (questions, statements, temporal phrases, negations, conditionals)
+
+### Updating the Sign Knowledge Base
+
+`python_code/sign_knowledge_base.json` contains verified descriptions for all 100 signs:
+- Each entry has `hand_shape`, `location`, `movement`, and `non_manual_markers` fields matching `DescriptionSchema`
+- Keys are lowercase with underscores (e.g., `thank_you`, `one`, `january`)
+- When adding new signs, add an entry here in addition to extracting MediaPipe landmarks — this ensures the Translation Agent uses accurate descriptions for known signs
+- The `_source` and `_schema` keys at the top are metadata and are filtered out at load time
 
 ### Static File Serving Issues
 
@@ -275,7 +295,8 @@ Modify CSP if adding external scripts or resources.
 
 **Backend:**
 - `app.py`: FastAPI application, routes, middleware
-- `python_code/asl_dict_langgraph.py`: AI translation workflow
+- `python_code/asl_dict_langgraph.py`: AI translation workflow (Grammar Agent + Translation Agent)
+- `python_code/sign_knowledge_base.json`: Verified sign descriptions for all 100 signs (grounding source)
 - `config.py`: Environment configuration
 - `database.py`: Database models and operations
 

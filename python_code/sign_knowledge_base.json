@@ -1,0 +1,608 @@
+{
+  "_source": "Descriptions based on standard ASL education references (Lifeprint/ASLU by Bill Vicars, Gallaudet conventions)",
+  "_schema": "hand_shape | location | movement | non_manual_markers",
+
+  "a": {
+    "hand_shape": "A handshape: closed fist with all four fingers curled, thumb resting alongside the index finger (not over fingers)",
+    "location": "Neutral space in front of the chest/shoulder",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "b": {
+    "hand_shape": "B handshape: all four fingers extended straight and together, thumb folded tightly across the palm",
+    "location": "Neutral space at shoulder height, palm facing forward",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "c": {
+    "hand_shape": "C handshape: all fingers curved and held together forming a large C shape, thumb curves to match",
+    "location": "Neutral space in front of the body",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "d": {
+    "hand_shape": "D handshape: index finger points straight up, middle, ring, and pinky fingers curve down to touch the thumb, forming a circle",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "e": {
+    "hand_shape": "E handshape: all four fingers bend at the knuckles so fingertips touch the bent thumb; hand looks like a claw pressed flat",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "f": {
+    "hand_shape": "F handshape: index finger and thumb touch at their tips forming a circle; middle, ring, and pinky fingers extend upward",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "g": {
+    "hand_shape": "G handshape: index finger points forward, thumb points forward in parallel below it (like pointing a gun sideways)",
+    "location": "Neutral space beside the body, pointing to the side",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "h": {
+    "hand_shape": "H handshape: index and middle fingers extended together and pointing sideways, other fingers folded, thumb rests on folded fingers",
+    "location": "Neutral space beside the body, fingers pointing to the side",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "i": {
+    "hand_shape": "I handshape: pinky finger extended straight up, all other fingers curled into fist, thumb folds over middle fingers",
+    "location": "Neutral space in front of the shoulder",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "j": {
+    "hand_shape": "I handshape: pinky finger extended, others in fist",
+    "location": "Start at upper right space",
+    "movement": "Trace the letter J in the air — curve down, then hook back to the left",
+    "non_manual_markers": "Neutral expression"
+  },
+  "k": {
+    "hand_shape": "K handshape: index finger points up, middle finger extends forward at an angle, thumb rests between them; ring and pinky folded",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "l": {
+    "hand_shape": "L handshape: index finger points straight up, thumb extends straight out to the side forming an L shape; other fingers curled",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "m": {
+    "hand_shape": "M handshape: index, middle, and ring fingers folded down over the thumb; pinky folded in",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "n": {
+    "hand_shape": "N handshape: index and middle fingers folded down over the thumb; ring and pinky folded in",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "o": {
+    "hand_shape": "O handshape: all fingers curve down and all fingertips touch the thumb, forming a round O shape",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "p": {
+    "hand_shape": "P handshape: K handshape rotated so the middle finger points downward (index points forward, thumb between index and middle)",
+    "location": "Neutral space, fingers angled down-forward",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "q": {
+    "hand_shape": "Q handshape: G handshape rotated downward — index and thumb point downward",
+    "location": "Neutral space, fingers angled downward",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "r": {
+    "hand_shape": "R handshape: index and middle fingers extended and crossed over each other; ring and pinky folded, thumb rests on them",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "s": {
+    "hand_shape": "S handshape: closed fist with all fingers curled; thumb wraps over the index and middle fingers",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "t": {
+    "hand_shape": "T handshape: thumb is tucked between the index and middle fingers, fist closed",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "u": {
+    "hand_shape": "U handshape: index and middle fingers extended together and pointing straight up, held together (not spread); ring and pinky folded, thumb folded",
+    "location": "Neutral space in front of the chest, palm facing forward",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "v": {
+    "hand_shape": "V handshape (also called 2 handshape): index and middle fingers extended and spread apart in a V/peace-sign shape; ring and pinky folded, thumb folded",
+    "location": "Neutral space in front of the chest, palm facing forward",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "w": {
+    "hand_shape": "W handshape: index, middle, and ring fingers extended and spread apart; pinky and thumb touch each other",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "x": {
+    "hand_shape": "X handshape: index finger bent/hooked at the knuckle like a hook; other fingers curled in fist, thumb alongside",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "y": {
+    "hand_shape": "Y handshape: thumb and pinky extended outward; index, middle, and ring fingers folded into palm",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "z": {
+    "hand_shape": "1 handshape (index finger extended, pointing forward)",
+    "location": "Upper neutral space in front of the chest",
+    "movement": "Trace the letter Z in the air — draw a line right, then diagonally down-left, then a line right again",
+    "non_manual_markers": "Neutral expression"
+  },
+
+  "one": {
+    "hand_shape": "1 handshape: index finger points straight up, all other fingers curl into fist",
+    "location": "Neutral space in front of the chest, palm facing signer",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "two": {
+    "hand_shape": "2 handshape (V handshape): index and middle fingers extended and spread in a V; other fingers folded",
+    "location": "Neutral space in front of the chest, palm facing signer",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "three": {
+    "hand_shape": "3 handshape: thumb, index, and middle fingers extended and spread; ring and pinky folded into palm",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "four": {
+    "hand_shape": "4 handshape: all four fingers (index through pinky) extended and spread, thumb folded across the palm",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "five": {
+    "hand_shape": "5 handshape: all five fingers spread open, palm facing forward",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "six": {
+    "hand_shape": "6 handshape (also called W or 'six'): pinky and thumb touch at their tips; index, middle, and ring fingers extended",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "seven": {
+    "hand_shape": "7 handshape: ring finger bends to touch the thumb; index, middle, and pinky extended",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "eight": {
+    "hand_shape": "8 handshape: middle finger bends down to touch the thumb; index, ring, and pinky extended",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "nine": {
+    "hand_shape": "9 handshape: index finger bends to touch the thumb forming a circle; middle, ring, and pinky extended",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hold still; no movement",
+    "non_manual_markers": "Neutral expression"
+  },
+  "ten": {
+    "hand_shape": "A handshape (closed fist) with thumb extended upward",
+    "location": "Neutral space in front of the chest",
+    "movement": "Shake or twist the wrist slightly side-to-side",
+    "non_manual_markers": "Neutral expression"
+  },
+
+  "january": {
+    "hand_shape": "J, A, N handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through J → A → N handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "february": {
+    "hand_shape": "F, E, B handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through F → E → B handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "march": {
+    "hand_shape": "M, A, R handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through M → A → R handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "april": {
+    "hand_shape": "A, P, R handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through A → P → R handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "may": {
+    "hand_shape": "M, A, Y handshapes in sequence (fully fingerspelled — only 3 letters)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through M → A → Y handshapes",
+    "non_manual_markers": "Neutral expression"
+  },
+  "june": {
+    "hand_shape": "J, U, N, E handshapes in sequence (fully fingerspelled — 4 letters)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through J → U → N → E handshapes",
+    "non_manual_markers": "Neutral expression"
+  },
+  "july": {
+    "hand_shape": "J, U, L, Y handshapes in sequence (fully fingerspelled — 4 letters)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through J → U → L → Y handshapes",
+    "non_manual_markers": "Neutral expression"
+  },
+  "august": {
+    "hand_shape": "A, U, G handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through A → U → G handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "september": {
+    "hand_shape": "S, E, P, T handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through S → E → P → T handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "october": {
+    "hand_shape": "O, C, T handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through O → C → T handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "november": {
+    "hand_shape": "N, O, V handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through N → O → V handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+  "december": {
+    "hand_shape": "D, E, C handshapes in sequence (abbreviated fingerspelling)",
+    "location": "Neutral space in front of the chest",
+    "movement": "Smoothly transition through D → E → C handshapes, moving slightly to the right",
+    "non_manual_markers": "Neutral expression"
+  },
+
+  "angry": {
+    "hand_shape": "Claw-5 handshape (both hands): fingers spread and bent/curved like claws",
+    "location": "In front of the face, fingers pointing toward the face",
+    "movement": "Pull both hands outward and away from the face with tension, or claw inward toward face then pull out",
+    "non_manual_markers": "Furrowed brow, tense jaw, possibly bared teeth or tight lips; body may tense forward"
+  },
+  "bad": {
+    "hand_shape": "Flat B handshape: all fingers extended and together, thumb folded",
+    "location": "Fingertips touching the chin/lips at the start",
+    "movement": "Flick the hand outward and downward away from the mouth, rotating so fingers end pointing down",
+    "non_manual_markers": "Slight grimace or negative expression; mouth may turn down briefly"
+  },
+  "bathroom": {
+    "hand_shape": "T handshape: thumb tucked between index and middle fingers, fist closed",
+    "location": "Neutral space in front of the body",
+    "movement": "Shake the hand side-to-side (wrist twist) two or three times",
+    "non_manual_markers": "Neutral expression; sometimes a slightly raised eyebrow if asking a question"
+  },
+  "book": {
+    "hand_shape": "Both hands flat (B handshape), palms together like a closed book",
+    "location": "Neutral space in front of the chest",
+    "movement": "Open both hands outward like opening a book, keeping pinky sides together as the 'spine'",
+    "non_manual_markers": "Neutral expression"
+  },
+  "car": {
+    "hand_shape": "Both hands in S handshape (closed fists) or modified A handshape, representing hands gripping a steering wheel",
+    "location": "Neutral space in front of the chest",
+    "movement": "Move hands alternately up and down in a small steering-wheel motion, as if driving",
+    "non_manual_markers": "Neutral expression"
+  },
+  "family": {
+    "hand_shape": "Both hands in F handshape (index-thumb circle, other fingers extended)",
+    "location": "Start with both F hands touching in front of the chest, index-thumb circles touching",
+    "movement": "Circle both hands outward and forward (away from each other) until the pinky sides come together, forming a large circle representing a group",
+    "non_manual_markers": "Neutral to warm expression"
+  },
+  "finished": {
+    "hand_shape": "Both hands in open-5 handshape (all fingers spread), palms facing the signer",
+    "location": "Chest level in front of the body",
+    "movement": "Quickly flip both hands outward so palms now face away from the signer",
+    "non_manual_markers": "Slight puff of cheeks or exhale; sometimes head tilts back slightly to emphasize completion"
+  },
+  "food": {
+    "hand_shape": "Flat-O handshape (dominant hand): all fingertips pinched together touching the thumb",
+    "location": "In front of the mouth",
+    "movement": "Tap the fingertips to the lips twice",
+    "non_manual_markers": "Neutral expression; may show a slight hungry or interested look"
+  },
+  "friend": {
+    "hand_shape": "Both hands in 1 handshape (index fingers extended), then hook them together",
+    "location": "Neutral space in front of the chest",
+    "movement": "Hook the dominant index finger over the non-dominant index finger, then reverse — swap which finger is on top",
+    "non_manual_markers": "Warm or neutral expression"
+  },
+  "good": {
+    "hand_shape": "Flat B handshape (dominant hand), fingers together and extended",
+    "location": "Fingertips start touching the chin",
+    "movement": "Move the hand forward and downward, landing on the non-dominant palm which is held flat facing up",
+    "non_manual_markers": "Positive expression, slight smile; head may nod once"
+  },
+  "goodbye": {
+    "hand_shape": "Open flat hand (B handshape), palm facing forward",
+    "location": "Raised at shoulder/face height",
+    "movement": "Bend the fingers down and back up repeatedly, as if waving goodbye",
+    "non_manual_markers": "Friendly smile; may lean head slightly"
+  },
+  "grandfather": {
+    "hand_shape": "Open-5 handshape (all five fingers spread), dominant hand",
+    "location": "Start with thumb touching the forehead (like FATHER sign)",
+    "movement": "Move the hand forward in two arcing bounces away from the forehead",
+    "non_manual_markers": "Neutral expression"
+  },
+  "grandmother": {
+    "hand_shape": "Open-5 handshape (all five fingers spread), dominant hand",
+    "location": "Start with thumb touching the chin (like MOTHER sign)",
+    "movement": "Move the hand forward in two arcing bounces away from the chin",
+    "non_manual_markers": "Neutral expression"
+  },
+  "happy": {
+    "hand_shape": "Open flat hand (B handshape) or open-5 handshape, palm facing the body",
+    "location": "In front of the chest",
+    "movement": "Brush the hand upward on the chest in circular motion, one or two times (like something welling up with joy)",
+    "non_manual_markers": "Genuine smile, bright eyes, possibly slight head nod"
+  },
+  "hello": {
+    "hand_shape": "Flat B handshape (all fingers together and extended), palm facing outward",
+    "location": "Start with fingertips at the temple or forehead",
+    "movement": "Extend the hand outward and slightly forward away from the forehead, like a relaxed salute",
+    "non_manual_markers": "Smile; friendly expression"
+  },
+  "home": {
+    "hand_shape": "Flat-O handshape (fingertips pinched together), dominant hand",
+    "location": "Touch fingertips to the cheek near the mouth, then move up to touch near the cheekbone/ear area",
+    "movement": "Touch cheek once near mouth (EAT location), then touch again higher near the cheekbone (SLEEP location)",
+    "non_manual_markers": "Neutral expression (HOME combines EAT and SLEEP — a place you eat and sleep)"
+  },
+  "hospital": {
+    "hand_shape": "H handshape (index and middle fingers extended together sideways) on dominant hand",
+    "location": "On the upper arm/shoulder of the non-dominant arm",
+    "movement": "Draw a small cross (plus sign) on the upper arm with the fingertips",
+    "non_manual_markers": "Neutral expression"
+  },
+  "house": {
+    "hand_shape": "Both hands flat (B handshape), angled diagonally with fingertips meeting",
+    "location": "Neutral space in front of the chest",
+    "movement": "Start with fingertips meeting overhead (forming a roof peak), then move hands outward and downward along the sides (forming walls), stopping at waist level",
+    "non_manual_markers": "Neutral expression"
+  },
+  "how": {
+    "hand_shape": "Both hands in bent/curved handshape (fingers bent, knuckles up), backs of hands facing each other",
+    "location": "Neutral space in front of the chest",
+    "movement": "Rotate both hands forward simultaneously so the palms end up facing upward",
+    "non_manual_markers": "Raised eyebrows (yes/no question context) or furrowed brow (wh-question context)"
+  },
+  "hungry": {
+    "hand_shape": "C handshape (curved hand forming a C), dominant hand",
+    "location": "Upper chest near the throat",
+    "movement": "Move the C handshape downward along the chest/sternum",
+    "non_manual_markers": "Can show a hungry expression — slight frown or longing look"
+  },
+  "later": {
+    "hand_shape": "L handshape (index up, thumb out) on dominant hand; non-dominant hand flat (palm up)",
+    "location": "Dominant L-hand rests its thumb on the non-dominant palm",
+    "movement": "Tilt or rotate the L-hand forward from upright to angled (like a clock hand moving forward in time)",
+    "non_manual_markers": "Neutral expression"
+  },
+  "learn": {
+    "hand_shape": "Dominant hand starts as open-5 (fingers spread) near the forehead, non-dominant hand flat (palm up) as a reference",
+    "location": "Dominant hand at the forehead",
+    "movement": "Bring the fingertips of the dominant open hand down to the non-dominant palm, picking up 'information', then move back to forehead closing into a flat-O shape",
+    "non_manual_markers": "Attentive, focused expression"
+  },
+  "morning": {
+    "hand_shape": "Non-dominant arm rests horizontally in front of body (like a horizon); dominant hand is flat (B handshape) with fingers together",
+    "location": "Dominant hand starts below the non-dominant arm (like the sun below the horizon)",
+    "movement": "Raise the dominant hand upward from below the crook of the non-dominant arm, like the sun rising",
+    "non_manual_markers": "Neutral or pleasant expression"
+  },
+  "mother": {
+    "hand_shape": "Open-5 handshape (all five fingers spread), dominant hand",
+    "location": "Thumb touches the chin",
+    "movement": "Tap the thumb to the chin twice",
+    "non_manual_markers": "Neutral expression"
+  },
+  "need": {
+    "hand_shape": "X handshape (index finger hooked/bent), dominant hand",
+    "location": "Neutral space in front of the body",
+    "movement": "Bend the wrist downward once or twice, like a hooking or compelling motion",
+    "non_manual_markers": "Can show a slightly serious or urgent expression to convey necessity"
+  },
+  "now": {
+    "hand_shape": "Both hands in Y handshape (thumb and pinky extended) or bent-B handshape",
+    "location": "Neutral space at waist/hip level",
+    "movement": "Drop both hands downward firmly",
+    "non_manual_markers": "Can have a slightly emphatic expression if stressing immediacy"
+  },
+  "phone": {
+    "hand_shape": "Y handshape (thumb and pinky extended, other fingers folded), mimicking a telephone handset",
+    "location": "Held up to the ear, thumb near the ear, pinky near the mouth",
+    "movement": "Hold the handshape at the ear; may tap slightly or just hold in place",
+    "non_manual_markers": "Neutral expression"
+  },
+  "please": {
+    "hand_shape": "Flat B handshape (open hand, fingers together), palm facing the chest",
+    "location": "Flat against the chest",
+    "movement": "Rub the hand in a circular motion on the chest (clockwise from signer's perspective)",
+    "non_manual_markers": "Polite, slightly earnest expression; may include slight eyebrow raise"
+  },
+  "read": {
+    "hand_shape": "Dominant hand in V handshape (index and middle fingers spread like two eyes/legs); non-dominant hand held flat (palm up, representing a page)",
+    "location": "Dominant V-hand over the non-dominant flat hand",
+    "movement": "Move the V-hand (representing eyes reading) downward across the non-dominant palm, like eyes scanning a page",
+    "non_manual_markers": "Neutral expression"
+  },
+  "sad": {
+    "hand_shape": "Both hands open-5 (fingers spread), palms facing the signer",
+    "location": "In front of the face, fingers pointing upward near the cheeks",
+    "movement": "Move both hands slowly downward in front of the face, as if sadness is weighing the face down",
+    "non_manual_markers": "Downturned mouth, drooping eyelids, overall drooping facial expression"
+  },
+  "scared": {
+    "hand_shape": "Both hands in A or S handshape (closed fists), held on each side of the chest",
+    "location": "On each side of the chest",
+    "movement": "Quickly bring both hands toward each other and the center of the chest simultaneously, in a startled motion",
+    "non_manual_markers": "Wide eyes, open mouth, sharp inhale; body may flinch backward"
+  },
+  "school": {
+    "hand_shape": "Non-dominant hand flat (palm up); dominant hand flat (palm down)",
+    "location": "Non-dominant flat hand held in neutral space",
+    "movement": "Clap the dominant flat hand down onto the non-dominant palm twice",
+    "non_manual_markers": "Neutral expression"
+  },
+  "sit": {
+    "hand_shape": "Both hands in H handshape (index and middle fingers extended together, pointing forward)",
+    "location": "Neutral space in front of the body",
+    "movement": "Place the dominant H-fingers on top of the non-dominant H-fingers (like legs sitting on a ledge), letting them rest there",
+    "non_manual_markers": "Neutral expression"
+  },
+  "sleep": {
+    "hand_shape": "Open-5 handshape (fingers spread), palm facing the face",
+    "location": "In front of the face",
+    "movement": "Draw the hand downward over the face while the fingers come together into a flat-O shape, as if the face is closing into sleep",
+    "non_manual_markers": "Eyes close as hand moves down; relaxed, sleepy expression"
+  },
+  "sorry": {
+    "hand_shape": "A handshape (closed fist), dominant hand",
+    "location": "Fist placed on the chest",
+    "movement": "Rub the fist in a circular motion on the chest (clockwise from signer's perspective)",
+    "non_manual_markers": "Apologetic expression — furrowed brow, downturned mouth, possibly slight bow of head"
+  },
+  "stand": {
+    "hand_shape": "Dominant hand in V handshape (index and middle fingers extended, spread); non-dominant hand flat (palm up)",
+    "location": "Non-dominant palm held flat; V-fingers placed on it",
+    "movement": "Place the tips of the V-fingers on the non-dominant palm to stand upright, like two legs standing on a surface",
+    "non_manual_markers": "Neutral expression"
+  },
+  "thank_you": {
+    "hand_shape": "Flat B handshape (open hand, fingers together), dominant hand",
+    "location": "Fingertips touch the chin/lips at the start",
+    "movement": "Move the hand forward and outward away from the mouth toward the person you are thanking",
+    "non_manual_markers": "Sincere smile; slight head nod"
+  },
+  "thirsty": {
+    "hand_shape": "1 handshape (index finger extended and pointing up), dominant hand",
+    "location": "Top of the throat/chin",
+    "movement": "Drag the extended index finger slowly down the throat from chin to sternum",
+    "non_manual_markers": "Can show a thirsty or longing expression; slightly dry or craving look"
+  },
+  "tired": {
+    "hand_shape": "Both hands in bent-5 handshape (fingers bent, fingertips on chest), fingertips touching the chest on each side",
+    "location": "On the chest, one hand on each side",
+    "movement": "Rotate both hands forward and downward simultaneously, so fingers end up pointing down — like energy draining away",
+    "non_manual_markers": "Drooping eyelids, slightly slumped shoulders, tired expression"
+  },
+  "today": {
+    "hand_shape": "Y handshapes (both hands, thumb and pinky extended) or bent hands",
+    "location": "Neutral space at waist level",
+    "movement": "Drop both hands downward firmly (sign NOW), repeat once more (sign DAY) — or sign NOW then DAY sequentially",
+    "non_manual_markers": "Neutral expression"
+  },
+  "tomorrow": {
+    "hand_shape": "A handshape with thumb extended (thumbs-up style), dominant hand",
+    "location": "Thumb side of fist touching the cheek",
+    "movement": "Move the hand forward (away from the face, toward the future)",
+    "non_manual_markers": "Neutral expression"
+  },
+  "wait": {
+    "hand_shape": "Both hands in open curved/bent-5 handshape, fingers spread and bent",
+    "location": "One hand slightly in front of the other, both at waist/torso level",
+    "movement": "Wiggle all the fingers of both hands (like a slow wave of fingers)",
+    "non_manual_markers": "Neutral or slightly patient expression; sometimes lips pressed together"
+  },
+  "want": {
+    "hand_shape": "Both hands in curved-5 handshape (fingers spread and bent, palms facing up)",
+    "location": "Neutral space in front of the body, palms up",
+    "movement": "Pull both hands toward the body (drawing in what you want)",
+    "non_manual_markers": "Can show a wanting or desirous expression; eyebrows may lower slightly"
+  },
+  "water": {
+    "hand_shape": "W handshape (index, middle, ring fingers extended and spread), dominant hand",
+    "location": "Fingertips tap the chin/lower lip",
+    "movement": "Tap the W-handshape fingertips to the chin twice",
+    "non_manual_markers": "Neutral expression"
+  },
+  "when": {
+    "hand_shape": "Both hands in 1 handshape (index fingers extended); dominant index circles the non-dominant index, then touches its tip",
+    "location": "Neutral space in front of the body",
+    "movement": "Dominant index finger circles around the tip of the non-dominant index finger, then touches the tip",
+    "non_manual_markers": "Raised eyebrows (if yes/no question); furrowed brow (if wh-question)"
+  },
+  "where": {
+    "hand_shape": "1 handshape (index finger extended, pointing up), dominant hand",
+    "location": "Neutral space in front of the body",
+    "movement": "Shake the index finger side-to-side (back and forth) at the wrist",
+    "non_manual_markers": "Furrowed brow (wh-question marker)"
+  },
+  "which": {
+    "hand_shape": "Both hands in A handshape (closed fists) or Y handshape",
+    "location": "Neutral space in front of the body, one hand slightly higher",
+    "movement": "Move both hands alternately up and down, like a scale/balance tipping back and forth",
+    "non_manual_markers": "Furrowed brow; slight tilt of head (wh-question marker)"
+  },
+  "who": {
+    "hand_shape": "L handshape or bent-1 handshape (index finger slightly bent) near the mouth, or dominant hand with index at lips",
+    "location": "At or near the lips/chin",
+    "movement": "Circle or wiggle the index finger in front of the lips",
+    "non_manual_markers": "Furrowed brow (wh-question marker); pursed lips"
+  },
+  "why": {
+    "hand_shape": "Open hand at forehead then Y handshape: touch forehead with middle finger of open hand, then move hand outward closing into Y handshape",
+    "location": "Start at forehead",
+    "movement": "Touch the middle finger to the forehead, then draw the hand forward and down while transitioning to Y handshape",
+    "non_manual_markers": "Furrowed brow (wh-question marker)"
+  },
+  "write": {
+    "hand_shape": "Dominant hand in a modified F or pinching handshape (index finger and thumb pinched together, other fingers loosely extended, mimicking holding a pen)",
+    "location": "Dominant hand above the non-dominant flat palm (palm up, held horizontally)",
+    "movement": "Move the dominant hand across the non-dominant palm in a writing motion, like writing on paper",
+    "non_manual_markers": "Neutral expression; sometimes a focused look"
+  },
+  "yes": {
+    "hand_shape": "S handshape (closed fist, thumb over fingers), dominant hand",
+    "location": "Neutral space in front of the chest",
+    "movement": "Nod the hand up and down at the wrist (like the fist is nodding), one or two times",
+    "non_manual_markers": "Affirmative nod of the head; positive expression"
+  },
+  "yesterday": {
+    "hand_shape": "A handshape with thumb extended (thumbs-up), dominant hand",
+    "location": "Thumb side of fist touching the cheek",
+    "movement": "Move the hand backward (toward the back of the head, toward the past)",
+    "non_manual_markers": "Neutral expression"
+  }
+}

@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 from typing import TypedDict, Annotated, List
 from operator import itemgetter
 
@@ -22,6 +23,21 @@ init(autoreset=True)
 load_dotenv()
 
 MODEL_NAME = "gemini-2.5-flash"
+
+# --- Load Sign Knowledge Base ---
+_KB_PATH = Path(__file__).parent / "sign_knowledge_base.json"
+try:
+    with open(_KB_PATH, "r") as f:
+        _raw_kb = json.load(f)
+    # Strip meta keys; keep only sign entries (dicts with hand_shape)
+    SIGN_KNOWLEDGE_BASE: dict = {
+        k: v for k, v in _raw_kb.items()
+        if isinstance(v, dict) and "hand_shape" in v
+    }
+    print(f"{Fore.CYAN}Loaded sign knowledge base: {len(SIGN_KNOWLEDGE_BASE)} signs{Style.RESET_ALL}")
+except Exception as e:
+    print(f"{Fore.YELLOW}Warning: Could not load sign knowledge base: {e}{Style.RESET_ALL}")
+    SIGN_KNOWLEDGE_BASE = {}
 
 # --- Pydantic Schemas (Reuse yours) ---
 # ... (DescriptionSchema and SentenceDescriptionSchema remain the same) ...
@@ -84,19 +100,91 @@ def grammar_planner_node(state: ASLState) -> dict:
     print(f"{Fore.MAGENTA}🧠 Grammar Agent: Planning ASL structure...{Style.RESET_ALL}")
 
     system_prompt = (
-        "You are an expert ASL grammarian. Analyze the English input for ASL grammar transformation.\n\n"
-        "ASL Grammar Rules:\n"
-        "1. TIME-TOPIC-COMMENT (TTC) structure: Time expressions come first, then topic, then comment\n"
-        "2. OMIT: Articles (a, an, the), linking verbs (is, am, are, was, were), infinitive 'to'\n"
-        "3. SIMPLIFY: Contractions (I'm → I, don't → NOT), auxiliary verbs (will, would, should)\n"
-        "4. DIRECTIONAL: Many verbs show direction naturally (GIVE-you vs GIVE-me)\n"
-        "5. QUESTIONS: Raise eyebrows for yes/no, furrow for wh-questions\n\n"
-        "Examples:\n"
-        "- 'I am going to the store' → 'I STORE GO' (omit am/to/the, destination before verb)\n"
-        "- 'Yesterday I saw my friend' → 'YESTERDAY I FRIEND SEE' (time first)\n"
-        "- 'What is your name?' → 'YOUR NAME WHAT' (wh-word at end, eyebrows furrowed)\n"
-        "- 'I don't like coffee' → 'I COFFEE LIKE NOT' (negation at end)\n\n"
-        "Determine if reordering is needed and provide the ASL gloss order (capitalized words, space-separated)."
+        "You are an expert ASL linguist and grammarian trained in the grammar of American Sign Language "
+        "as described by Valli, Lucas, and Ceil (Linguistics of American Sign Language) and Bill Vicars (Lifeprint/ASLU).\n\n"
+
+        "## CORE ASL GRAMMAR RULES\n\n"
+
+        "### 1. Time-Topic-Comment (TTC) Structure\n"
+        "Time expressions always come FIRST, then the topic, then the comment/predicate.\n"
+        "- 'I will go to the store tomorrow' → 'TOMORROW I STORE GO'\n"
+        "- 'She was sick last week' → 'LAST-WEEK SHE SICK'\n"
+        "- 'Every morning I drink coffee' → 'EVERY-MORNING I COFFEE DRINK'\n\n"
+
+        "### 2. Omit Function Words\n"
+        "Drop: articles (a, an, the), most linking verbs (is, am, are, was, were, be), "
+        "infinitive marker 'to', most prepositions (shown spatially in ASL), most auxiliary verbs.\n"
+        "- 'She is a teacher' → 'SHE TEACHER'\n"
+        "- 'I want to eat' → 'I WANT EAT'\n"
+        "- 'He was at the hospital' → 'HE HOSPITAL'\n\n"
+
+        "### 3. Expand Contractions and Negations\n"
+        "Expand contractions. Negation (NOT, NEVER, NONE) goes at the END of the clause.\n"
+        "- 'I don't want to go' → 'I GO WANT NOT'\n"
+        "- 'She didn't see him' → 'SHE HIM SEE NOT'\n"
+        "- 'I can't find it' → 'I IT FIND CAN NOT'\n"
+        "- 'He never eats vegetables' → 'HE VEGETABLE EAT NEVER'\n\n"
+
+        "### 4. Topicalization (Topic + Comment)\n"
+        "The topic of the sentence is established first (with raised eyebrows), then commented on.\n"
+        "- 'I love that movie' → 'THAT MOVIE I LOVE' (raised brows on THAT MOVIE)\n"
+        "- 'My car is broken' → 'MY CAR BROKEN'\n"
+        "- 'Pizza, I like it' → 'PIZZA I LIKE' (topic first)\n\n"
+
+        "### 5. Wh-Questions\n"
+        "Wh-words (WHO, WHAT, WHERE, WHEN, WHY, HOW, WHICH) go at the END of the sentence. "
+        "Furrowed brow throughout the question.\n"
+        "- 'What is your name?' → 'YOUR NAME WHAT'\n"
+        "- 'Where do you live?' → 'YOU LIVE WHERE'\n"
+        "- 'Why are you late?' → 'YOU LATE WHY'\n"
+        "- 'Who did you see?' → 'YOU SEE WHO'\n\n"
+
+        "### 6. Yes/No Questions\n"
+        "Same word order as statements but with RAISED EYEBROWS and a slight forward lean throughout. "
+        "The structure stays as Topic-Comment.\n"
+        "- 'Do you like coffee?' → 'YOU COFFEE LIKE' (raised brows)\n"
+        "- 'Are you hungry?' → 'YOU HUNGRY' (raised brows)\n\n"
+
+        "### 7. Conditional Sentences (IF-THEN)\n"
+        "Conditionals start with 'IF', signed with raised brows on the condition clause, "
+        "then the result clause follows.\n"
+        "- 'If it rains, I will stay home' → 'IF RAIN I HOME STAY'\n"
+        "- 'If you need help, ask me' → 'IF YOU HELP NEED YOU ASK-ME'\n\n"
+
+        "### 8. Verb Directionality\n"
+        "Many ASL verbs are directional — they move from subject to object in space. "
+        "Do not add separate pronouns when the verb already encodes direction.\n"
+        "- 'I give you' → 'GIVE' (hand moves from signer toward addressee)\n"
+        "- 'You help me' → 'HELP-ME'\n\n"
+
+        "### 9. Aspect and Temporal Modification\n"
+        "ASL expresses ongoing action by slowing/repeating a verb. "
+        "Perfect aspect (completed) uses FINISH or ALREADY before or after the verb.\n"
+        "- 'I have eaten' → 'I EAT FINISH'\n"
+        "- 'She is sleeping (ongoing)' → 'SHE SLEEP' (signed slowly/repeatedly)\n\n"
+
+        "### 10. Classifiers\n"
+        "ASL uses handshape classifiers to represent categories of objects in space. "
+        "When a classifier applies, note it in the gloss using CL: notation.\n"
+        "- A car driving → CL:3(car-moving)\n"
+        "- A person standing → CL:1(person-standing)\n\n"
+
+        "## GLOSS CONVENTIONS\n"
+        "- Use CAPITALIZED English words for ASL glosses\n"
+        "- Hyphenate compound glosses: THANK-YOU, LAST-WEEK, LOOK-AT\n"
+        "- Use # for fingerspelled loan signs: #BACK, #JOB\n"
+        "- Use fs- prefix for full fingerspelling when no ASL sign exists: fs-PIZZA\n\n"
+
+        "## MORE EXAMPLES\n"
+        "- 'I am going to school tomorrow' → 'TOMORROW I SCHOOL GO'\n"
+        "- 'Did you finish your homework?' → 'YOUR HOMEWORK FINISH YOU' (raised brows)\n"
+        "- 'I have been learning ASL for two years' → 'TWO YEAR I ASL LEARN'\n"
+        "- 'She is not my friend' → 'SHE MY FRIEND NOT'\n"
+        "- 'How are you?' → 'YOU HOW'\n"
+        "- 'I am happy to meet you' → 'I MEET YOU HAPPY'\n\n"
+
+        "Analyze the English input, determine if reordering/transformation is needed, "
+        "and output the correct ASL gloss sequence (capitalized words, space-separated)."
     )
 
     llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.0)
@@ -138,37 +226,81 @@ def reorder_node(state: ASLState) -> dict:
 
 
 # 3. Sign Instructor Agent (Instruct Node)
-def sign_instructor_node(state: ASLState) -> dict:
-    """The original logic: translates the (planned or original) string into signs."""
+def _build_knowledge_context(gloss_sequence: str) -> str:
+    """
+    Look up each gloss in the knowledge base and return a formatted reference block.
+    Handles uppercase glosses, hyphenated compounds (THANK-YOU → thank_you), and
+    number words (ONE → one). Returns an empty string if nothing is found.
+    """
+    if not SIGN_KNOWLEDGE_BASE:
+        return ""
 
-    # Use the 'translated_input' if available, otherwise use the original 'english_input'
+    glosses = gloss_sequence.split()
+    matched = []
+
+    for gloss in glosses:
+        # Normalize: lowercase, replace hyphens with underscores
+        key = gloss.lower().replace("-", "_").lstrip("#")
+        # Also try without underscore variant (e.g. thank_you → thankyou unlikely, but covers simple cases)
+        entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(key.replace("_", ""))
+        if entry:
+            matched.append((gloss, entry))
+
+    if not matched:
+        return ""
+
+    lines = ["## VERIFIED SIGN DESCRIPTIONS (use these exactly — do not deviate)\n"]
+    for gloss, entry in matched:
+        lines.append(f"### {gloss}")
+        lines.append(f"- Hand shape: {entry['hand_shape']}")
+        lines.append(f"- Location: {entry['location']}")
+        lines.append(f"- Movement: {entry['movement']}")
+        lines.append(f"- Non-manual markers: {entry['non_manual_markers']}")
+        lines.append("")
+
+    unmatched = [g for g in glosses if g.lower().replace("-", "_").lstrip("#") not in SIGN_KNOWLEDGE_BASE
+                 and g.lower().replace("-", "_").replace("_", "").lstrip("#") not in SIGN_KNOWLEDGE_BASE]
+    if unmatched:
+        lines.append(f"## Signs to generate (not in knowledge base): {', '.join(unmatched)}")
+        lines.append("For these, generate accurate descriptions based on your ASL knowledge.\n")
+
+    return "\n".join(lines)
+
+
+def sign_instructor_node(state: ASLState) -> dict:
+    """Translates the (planned or original) gloss sequence into detailed sign descriptions,
+    grounding known signs against the verified knowledge base."""
+
     input_text = state.get("translated_input") or state["english_input"]
+    original_input = state["english_input"]
 
     print(
         f"{Fore.MAGENTA}🤖 Instructor Agent: Generating signs for '{input_text}'...{Style.RESET_ALL}"
     )
 
-    # Get the original English input to compare transformations
-    original_input = state["english_input"]
+    # Build grounding context from knowledge base
+    knowledge_context = _build_knowledge_context(input_text)
+    if knowledge_context:
+        print(f"{Fore.CYAN}   -> Knowledge base: injecting verified descriptions{Style.RESET_ALL}")
 
     system_prompt = (
-        "You are an expert ASL lexicographer and teacher. Generate detailed sign descriptions.\n\n"
-        "For each sign in the ASL gloss sequence:\n"
-        "1. word: The ASL gloss (capitalized English word representing the sign)\n"
-        "2. hand_shape: Detailed description of hand configuration (e.g., 'flat hand with fingers together', 'closed fist with thumb extended')\n"
-        "3. location: Where the sign is performed relative to the body (e.g., 'in front of chest', 'at temple', 'neutral space')\n"
-        "4. movement: Precise description of motion (e.g., 'move forward in arc', 'tap twice', 'circular motion clockwise')\n"
-        "5. non_manual_markers: Facial expressions, head movement, body shift (e.g., 'raised eyebrows', 'head nod', 'lean forward slightly')\n\n"
-        "IMPORTANT for the 'note' field:\n"
-        "Explain the ASL grammar transformation from English to ASL. Address:\n"
-        "- What words were omitted and why (articles, linking verbs, etc.)\n"
-        "- How word order changed (TTC structure, negation placement, question formation)\n"
-        "- Any directional or spatial aspects of the signs\n"
+        "You are an expert ASL lexicographer and teacher. Generate detailed sign descriptions "
+        "for each gloss in the ASL gloss sequence.\n\n"
+        + (knowledge_context + "\n\n" if knowledge_context else "")
+        + "For each sign in the ASL gloss sequence, provide:\n"
+        "1. word: The ASL gloss (use the capitalized gloss exactly as given)\n"
+        "2. hand_shape: Detailed hand configuration (e.g., 'flat B handshape, fingers together')\n"
+        "3. location: Body location where the sign is performed\n"
+        "4. movement: Precise motion description\n"
+        "5. non_manual_markers: Facial expressions, head movement, body posture\n\n"
+        "IMPORTANT: For signs listed in VERIFIED SIGN DESCRIPTIONS above, copy those descriptions "
+        "faithfully. Only generate new descriptions for signs marked under 'Signs to generate'.\n\n"
+        "For the 'note' field, explain the ASL grammar transformation:\n"
+        "- What English words were omitted and why (articles, linking verbs, etc.)\n"
+        "- How word order changed (TTC structure, negation, wh-question placement)\n"
         "- Facial expression requirements for the sentence type\n"
-        "- Context or usage tips for natural signing\n\n"
-        'Example note: \'In ASL, we omit "am", "to", and "the" from the English sentence. '
-        "The destination (STORE) comes before the verb (GO) to show direction. Sign with "
-        "neutral expression unless emphasizing urgency.'\n\n"
+        "- Any directional or spatial grammar in use\n"
+        "- Tips for natural, fluent signing\n\n"
         "Original English: '{original}'\n"
         "ASL Gloss Order: '{text}'"
     )
@@ -177,16 +309,14 @@ def sign_instructor_node(state: ASLState) -> dict:
     instructor_chain = ChatPromptTemplate.from_messages(
         [
             ("system", system_prompt),
-            ("human", "Generate detailed ASL sign descriptions."),
+            ("human", "Generate detailed ASL sign descriptions for the gloss sequence."),
         ]
     ) | llm.with_structured_output(SentenceDescriptionSchema)
 
     try:
-        # Use the planned/reordered text as the input for the instruction
         result = instructor_chain.invoke(
             {"text": input_text, "original": original_input}
         )
-        # Update the state with the final result
         return {"final_output": result}
     except Exception as e:
         print(f"{Fore.RED}Instructor Agent Error: {e}{Style.RESET_ALL}")
