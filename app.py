@@ -35,7 +35,6 @@ from database import (
     get_popular_searches,
     get_daily_active_users,
     get_hourly_usage_pattern,
-    get_shared_key_usage_today,
     check_shared_key_rate_limit,
     hash_ip,
     AsyncSessionLocal,
@@ -54,7 +53,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "python_code"))
 from asl_dict_langgraph import (
     build_asl_graph,
     SentenceDescriptionSchema,
-    DescriptionSchema,
 )
 
 settings = get_settings()

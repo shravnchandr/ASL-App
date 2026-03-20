@@ -8,7 +8,7 @@ from typing import Optional
 
 
 def verify_admin_password(
-    password: Optional[str] = Header(None, alias="X-Admin-Password")
+    password: Optional[str] = Header(None, alias="X-Admin-Password"),
 ) -> bool:
     """Verify admin password from header"""
     admin_password = os.getenv("ADMIN_PASSWORD", "")

@@ -1,11 +1,9 @@
-import os
 import json
 from pathlib import Path
-from typing import TypedDict, Annotated, List
-from operator import itemgetter
+from typing import TypedDict, List
 
 # Core LangGraph imports
-from langgraph.graph import StateGraph, END, START
+from langgraph.graph import StateGraph, END
 
 # LangChain Imports
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -31,12 +29,15 @@ try:
         _raw_kb = json.load(f)
     # Strip meta keys; keep only sign entries (dicts with hand_shape)
     SIGN_KNOWLEDGE_BASE: dict = {
-        k: v for k, v in _raw_kb.items()
-        if isinstance(v, dict) and "hand_shape" in v
+        k: v for k, v in _raw_kb.items() if isinstance(v, dict) and "hand_shape" in v
     }
-    print(f"{Fore.CYAN}Loaded sign knowledge base: {len(SIGN_KNOWLEDGE_BASE)} signs{Style.RESET_ALL}")
+    print(
+        f"{Fore.CYAN}Loaded sign knowledge base: {len(SIGN_KNOWLEDGE_BASE)} signs{Style.RESET_ALL}"
+    )
 except Exception as e:
-    print(f"{Fore.YELLOW}Warning: Could not load sign knowledge base: {e}{Style.RESET_ALL}")
+    print(
+        f"{Fore.YELLOW}Warning: Could not load sign knowledge base: {e}{Style.RESET_ALL}"
+    )
     SIGN_KNOWLEDGE_BASE = {}
 
 # --- Pydantic Schemas (Reuse yours) ---
@@ -102,35 +103,29 @@ def grammar_planner_node(state: ASLState) -> dict:
     system_prompt = (
         "You are an expert ASL linguist and grammarian trained in the grammar of American Sign Language "
         "as described by Valli, Lucas, and Ceil (Linguistics of American Sign Language) and Bill Vicars (Lifeprint/ASLU).\n\n"
-
         "## CORE ASL GRAMMAR RULES\n\n"
-
         "### 1. Time-Topic-Comment (TTC) Structure\n"
         "Time expressions always come FIRST, then the topic, then the comment/predicate.\n"
         "- 'I will go to the store tomorrow' → 'TOMORROW I STORE GO'\n"
         "- 'She was sick last week' → 'LAST-WEEK SHE SICK'\n"
         "- 'Every morning I drink coffee' → 'EVERY-MORNING I COFFEE DRINK'\n\n"
-
         "### 2. Omit Function Words\n"
         "Drop: articles (a, an, the), most linking verbs (is, am, are, was, were, be), "
         "infinitive marker 'to', most prepositions (shown spatially in ASL), most auxiliary verbs.\n"
         "- 'She is a teacher' → 'SHE TEACHER'\n"
         "- 'I want to eat' → 'I WANT EAT'\n"
         "- 'He was at the hospital' → 'HE HOSPITAL'\n\n"
-
         "### 3. Expand Contractions and Negations\n"
         "Expand contractions. Negation (NOT, NEVER, NONE) goes at the END of the clause.\n"
         "- 'I don't want to go' → 'I GO WANT NOT'\n"
         "- 'She didn't see him' → 'SHE HIM SEE NOT'\n"
         "- 'I can't find it' → 'I IT FIND CAN NOT'\n"
         "- 'He never eats vegetables' → 'HE VEGETABLE EAT NEVER'\n\n"
-
         "### 4. Topicalization (Topic + Comment)\n"
         "The topic of the sentence is established first (with raised eyebrows), then commented on.\n"
         "- 'I love that movie' → 'THAT MOVIE I LOVE' (raised brows on THAT MOVIE)\n"
         "- 'My car is broken' → 'MY CAR BROKEN'\n"
         "- 'Pizza, I like it' → 'PIZZA I LIKE' (topic first)\n\n"
-
         "### 5. Wh-Questions\n"
         "Wh-words (WHO, WHAT, WHERE, WHEN, WHY, HOW, WHICH) go at the END of the sentence. "
         "Furrowed brow throughout the question.\n"
@@ -138,43 +133,36 @@ def grammar_planner_node(state: ASLState) -> dict:
         "- 'Where do you live?' → 'YOU LIVE WHERE'\n"
         "- 'Why are you late?' → 'YOU LATE WHY'\n"
         "- 'Who did you see?' → 'YOU SEE WHO'\n\n"
-
         "### 6. Yes/No Questions\n"
         "Same word order as statements but with RAISED EYEBROWS and a slight forward lean throughout. "
         "The structure stays as Topic-Comment.\n"
         "- 'Do you like coffee?' → 'YOU COFFEE LIKE' (raised brows)\n"
         "- 'Are you hungry?' → 'YOU HUNGRY' (raised brows)\n\n"
-
         "### 7. Conditional Sentences (IF-THEN)\n"
         "Conditionals start with 'IF', signed with raised brows on the condition clause, "
         "then the result clause follows.\n"
         "- 'If it rains, I will stay home' → 'IF RAIN I HOME STAY'\n"
         "- 'If you need help, ask me' → 'IF YOU HELP NEED YOU ASK-ME'\n\n"
-
         "### 8. Verb Directionality\n"
         "Many ASL verbs are directional — they move from subject to object in space. "
         "Do not add separate pronouns when the verb already encodes direction.\n"
         "- 'I give you' → 'GIVE' (hand moves from signer toward addressee)\n"
         "- 'You help me' → 'HELP-ME'\n\n"
-
         "### 9. Aspect and Temporal Modification\n"
         "ASL expresses ongoing action by slowing/repeating a verb. "
         "Perfect aspect (completed) uses FINISH or ALREADY before or after the verb.\n"
         "- 'I have eaten' → 'I EAT FINISH'\n"
         "- 'She is sleeping (ongoing)' → 'SHE SLEEP' (signed slowly/repeatedly)\n\n"
-
         "### 10. Classifiers\n"
         "ASL uses handshape classifiers to represent categories of objects in space. "
         "When a classifier applies, note it in the gloss using CL: notation.\n"
         "- A car driving → CL:3(car-moving)\n"
         "- A person standing → CL:1(person-standing)\n\n"
-
         "## GLOSS CONVENTIONS\n"
         "- Use CAPITALIZED English words for ASL glosses\n"
         "- Hyphenate compound glosses: THANK-YOU, LAST-WEEK, LOOK-AT\n"
         "- Use # for fingerspelled loan signs: #BACK, #JOB\n"
         "- Use fs- prefix for full fingerspelling when no ASL sign exists: fs-PIZZA\n\n"
-
         "## MORE EXAMPLES\n"
         "- 'I am going to school tomorrow' → 'TOMORROW I SCHOOL GO'\n"
         "- 'Did you finish your homework?' → 'YOUR HOMEWORK FINISH YOU' (raised brows)\n"
@@ -182,7 +170,6 @@ def grammar_planner_node(state: ASLState) -> dict:
         "- 'She is not my friend' → 'SHE MY FRIEND NOT'\n"
         "- 'How are you?' → 'YOU HOW'\n"
         "- 'I am happy to meet you' → 'I MEET YOU HAPPY'\n\n"
-
         "Analyze the English input, determine if reordering/transformation is needed, "
         "and output the correct ASL gloss sequence (capitalized words, space-separated)."
     )
@@ -242,7 +229,9 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
         # Normalize: lowercase, replace hyphens with underscores
         key = gloss.lower().replace("-", "_").lstrip("#")
         # Also try without underscore variant (e.g. thank_you → thankyou unlikely, but covers simple cases)
-        entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(key.replace("_", ""))
+        entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(
+            key.replace("_", "")
+        )
         if entry:
             matched.append((gloss, entry))
 
@@ -258,11 +247,20 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
         lines.append(f"- Non-manual markers: {entry['non_manual_markers']}")
         lines.append("")
 
-    unmatched = [g for g in glosses if g.lower().replace("-", "_").lstrip("#") not in SIGN_KNOWLEDGE_BASE
-                 and g.lower().replace("-", "_").replace("_", "").lstrip("#") not in SIGN_KNOWLEDGE_BASE]
+    unmatched = [
+        g
+        for g in glosses
+        if g.lower().replace("-", "_").lstrip("#") not in SIGN_KNOWLEDGE_BASE
+        and g.lower().replace("-", "_").replace("_", "").lstrip("#")
+        not in SIGN_KNOWLEDGE_BASE
+    ]
     if unmatched:
-        lines.append(f"## Signs to generate (not in knowledge base): {', '.join(unmatched)}")
-        lines.append("For these, generate accurate descriptions based on your ASL knowledge.\n")
+        lines.append(
+            f"## Signs to generate (not in knowledge base): {', '.join(unmatched)}"
+        )
+        lines.append(
+            "For these, generate accurate descriptions based on your ASL knowledge.\n"
+        )
 
     return "\n".join(lines)
 
@@ -281,7 +279,9 @@ def sign_instructor_node(state: ASLState) -> dict:
     # Build grounding context from knowledge base
     knowledge_context = _build_knowledge_context(input_text)
     if knowledge_context:
-        print(f"{Fore.CYAN}   -> Knowledge base: injecting verified descriptions{Style.RESET_ALL}")
+        print(
+            f"{Fore.CYAN}   -> Knowledge base: injecting verified descriptions{Style.RESET_ALL}"
+        )
 
     system_prompt = (
         "You are an expert ASL lexicographer and teacher. Generate detailed sign descriptions "
@@ -309,7 +309,10 @@ def sign_instructor_node(state: ASLState) -> dict:
     instructor_chain = ChatPromptTemplate.from_messages(
         [
             ("system", system_prompt),
-            ("human", "Generate detailed ASL sign descriptions for the gloss sequence."),
+            (
+                "human",
+                "Generate detailed ASL sign descriptions for the gloss sequence.",
+            ),
         ]
     ) | llm.with_structured_output(SentenceDescriptionSchema)
 

@@ -332,7 +332,7 @@ async def get_popular_searches(
 
 async def get_daily_active_users(session: AsyncSession, days: int = 30) -> List[dict]:
     """Get daily active users for the last N days"""
-    from sqlalchemy import func, select, cast, Date
+    from sqlalchemy import func, select
 
     start_date = datetime.utcnow() - timedelta(days=days)
 

@@ -12,12 +12,10 @@ Output:
     public/sign-data/metadata.json - Sign list with metadata
 """
 
-import os
 import json
 import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Optional
-import numpy as np
 
 # ============================================================
 # LANDMARK CONFIGURATION
@@ -459,7 +457,7 @@ def create_metadata(sign_data: Dict[str, Dict]) -> None:
     other_count = sum(
         1 for s in metadata["signs"].values() if s["difficulty"] == "other"
     )
-    print(f"\n  Summary:")
+    print("\n  Summary:")
     print(f"    Beginner signs: {beginner_count}")
     print(f"    Intermediate signs: {intermediate_count}")
     print(f"    Other signs: {other_count}")

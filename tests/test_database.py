@@ -4,7 +4,7 @@ Tests for database operations
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import Feedback, create_feedback, get_feedback_stats
+from database import create_feedback, get_feedback_stats
 
 
 class TestFeedbackModel:

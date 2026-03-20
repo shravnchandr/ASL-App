@@ -350,7 +350,7 @@ def process_video(video_path: str, sign: str):
 
     frames = extract_landmarks_from_video(video_path)
     if not frames:
-        print(f"  ERROR: Failed to extract landmarks")
+        print("  ERROR: Failed to extract landmarks")
         return False
 
     # Get video FPS
@@ -416,7 +416,7 @@ def main():
             print("ERROR: --sign required with --youtube")
             return
 
-        print(f"\nDownloading from YouTube...")
+        print("\nDownloading from YouTube...")
         with tempfile.TemporaryDirectory() as tmpdir:
             video_path = download_youtube_video(args.youtube, tmpdir)
             if video_path:

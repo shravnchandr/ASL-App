@@ -3,7 +3,6 @@ Pytest configuration and fixtures
 """
 
 import os
-import sys
 
 # Set test environment BEFORE importing any app modules
 os.environ["ENVIRONMENT"] = "test"
@@ -19,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.pool import StaticPool
 
 # Import database models FIRST to ensure they're registered
-from database import Base, get_db, Feedback
+from database import Base, get_db
 
 
 @pytest.fixture(scope="session")

@@ -36,3 +36,8 @@ dependencies = [
     "tqdm>=4.67.3",
     "uvicorn[standard]>=0.32.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.7",
+]

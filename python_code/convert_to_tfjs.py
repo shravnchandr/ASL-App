@@ -11,7 +11,6 @@ Also exports:
 
 import json
 import pickle
-import struct
 from pathlib import Path
 
 import numpy as np
@@ -48,7 +47,9 @@ def load_pytorch_model(model_path: str, input_size: int = 63, num_classes: int =
     return model
 
 
-def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_classes: int = 36):
+def save_tfjs_model(
+    pytorch_model, output_dir: Path, input_size: int = 63, num_classes: int = 36
+):
     """
     Manually create TensorFlow.js LayersModel format.
 
@@ -62,29 +63,32 @@ def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_c
     weights = []
 
     # Layer 0: Dense 63 -> 128
-    w0 = state_dict['layer_stack.0.weight'].numpy().T.astype(np.float32)
-    b0 = state_dict['layer_stack.0.bias'].numpy().astype(np.float32)
+    w0 = state_dict["layer_stack.0.weight"].numpy().T.astype(np.float32)
+    b0 = state_dict["layer_stack.0.bias"].numpy().astype(np.float32)
     weights.extend([w0, b0])
 
     # Layer 1: Dense 128 -> 64
-    w1 = state_dict['layer_stack.3.weight'].numpy().T.astype(np.float32)
-    b1 = state_dict['layer_stack.3.bias'].numpy().astype(np.float32)
+    w1 = state_dict["layer_stack.3.weight"].numpy().T.astype(np.float32)
+    b1 = state_dict["layer_stack.3.bias"].numpy().astype(np.float32)
     weights.extend([w1, b1])
 
     # Layer 2: Dense 64 -> 36
-    w2 = state_dict['layer_stack.5.weight'].numpy().T.astype(np.float32)
-    b2 = state_dict['layer_stack.5.bias'].numpy().astype(np.float32)
+    w2 = state_dict["layer_stack.5.weight"].numpy().T.astype(np.float32)
+    b2 = state_dict["layer_stack.5.bias"].numpy().astype(np.float32)
     weights.extend([w2, b2])
 
     # Create binary weights file
-    weights_data = b''
+    weights_data = b""
     weight_specs = []
     offset = 0
 
     weight_names = [
-        "dense/kernel", "dense/bias",
-        "dense_1/kernel", "dense_1/bias",
-        "dense_2/kernel", "dense_2/bias"
+        "dense/kernel",
+        "dense/bias",
+        "dense_1/kernel",
+        "dense_1/bias",
+        "dense_2/kernel",
+        "dense_2/bias",
     ]
 
     for name, w in zip(weight_names, weights):
@@ -93,16 +97,12 @@ def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_c
         byte_data = flat.tobytes()
         weights_data += byte_data
 
-        weight_specs.append({
-            "name": name,
-            "shape": list(w.shape),
-            "dtype": "float32"
-        })
+        weight_specs.append({"name": name, "shape": list(w.shape), "dtype": "float32"})
         offset += len(byte_data)
 
     # Write binary weights
     weights_path = output_dir / "group1-shard1of1.bin"
-    with open(weights_path, 'wb') as f:
+    with open(weights_path, "wb") as f:
         f.write(weights_data)
 
     # Create model.json (TensorFlow.js LayersModel format)
@@ -124,8 +124,8 @@ def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_c
                                 "batch_input_shape": [None, input_size],
                                 "dtype": "float32",
                                 "sparse": False,
-                                "name": "input_1"
-                            }
+                                "name": "input_1",
+                            },
                         },
                         {
                             "class_name": "Dense",
@@ -136,14 +136,20 @@ def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_c
                                 "units": 128,
                                 "activation": "relu",
                                 "use_bias": True,
-                                "kernel_initializer": {"class_name": "GlorotUniform", "config": {"seed": None}},
-                                "bias_initializer": {"class_name": "Zeros", "config": {}},
+                                "kernel_initializer": {
+                                    "class_name": "GlorotUniform",
+                                    "config": {"seed": None},
+                                },
+                                "bias_initializer": {
+                                    "class_name": "Zeros",
+                                    "config": {},
+                                },
                                 "kernel_regularizer": None,
                                 "bias_regularizer": None,
                                 "activity_regularizer": None,
                                 "kernel_constraint": None,
-                                "bias_constraint": None
-                            }
+                                "bias_constraint": None,
+                            },
                         },
                         {
                             "class_name": "Dropout",
@@ -153,8 +159,8 @@ def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_c
                                 "dtype": "float32",
                                 "rate": 0.2,
                                 "noise_shape": None,
-                                "seed": None
-                            }
+                                "seed": None,
+                            },
                         },
                         {
                             "class_name": "Dense",
@@ -165,14 +171,20 @@ def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_c
                                 "units": 64,
                                 "activation": "relu",
                                 "use_bias": True,
-                                "kernel_initializer": {"class_name": "GlorotUniform", "config": {"seed": None}},
-                                "bias_initializer": {"class_name": "Zeros", "config": {}},
+                                "kernel_initializer": {
+                                    "class_name": "GlorotUniform",
+                                    "config": {"seed": None},
+                                },
+                                "bias_initializer": {
+                                    "class_name": "Zeros",
+                                    "config": {},
+                                },
                                 "kernel_regularizer": None,
                                 "bias_regularizer": None,
                                 "activity_regularizer": None,
                                 "kernel_constraint": None,
-                                "bias_constraint": None
-                            }
+                                "bias_constraint": None,
+                            },
                         },
                         {
                             "class_name": "Dense",
@@ -183,29 +195,32 @@ def save_tfjs_model(pytorch_model, output_dir: Path, input_size: int = 63, num_c
                                 "units": num_classes,
                                 "activation": "linear",
                                 "use_bias": True,
-                                "kernel_initializer": {"class_name": "GlorotUniform", "config": {"seed": None}},
-                                "bias_initializer": {"class_name": "Zeros", "config": {}},
+                                "kernel_initializer": {
+                                    "class_name": "GlorotUniform",
+                                    "config": {"seed": None},
+                                },
+                                "bias_initializer": {
+                                    "class_name": "Zeros",
+                                    "config": {},
+                                },
                                 "kernel_regularizer": None,
                                 "bias_regularizer": None,
                                 "activity_regularizer": None,
                                 "kernel_constraint": None,
-                                "bias_constraint": None
-                            }
-                        }
-                    ]
-                }
-            }
+                                "bias_constraint": None,
+                            },
+                        },
+                    ],
+                },
+            },
         },
         "weightsManifest": [
-            {
-                "paths": ["group1-shard1of1.bin"],
-                "weights": weight_specs
-            }
-        ]
+            {"paths": ["group1-shard1of1.bin"], "weights": weight_specs}
+        ],
     }
 
     model_path = output_dir / "model.json"
-    with open(model_path, 'w') as f:
+    with open(model_path, "w") as f:
         json.dump(model_json, f, indent=2)
 
     print(f"Saved TensorFlow.js model to: {output_dir}")
@@ -218,30 +233,31 @@ def verify_weights(pytorch_model, output_dir: Path):
     state_dict = pytorch_model.state_dict()
 
     # Read back the binary weights
-    with open(output_dir / "group1-shard1of1.bin", 'rb') as f:
+    with open(output_dir / "group1-shard1of1.bin", "rb") as f:
         weights_data = f.read()
 
     # Verify each weight
     offset = 0
-    weight_shapes = [
-        (63, 128), (128,),
-        (128, 64), (64,),
-        (64, 36), (36,)
-    ]
+    weight_shapes = [(63, 128), (128,), (128, 64), (64,), (64, 36), (36,)]
     pytorch_keys = [
-        'layer_stack.0.weight', 'layer_stack.0.bias',
-        'layer_stack.3.weight', 'layer_stack.3.bias',
-        'layer_stack.5.weight', 'layer_stack.5.bias'
+        "layer_stack.0.weight",
+        "layer_stack.0.bias",
+        "layer_stack.3.weight",
+        "layer_stack.3.bias",
+        "layer_stack.5.weight",
+        "layer_stack.5.bias",
     ]
 
     for shape, key in zip(weight_shapes, pytorch_keys):
         num_elements = np.prod(shape)
         byte_length = num_elements * 4  # float32 = 4 bytes
 
-        exported = np.frombuffer(weights_data[offset:offset+byte_length], dtype=np.float32).reshape(shape)
+        exported = np.frombuffer(
+            weights_data[offset : offset + byte_length], dtype=np.float32
+        ).reshape(shape)
 
         original = state_dict[key].numpy()
-        if 'weight' in key:
+        if "weight" in key:
             original = original.T  # Transpose kernels
 
         max_diff = np.max(np.abs(exported - original))

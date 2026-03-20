@@ -3,7 +3,6 @@ Configuration management for ASL Dictionary API
 Handles environment-based settings for development and production
 """
 
-import os
 from typing import List
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
