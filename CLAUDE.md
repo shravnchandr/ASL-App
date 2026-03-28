@@ -226,6 +226,11 @@ The LangGraph workflow in `python_code/asl_dict_langgraph.py`:
 - `is_fingerspelled: bool` — set `true` for proper nouns (names, cities, brands, abbreviations) that are fingerspelled letter by letter in ASL
 - `fingerspell_letters: List[str]` — ordered uppercase letters, e.g. `['S','H','R','A','V','A','N']` for SHRAVAN
 
+**How fingerspelling is detected (three layers):**
+1. **Grammar Agent** — GLOSS CONVENTIONS require `fs-` prefix for all proper nouns (e.g. `fs-SHRAVAN`, `fs-BOSTON`). Examples are included in the prompt.
+2. **`_build_knowledge_context`** — `fs-` prefixed glosses get a dedicated `FINGERSPELLING REQUIRED` section injected into the Translation Agent's context, with pre-computed letters and field values. The LLM copies these rather than reasoning about them.
+3. **Post-processing in `sign_instructor_node`** — after the LLM responds, `_extract_fs_glosses()` scans the gloss sequence and force-sets `is_fingerspelled=True` and `fingerspell_letters` on matching signs in Python. This is deterministic and immune to LLM omission.
+
 **Fingerspelling frontend rendering** (`src/components/SignCard.tsx`):
 - When `is_fingerspelled` is true, a collapsible "Fingerspell" section appears below the sign details
 - Letter chips display the full sequence at a glance (always visible)
