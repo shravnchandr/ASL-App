@@ -95,7 +95,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 **AI Workflow:** `python_code/asl_dict_langgraph.py`
 - LangGraph state machine with two agents:
   1. **Grammar Agent**: Analyzes English input and applies 10 ASL grammar rules — TTC structure, function-word omission, negation placement, topicalization, wh-question formation, yes/no questions, conditionals, verb directionality, aspect, and classifiers
-  2. **Translation Agent**: Generates detailed sign descriptions using structured output, grounded by the verified sign knowledge base (see below)
+  2. **Translation Agent**: Generates detailed sign descriptions using structured output, grounded by the verified sign knowledge base (see below). Also identifies proper nouns (names, cities, brands) and sets `is_fingerspelled=true` + `fingerspell_letters` on those signs
 - Uses Google Gemini 2.5 Flash model
 - Built at startup and stored in `app.state.asl_graph`
 - Invoked via `await asyncio.to_thread(asl_graph.invoke, {"english_input": text})` — runs in a thread pool to avoid blocking the async event loop
@@ -220,6 +220,17 @@ The LangGraph workflow in `python_code/asl_dict_langgraph.py`:
 - Modify Grammar Agent prompt in `grammar_planner_node()` — rules are documented inline
 - Modify Translation Agent prompt in `sign_instructor_node()`
 - Always test with various phrase types (questions, statements, temporal phrases, negations, conditionals)
+
+**`DescriptionSchema` fields:**
+- `word`, `hand_shape`, `location`, `movement`, `non_manual_markers` — standard sign fields
+- `is_fingerspelled: bool` — set `true` for proper nouns (names, cities, brands, abbreviations) that are fingerspelled letter by letter in ASL
+- `fingerspell_letters: List[str]` — ordered uppercase letters, e.g. `['S','H','R','A','V','A','N']` for SHRAVAN
+
+**Fingerspelling frontend rendering** (`src/components/SignCard.tsx`):
+- When `is_fingerspelled` is true, a collapsible "Fingerspell" section appears below the sign details
+- Letter chips display the full sequence at a glance (always visible)
+- "Show letter guide" expands a `<dl>` list with each letter and its hand shape description
+- Descriptions come from a static `LETTER_SHAPES` lookup table (A-Z) hardcoded in `SignCard.tsx` — no API call needed
 
 ### Updating the Sign Knowledge Base
 

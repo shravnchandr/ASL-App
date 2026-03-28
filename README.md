@@ -17,6 +17,7 @@ A modern, production-ready web application that helps you learn American Sign La
 ### Core Functionality
 - 🔤 **ASL Sign Breakdowns** - Detailed descriptions with beginner-friendly language: "How to Form Your Hands", "Where to Place Your Hands", "How to Move", "Facial Expressions & Body Language"
 - 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU. Exact matches are looked up directly; synonyms and near-matches (e.g. "glad" → happy) can be resolved via semantic similarity search using sentence-transformers (opt-in, requires `ENABLE_SEMANTIC_LOOKUP=true`)
+- 🔡 **Fingerspelling Guide** - Proper nouns (names, cities, brands) are automatically identified and shown with a collapsible letter-by-letter breakdown directly on the sign card — each letter displays its ASL hand shape description
 - 🔤 **Advanced ASL Grammar Engine** - Grammar Agent applies 10 documented ASL grammar rules: TTC structure, topicalization, wh-question formation, negation placement, conditionals, verb directionality, aspect, and classifiers
 - 🎥 **Video Resource Links** - Direct links to Handspeak, ASL University, and YouTube for each sign to watch proper demonstrations
 - 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
