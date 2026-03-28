@@ -3,6 +3,7 @@ Simple admin authentication for accessing feedback data
 """
 
 import os
+import hmac
 from fastapi import HTTPException, Header
 from typing import Optional
 
@@ -19,7 +20,8 @@ def verify_admin_password(
             detail="Admin access not configured. Set ADMIN_PASSWORD environment variable.",
         )
 
-    if not password or password != admin_password:
+    # Use compare_digest to prevent timing attacks
+    if not password or not hmac.compare_digest(password, admin_password):
         raise HTTPException(status_code=401, detail="Invalid admin password")
 
     return True

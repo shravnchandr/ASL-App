@@ -26,6 +26,10 @@ sqlalchemy[asyncio]>=2.0.0
 aiosqlite>=0.20.0
 asyncpg>=0.29.0  # PostgreSQL async driver
 
+# Semantic similarity for sign knowledge base lookup
+sentence-transformers>=3.0.0
+numpy>=1.26.0
+
 # Caching
 redis[asyncio]>=5.0.0
 

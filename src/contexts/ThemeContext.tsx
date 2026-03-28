@@ -68,7 +68,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     // Persist preference
     useEffect(() => {
-        storage.setTheme(themePreference as 'light' | 'dark' | 'high-contrast');
+        storage.setTheme(themePreference);
     }, [themePreference]);
 
     useEffect(() => {

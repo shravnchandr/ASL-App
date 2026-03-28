@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
-from typing import TypedDict, List
+from typing import TypedDict, List, Optional, Tuple
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 # Core LangGraph imports
 from langgraph.graph import StateGraph, END
@@ -39,6 +42,29 @@ except Exception as e:
         f"{Fore.YELLOW}Warning: Could not load sign knowledge base: {e}{Style.RESET_ALL}"
     )
     SIGN_KNOWLEDGE_BASE = {}
+
+# --- Semantic Similarity Index ---
+_EMBED_MODEL: Optional[SentenceTransformer] = None
+_KB_KEYS: list[str] = []
+_KB_EMBEDDINGS: Optional[np.ndarray] = None
+_SIMILARITY_THRESHOLD = 0.60
+
+try:
+    _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    _KB_KEYS = list(SIGN_KNOWLEDGE_BASE.keys())
+    # Replace underscores with spaces so "thank_you" embeds as "thank you"
+    _KB_EMBEDDINGS = _EMBED_MODEL.encode(
+        [k.replace("_", " ") for k in _KB_KEYS],
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    )
+    print(
+        f"{Fore.CYAN}Loaded semantic index: {len(_KB_KEYS)} sign embeddings{Style.RESET_ALL}"
+    )
+except Exception as e:
+    print(
+        f"{Fore.YELLOW}Warning: Could not build semantic index: {e}{Style.RESET_ALL}"
+    )
 
 # --- Pydantic Schemas (Reuse yours) ---
 # ... (DescriptionSchema and SentenceDescriptionSchema remain the same) ...
@@ -213,47 +239,74 @@ def reorder_node(state: ASLState) -> dict:
 
 
 # 3. Sign Instructor Agent (Instruct Node)
+def _semantic_lookup(gloss: str) -> Optional[Tuple[str, dict, float]]:
+    """
+    Find the closest KB entry for a gloss using cosine similarity.
+    Returns (matched_key, entry, similarity) if above threshold, else None.
+    Embeddings are L2-normalized at startup, so dot product == cosine similarity.
+    """
+    if _EMBED_MODEL is None or _KB_EMBEDDINGS is None or not _KB_KEYS:
+        return None
+
+    query = gloss.lower().replace("-", " ").replace("_", " ").lstrip("#")
+    query_vec = _EMBED_MODEL.encode([query], normalize_embeddings=True, show_progress_bar=False)
+    similarities = (_KB_EMBEDDINGS @ query_vec.T).flatten()
+    best_idx = int(similarities.argmax())
+    best_score = float(similarities[best_idx])
+
+    if best_score >= _SIMILARITY_THRESHOLD:
+        matched_key = _KB_KEYS[best_idx]
+        return matched_key, SIGN_KNOWLEDGE_BASE[matched_key], best_score
+    return None
+
+
 def _build_knowledge_context(gloss_sequence: str) -> str:
     """
     Look up each gloss in the knowledge base and return a formatted reference block.
-    Handles uppercase glosses, hyphenated compounds (THANK-YOU → thank_you), and
-    number words (ONE → one). Returns an empty string if nothing is found.
+    First tries exact key match; falls back to semantic similarity for synonyms
+    (e.g. GLAD → happy, AUTOMOBILE → car). Returns empty string if nothing found.
     """
     if not SIGN_KNOWLEDGE_BASE:
         return ""
 
     glosses = gloss_sequence.split()
-    matched = []
+    matched = []   # (gloss, entry, matched_key_or_None, similarity_or_None)
+    unmatched = []
 
     for gloss in glosses:
-        # Normalize: lowercase, replace hyphens with underscores
         key = gloss.lower().replace("-", "_").lstrip("#")
-        # Also try without underscore variant (e.g. thank_you → thankyou unlikely, but covers simple cases)
         entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(
             key.replace("_", "")
         )
         if entry:
-            matched.append((gloss, entry))
+            matched.append((gloss, entry, None, None))
+        else:
+            result = _semantic_lookup(gloss)
+            if result:
+                matched_key, sem_entry, score = result
+                print(
+                    f"{Fore.YELLOW}   -> Semantic match: {gloss} → {matched_key} "
+                    f"(similarity={score:.2f}){Style.RESET_ALL}"
+                )
+                matched.append((gloss, sem_entry, matched_key, score))
+            else:
+                unmatched.append(gloss)
 
     if not matched:
         return ""
 
     lines = ["## VERIFIED SIGN DESCRIPTIONS (use these exactly — do not deviate)\n"]
-    for gloss, entry in matched:
-        lines.append(f"### {gloss}")
+    for gloss, entry, matched_key, score in matched:
+        if matched_key:
+            lines.append(f"### {gloss} (semantic match → {matched_key}, similarity={score:.2f})")
+        else:
+            lines.append(f"### {gloss}")
         lines.append(f"- Hand shape: {entry['hand_shape']}")
         lines.append(f"- Location: {entry['location']}")
         lines.append(f"- Movement: {entry['movement']}")
         lines.append(f"- Non-manual markers: {entry['non_manual_markers']}")
         lines.append("")
 
-    unmatched = [
-        g
-        for g in glosses
-        if g.lower().replace("-", "_").lstrip("#") not in SIGN_KNOWLEDGE_BASE
-        and g.lower().replace("-", "_").replace("_", "").lstrip("#")
-        not in SIGN_KNOWLEDGE_BASE
-    ]
     if unmatched:
         lines.append(
             f"## Signs to generate (not in knowledge base): {', '.join(unmatched)}"

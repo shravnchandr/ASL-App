@@ -16,7 +16,7 @@ A modern, production-ready web application that helps you learn American Sign La
 
 ### Core Functionality
 - 🔤 **ASL Sign Breakdowns** - Detailed descriptions with beginner-friendly language: "How to Form Your Hands", "Where to Place Your Hands", "How to Move", "Facial Expressions & Body Language"
-- 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU, so descriptions are consistent and accurate rather than purely AI-generated
+- 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU. Exact matches are looked up directly; synonyms and near-matches (e.g. "glad" → happy) are resolved via semantic similarity search using a locally-cached sentence-transformers model — no vector database required
 - 🔤 **Advanced ASL Grammar Engine** - Grammar Agent applies 10 documented ASL grammar rules: TTC structure, topicalization, wh-question formation, negation placement, conditionals, verb directionality, aspect, and classifiers
 - 🎥 **Video Resource Links** - Direct links to Handspeak, ASL University, and YouTube for each sign to watch proper demonstrations
 - 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
@@ -203,6 +203,7 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 - **Python 3.11+** - Programming language
 - **Google Gemini AI** - LLM for ASL translation
 - **LangGraph** - Agentic workflow orchestration
+- **sentence-transformers** - Local semantic similarity for knowledge base lookup (all-MiniLM-L6-v2, pre-cached in Docker image)
 - **SQLAlchemy** - ORM with async support
 - **SQLite/PostgreSQL** - Database (SQLite for dev, PostgreSQL for production)
 - **Redis** - Optional caching layer for improved performance

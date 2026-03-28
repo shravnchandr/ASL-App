@@ -350,8 +350,8 @@ async def translate_to_asl(
             # Initial state
             initial_state = {"english_input": translate_req.text}
 
-            # Execute LangGraph workflow
-            final_state = asl_graph.invoke(initial_state)
+            # Execute LangGraph workflow — run in thread pool to avoid blocking the event loop
+            final_state = await asyncio.to_thread(asl_graph.invoke, initial_state)
         finally:
             # Restore original API key
             if api_key_to_use != original_api_key:

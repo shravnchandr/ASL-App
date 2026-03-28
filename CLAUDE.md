@@ -98,14 +98,18 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
   2. **Translation Agent**: Generates detailed sign descriptions using structured output, grounded by the verified sign knowledge base (see below)
 - Uses Google Gemini 2.5 Flash model
 - Built at startup and stored in `app.state.asl_graph`
-- Invoked via `asl_graph.invoke({"english_input": text})`
+- Invoked via `await asyncio.to_thread(asl_graph.invoke, {"english_input": text})` — runs in a thread pool to avoid blocking the async event loop
 
 **Sign Knowledge Base:** `python_code/sign_knowledge_base.json`
 - Verified hand shape, location, movement, and non-manual marker descriptions for all 100 signs (A-Z, 0-9, 12 months, 52 common signs)
 - Sourced from Lifeprint/ASLU (Bill Vicars) and Gallaudet conventions
 - Loaded once at module startup into `SIGN_KNOWLEDGE_BASE` dict
-- `_build_knowledge_context()` extracts glosses from the Grammar Agent's output, looks up matches (case-insensitive, handles hyphenated compounds like `THANK-YOU → thank_you`), and injects verified descriptions directly into the Translation Agent's system prompt
-- Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs instruct the LLM to copy descriptions faithfully
+- `_build_knowledge_context()` extracts glosses from the Grammar Agent's output, looks up matches, and injects verified descriptions directly into the Translation Agent's system prompt
+  - **Exact lookup first**: case-insensitive, handles hyphenated compounds (`THANK-YOU → thank_you`)
+  - **Semantic fallback**: if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt
+  - Embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
+  - The `sentence-transformers` model (`~80MB`) is pre-cached in the Docker image at build time via `ENV HF_HOME=/app/.cache/huggingface`
+- Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs (exact or semantic) instruct the LLM to copy descriptions faithfully
 
 **Custom API Keys:**
 - Users can provide their own Google Gemini API key
@@ -235,12 +239,14 @@ If CSS/JS files don't load in production:
 
 ### CORS Configuration
 
-Production domains must be added to `config.py` line 32-35:
+Production domains must be added inside the `__init__` method in `config.py` (not at class body level — class-body code runs at definition time before env vars are loaded):
 ```python
-if environment == "production":
-    cors_origins.extend([
-        "https://your-domain.com",
-    ])
+def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    if self.environment == "production":
+        origins = list(self.cors_origins)
+        origins.extend(["https://your-domain.com"])
+        object.__setattr__(self, "cors_origins", origins)
 ```
 
 Or set `CORS_ORIGINS` environment variable as JSON array.
@@ -344,7 +350,7 @@ Modify CSP if adding external scripts or resources.
 
 - **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Material 3 Design
 - **Backend**: FastAPI, Python 3.11+, uvicorn
-- **AI**: Google Gemini 2.5 Flash, LangGraph, LangChain
+- **AI**: Google Gemini 2.5 Flash, LangGraph, LangChain, sentence-transformers (all-MiniLM-L6-v2)
 - **Browser ML**: TensorFlow.js, MediaPipe Hands (Tasks Vision API)
 - **Database**: SQLAlchemy (async), aiosqlite/PostgreSQL
 - **Deployment**: Docker, Render.com

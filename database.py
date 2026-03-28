@@ -49,7 +49,8 @@ class Feedback(Base):
     email = Column(String(255), nullable=True)
 
     def __repr__(self):
-        return f"<Feedback(id={self.id}, query='{self.query[:30]}...', rating={self.rating})>"
+        query_preview = self.query[:30] if self.query else "None"
+        return f"<Feedback(id={self.id}, query='{query_preview}...', rating={self.rating})>"
 
 
 class Analytics(Base):

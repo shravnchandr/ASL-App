@@ -26,6 +26,17 @@ class Settings(BaseSettings):
         # Set debug based on environment after initialization
         if self.environment == "development":
             object.__setattr__(self, "debug", True)
+        # Extend CORS origins for production — must be done here, not at class body
+        # level, because class-body code runs at definition time before env vars are read
+        if self.environment == "production":
+            origins = list(self.cors_origins)
+            origins.extend(
+                [
+                    # Add your production domain here
+                    "https://asl-dictionary.onrender.com",
+                ]
+            )
+            object.__setattr__(self, "cors_origins", origins)
 
     # CORS Settings
     cors_origins: List[str] = [
@@ -33,15 +44,6 @@ class Settings(BaseSettings):
         "http://localhost:3000",  # Alternative dev port
         "http://localhost:8000",  # Same origin
     ]
-
-    # Add production origins when deploying
-    if environment == "production":
-        cors_origins.extend(
-            [
-                # Add your production domain here
-                "https://asl-dictionary.onrender.com",
-            ]
-        )
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./asl_feedback.db"
