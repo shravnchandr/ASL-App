@@ -87,6 +87,14 @@ class DescriptionSchema(BaseModel):
     non_manual_markers: str = Field(
         description="Facial expressions or body posture required."
     )
+    is_fingerspelled: bool = Field(
+        default=False,
+        description="True if this word is a proper noun or abbreviation that should be fingerspelled letter by letter.",
+    )
+    fingerspell_letters: List[str] = Field(
+        default_factory=list,
+        description="Ordered list of uppercase letters to fingerspell, e.g. ['S','H','R','A','V','A','N'] for the name SHRAVAN. Only populated when is_fingerspelled is true.",
+    )
 
 
 class SentenceDescriptionSchema(BaseModel):
@@ -354,6 +362,12 @@ def sign_instructor_node(state: ASLState) -> dict:
         "5. non_manual_markers: Facial expressions, head movement, body posture\n\n"
         "IMPORTANT: For signs listed in VERIFIED SIGN DESCRIPTIONS above, copy those descriptions "
         "faithfully. Only generate new descriptions for signs marked under 'Signs to generate'.\n\n"
+        "FINGERSPELLING: For proper nouns (names, cities, brands, abbreviations) that are fingerspelled "
+        "letter by letter in ASL, set `is_fingerspelled` to true and populate `fingerspell_letters` with "
+        "each uppercase letter in order (e.g. SHRAVAN → ['S','H','R','A','V','A','N']). "
+        "For the other fields, provide general fingerspelling guidance (location in front of chest/shoulder, "
+        "smooth transitions, neutral expression). For all regular ASL signs, leave `is_fingerspelled` false "
+        "and `fingerspell_letters` empty.\n\n"
         "For the 'note' field, explain the ASL grammar transformation:\n"
         "- What English words were omitted and why (articles, linking verbs, etc.)\n"
         "- How word order changed (TTC structure, negation, wh-question placement)\n"

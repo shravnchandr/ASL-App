@@ -8,6 +8,8 @@ export interface ASLSign {
     location: string;
     movement: string;
     non_manual_markers: string;
+    is_fingerspelled?: boolean;
+    fingerspell_letters?: string[];
 }
 
 export interface TranslateResponse {

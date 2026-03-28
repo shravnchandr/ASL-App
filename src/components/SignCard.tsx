@@ -4,9 +4,38 @@
  * Updated with beginner-friendly language and video resource links
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { ASLSign } from '../types';
 import './SignCard.css';
+
+const LETTER_SHAPES: Record<string, string> = {
+    A: 'Closed fist, thumb resting on the side of the index finger',
+    B: 'Flat hand, four fingers extended and together pointing up, thumb tucked across palm',
+    C: 'All fingers and thumb curved to form a C shape',
+    D: 'Index finger points up, remaining fingers curl to touch thumb forming a D',
+    E: 'All fingers bent at the knuckles, thumb tucked under fingertips',
+    F: 'Index finger and thumb touch forming a circle; other three fingers extended up',
+    G: 'Index finger points sideways, thumb parallel beneath it',
+    H: 'Index and middle fingers extended horizontally, held side by side',
+    I: 'Pinky finger extended straight up, other fingers in a fist',
+    J: 'Pinky extended; draw a J by moving down then curving up',
+    K: 'Index pointing up, middle angled outward, thumb between them',
+    L: 'Index finger pointing up, thumb extended outward — an L shape',
+    M: 'Three fingers folded down over the tucked thumb',
+    N: 'Index and middle fingers folded down over the tucked thumb',
+    O: 'All fingers and thumb curved to meet each other, forming an O',
+    P: 'Like K but rotated so the index finger points downward',
+    Q: 'Like G but index finger and thumb point downward',
+    R: 'Index and middle fingers crossed over each other',
+    S: 'Closed fist with thumb placed across the front of the fingers',
+    T: 'Thumb tucked between index and middle fingers in a closed fist',
+    U: 'Index and middle fingers extended together and pointing up',
+    V: 'Index and middle fingers extended and spread apart (peace sign)',
+    W: 'Index, middle, and ring fingers extended and spread apart',
+    X: 'Index finger bent into a hook',
+    Y: 'Thumb and pinky extended outward, other fingers curled',
+    Z: 'Index finger extended; trace a Z shape in the air',
+};
 
 interface SignCardProps {
     sign: ASLSign;
@@ -14,6 +43,9 @@ interface SignCardProps {
 }
 
 export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
+    const [guideOpen, setGuideOpen] = useState(false);
+    const letters = sign.fingerspell_letters ?? [];
+
     return (
         <article
             className="sign-card"
@@ -78,6 +110,38 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                     </div>
                 </div>
             </div>
+
+            {sign.is_fingerspelled && letters.length > 0 && (
+                <div className="fingerspell-section">
+                    <div className="fingerspell-header">
+                        <span className="fingerspell-label">Fingerspell</span>
+                        <span className="fingerspell-sequence">
+                            {letters.map((l, i) => (
+                                <span key={i} className="fingerspell-chip">{l}</span>
+                            ))}
+                        </span>
+                    </div>
+                    <button
+                        className="fingerspell-toggle"
+                        onClick={() => setGuideOpen(o => !o)}
+                        aria-expanded={guideOpen}
+                    >
+                        {guideOpen ? 'Hide letter guide ▲' : 'Show letter guide ▼'}
+                    </button>
+                    {guideOpen && (
+                        <dl className="fingerspell-guide">
+                            {letters.map((l, i) => (
+                                <div key={i} className="fingerspell-row">
+                                    <dt className="fingerspell-row-letter">{l}</dt>
+                                    <dd className="fingerspell-row-desc">
+                                        {LETTER_SHAPES[l] ?? 'See ASL alphabet reference'}
+                                    </dd>
+                                </div>
+                            ))}
+                        </dl>
+                    )}
+                </div>
+            )}
 
             <div className="video-resources">
                 <p className="video-resources-label">🎥 Watch video tutorials:</p>

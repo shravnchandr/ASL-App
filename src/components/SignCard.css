@@ -181,6 +181,103 @@
     }
 }
 
+/* Fingerspell Section */
+.fingerspell-section {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 2px solid var(--md-sys-color-outline-variant);
+}
+
+.fingerspell-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.fingerspell-label {
+    font-size: var(--md-sys-typescale-label-medium-size);
+    font-weight: var(--md-sys-typescale-label-medium-weight);
+    color: var(--md-sys-color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.fingerspell-sequence {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.fingerspell-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--md-sys-shape-corner-small);
+    background: linear-gradient(135deg, var(--md-sys-color-primary-container), hsla(205, 80%, 88%, 1));
+    color: var(--md-sys-color-on-primary-container);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+[data-theme="dark"] .fingerspell-chip {
+    background: linear-gradient(135deg, var(--md-sys-color-primary-container), hsla(205, 70%, 25%, 1));
+}
+
+.fingerspell-toggle {
+    background: none;
+    border: none;
+    padding: 4px 0;
+    font-size: var(--md-sys-typescale-label-medium-size);
+    font-weight: var(--md-sys-typescale-label-medium-weight);
+    color: var(--md-sys-color-primary);
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: opacity var(--md-sys-motion-duration-short-3) ease;
+}
+
+.fingerspell-toggle:hover {
+    opacity: 0.75;
+}
+
+.fingerspell-toggle:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.fingerspell-guide {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fingerspell-row {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: var(--spacing-md);
+    align-items: baseline;
+}
+
+.fingerspell-row-letter {
+    font-size: var(--md-sys-typescale-title-medium-size);
+    font-weight: 700;
+    color: var(--md-sys-color-primary);
+    text-align: center;
+}
+
+.fingerspell-row-desc {
+    font-size: var(--md-sys-typescale-body-medium-size);
+    color: var(--md-sys-color-on-surface);
+    line-height: 1.5;
+}
+
 /* Video Resources */
 .video-resources {
     margin-top: 20px;
