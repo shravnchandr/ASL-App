@@ -202,14 +202,18 @@ def grammar_planner_node(state: ASLState) -> dict:
         "- Use CAPITALIZED English words for ASL glosses\n"
         "- Hyphenate compound glosses: THANK-YOU, LAST-WEEK, LOOK-AT\n"
         "- Use # for fingerspelled loan signs: #BACK, #JOB\n"
-        "- Use fs- prefix for full fingerspelling when no ASL sign exists: fs-PIZZA\n\n"
+        "- Use fs- prefix for full fingerspelling when no ASL sign exists: fs-PIZZA\n"
+        "- ALWAYS use fs- prefix for proper nouns — names of people, cities, organizations, brands: "
+        "fs-SHRAVAN, fs-BOSTON, fs-GOOGLE, fs-MARIA\n\n"
         "## MORE EXAMPLES\n"
         "- 'I am going to school tomorrow' → 'TOMORROW I SCHOOL GO'\n"
         "- 'Did you finish your homework?' → 'YOUR HOMEWORK FINISH YOU' (raised brows)\n"
         "- 'I have been learning ASL for two years' → 'TWO YEAR I ASL LEARN'\n"
         "- 'She is not my friend' → 'SHE MY FRIEND NOT'\n"
         "- 'How are you?' → 'YOU HOW'\n"
-        "- 'I am happy to meet you' → 'I MEET YOU HAPPY'\n\n"
+        "- 'I am happy to meet you' → 'I MEET YOU HAPPY'\n"
+        "- 'My name is Sarah' → 'MY NAME fs-SARAH'\n"
+        "- 'I live in Boston' → 'I fs-BOSTON LIVE'\n\n"
         "Analyze the English input, determine if reordering/transformation is needed, "
         "and output the correct ASL gloss sequence (capitalized words, space-separated)."
     )
@@ -274,11 +278,25 @@ def _semantic_lookup(gloss: str) -> Optional[Tuple[str, dict, float]]:
     return None
 
 
+def _extract_fs_glosses(gloss_sequence: str) -> dict[str, list[str]]:
+    """
+    Find all fs-prefixed glosses in the sequence.
+    Returns {clean_word_upper: [letters]} e.g. {"SHRAVAN": ["S","H","R","A","V","A","N"]}.
+    """
+    fs_map: dict[str, list[str]] = {}
+    for gloss in gloss_sequence.split():
+        if gloss.lower().startswith("fs-"):
+            word = gloss[3:].upper()
+            fs_map[word] = list(word)
+    return fs_map
+
+
 def _build_knowledge_context(gloss_sequence: str) -> str:
     """
     Look up each gloss in the knowledge base and return a formatted reference block.
     First tries exact key match; falls back to semantic similarity for synonyms
     (e.g. GLAD → happy, AUTOMOBILE → car). Returns empty string if nothing found.
+    fs-prefixed glosses are extracted and listed under a dedicated FINGERSPELLING section.
     """
     if not SIGN_KNOWLEDGE_BASE:
         return ""
@@ -286,8 +304,15 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
     glosses = gloss_sequence.split()
     matched = []   # (gloss, entry, matched_key_or_None, similarity_or_None)
     unmatched = []
+    fs_glosses = []  # (display_word, letters)
 
     for gloss in glosses:
+        # Explicit fingerspelling marker — handle separately
+        if gloss.lower().startswith("fs-"):
+            word = gloss[3:].upper()
+            fs_glosses.append((word, list(word)))
+            continue
+
         key = gloss.lower().replace("-", "_").lstrip("#")
         entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(
             key.replace("_", "")
@@ -306,20 +331,37 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
             else:
                 unmatched.append(gloss)
 
-    if not matched:
-        return ""
+    lines = []
 
-    lines = ["## VERIFIED SIGN DESCRIPTIONS (use these exactly — do not deviate)\n"]
-    for gloss, entry, matched_key, score in matched:
-        if matched_key:
-            lines.append(f"### {gloss} (semantic match → {matched_key}, similarity={score:.2f})")
-        else:
-            lines.append(f"### {gloss}")
-        lines.append(f"- Hand shape: {entry['hand_shape']}")
-        lines.append(f"- Location: {entry['location']}")
-        lines.append(f"- Movement: {entry['movement']}")
-        lines.append(f"- Non-manual markers: {entry['non_manual_markers']}")
-        lines.append("")
+    if matched:
+        lines.append("## VERIFIED SIGN DESCRIPTIONS (use these exactly — do not deviate)\n")
+        for gloss, entry, matched_key, score in matched:
+            if matched_key:
+                lines.append(f"### {gloss} (semantic match → {matched_key}, similarity={score:.2f})")
+            else:
+                lines.append(f"### {gloss}")
+            lines.append(f"- Hand shape: {entry['hand_shape']}")
+            lines.append(f"- Location: {entry['location']}")
+            lines.append(f"- Movement: {entry['movement']}")
+            lines.append(f"- Non-manual markers: {entry['non_manual_markers']}")
+            lines.append("")
+
+    if fs_glosses:
+        lines.append("## FINGERSPELLING REQUIRED")
+        lines.append(
+            "The following are proper nouns. You MUST set is_fingerspelled=true "
+            "and use the exact fingerspell_letters listed. Use the clean name (no fs- prefix) as the word.\n"
+        )
+        for word, letters in fs_glosses:
+            lines.append(f"### {word}")
+            lines.append(f"- word: {word}")
+            lines.append(f"- is_fingerspelled: true")
+            lines.append(f"- fingerspell_letters: {letters}")
+            lines.append(f"- hand_shape: Varies per letter of the ASL manual alphabet")
+            lines.append(f"- location: In front of the chest/shoulder, dominant hand")
+            lines.append(f"- movement: Transition smoothly between each letter shape")
+            lines.append(f"- non_manual_markers: Neutral expression; slight nod after completing the name")
+            lines.append("")
 
     if unmatched:
         lines.append(
@@ -329,7 +371,7 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
             "For these, generate accurate descriptions based on your ASL knowledge.\n"
         )
 
-    return "\n".join(lines)
+    return "\n".join(lines) if lines else ""
 
 
 def sign_instructor_node(state: ASLState) -> dict:
@@ -361,13 +403,9 @@ def sign_instructor_node(state: ASLState) -> dict:
         "4. movement: Precise motion description\n"
         "5. non_manual_markers: Facial expressions, head movement, body posture\n\n"
         "IMPORTANT: For signs listed in VERIFIED SIGN DESCRIPTIONS above, copy those descriptions "
-        "faithfully. Only generate new descriptions for signs marked under 'Signs to generate'.\n\n"
-        "FINGERSPELLING: For proper nouns (names, cities, brands, abbreviations) that are fingerspelled "
-        "letter by letter in ASL, set `is_fingerspelled` to true and populate `fingerspell_letters` with "
-        "each uppercase letter in order (e.g. SHRAVAN → ['S','H','R','A','V','A','N']). "
-        "For the other fields, provide general fingerspelling guidance (location in front of chest/shoulder, "
-        "smooth transitions, neutral expression). For all regular ASL signs, leave `is_fingerspelled` false "
-        "and `fingerspell_letters` empty.\n\n"
+        "faithfully. For signs listed under FINGERSPELLING REQUIRED above, copy those values exactly "
+        "(is_fingerspelled=true, fingerspell_letters as listed, use the clean name as the word). "
+        "Only generate new descriptions for signs marked under 'Signs to generate'.\n\n"
         "For the 'note' field, explain the ASL grammar transformation:\n"
         "- What English words were omitted and why (articles, linking verbs, etc.)\n"
         "- How word order changed (TTC structure, negation, wh-question placement)\n"
@@ -393,6 +431,25 @@ def sign_instructor_node(state: ASLState) -> dict:
         result = instructor_chain.invoke(
             {"text": input_text, "original": original_input}
         )
+
+        # Post-process: deterministically set is_fingerspelled for any fs- glosses.
+        # This ensures the field is set correctly even if the LLM omits it.
+        fs_map = _extract_fs_glosses(input_text)
+        if fs_map:
+            for sign in result.signs:
+                # Strip fs- prefix the LLM may have echoed back
+                clean_word = sign.word.upper()
+                if clean_word.startswith("FS-"):
+                    clean_word = clean_word[3:]
+                    sign.word = sign.word[3:] if sign.word.upper().startswith("FS-") else sign.word
+                if clean_word in fs_map:
+                    sign.is_fingerspelled = True
+                    sign.fingerspell_letters = fs_map[clean_word]
+                    print(
+                        f"{Fore.CYAN}   -> Fingerspell forced: {clean_word} → "
+                        f"{fs_map[clean_word]}{Style.RESET_ALL}"
+                    )
+
         return {"final_output": result}
     except Exception as e:
         print(f"{Fore.RED}Instructor Agent Error: {e}{Style.RESET_ALL}")
