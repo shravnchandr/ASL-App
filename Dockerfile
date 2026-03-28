@@ -41,12 +41,6 @@ COPY requirements.txt ./
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-cache the sentence-transformers model so it's baked into the image
-# and doesn't download at runtime on every cold start.
-# HF_HOME is set to /app/.cache so the chown below covers it.
-ENV HF_HOME=/app/.cache/huggingface
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
-
 # Copy Python application
 COPY app.py ./
 COPY config.py ./

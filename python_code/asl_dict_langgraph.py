@@ -1,9 +1,9 @@
 import json
+import os
 from pathlib import Path
 from typing import TypedDict, List, Optional, Tuple
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 # Core LangGraph imports
 from langgraph.graph import StateGraph, END
@@ -44,27 +44,33 @@ except Exception as e:
     SIGN_KNOWLEDGE_BASE = {}
 
 # --- Semantic Similarity Index ---
-_EMBED_MODEL: Optional[SentenceTransformer] = None
+# Disabled by default — loading sentence-transformers exceeds Render free tier (512MB RAM).
+# Set ENABLE_SEMANTIC_LOOKUP=true to enable (requires ~200MB extra RAM).
+_EMBED_MODEL = None
 _KB_KEYS: list[str] = []
 _KB_EMBEDDINGS: Optional[np.ndarray] = None
 _SIMILARITY_THRESHOLD = 0.60
 
-try:
-    _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
-    _KB_KEYS = list(SIGN_KNOWLEDGE_BASE.keys())
-    # Replace underscores with spaces so "thank_you" embeds as "thank you"
-    _KB_EMBEDDINGS = _EMBED_MODEL.encode(
-        [k.replace("_", " ") for k in _KB_KEYS],
-        normalize_embeddings=True,
-        show_progress_bar=False,
-    )
-    print(
-        f"{Fore.CYAN}Loaded semantic index: {len(_KB_KEYS)} sign embeddings{Style.RESET_ALL}"
-    )
-except Exception as e:
-    print(
-        f"{Fore.YELLOW}Warning: Could not build semantic index: {e}{Style.RESET_ALL}"
-    )
+if os.getenv("ENABLE_SEMANTIC_LOOKUP", "false").lower() == "true":
+    try:
+        from sentence_transformers import SentenceTransformer
+        _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+        _KB_KEYS = list(SIGN_KNOWLEDGE_BASE.keys())
+        # Replace underscores with spaces so "thank_you" embeds as "thank you"
+        _KB_EMBEDDINGS = _EMBED_MODEL.encode(
+            [k.replace("_", " ") for k in _KB_KEYS],
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        print(
+            f"{Fore.CYAN}Loaded semantic index: {len(_KB_KEYS)} sign embeddings{Style.RESET_ALL}"
+        )
+    except Exception as e:
+        print(
+            f"{Fore.YELLOW}Warning: Could not build semantic index: {e}{Style.RESET_ALL}"
+        )
+else:
+    print(f"{Fore.CYAN}Semantic lookup disabled (ENABLE_SEMANTIC_LOOKUP not set){Style.RESET_ALL}")
 
 # --- Pydantic Schemas (Reuse yours) ---
 # ... (DescriptionSchema and SentenceDescriptionSchema remain the same) ...

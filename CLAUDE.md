@@ -106,9 +106,9 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - Loaded once at module startup into `SIGN_KNOWLEDGE_BASE` dict
 - `_build_knowledge_context()` extracts glosses from the Grammar Agent's output, looks up matches, and injects verified descriptions directly into the Translation Agent's system prompt
   - **Exact lookup first**: case-insensitive, handles hyphenated compounds (`THANK-YOU → thank_you`)
-  - **Semantic fallback**: if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt
-  - Embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
-  - The `sentence-transformers` model (`~80MB`) is pre-cached in the Docker image at build time via `ENV HF_HOME=/app/.cache/huggingface`
+  - **Semantic fallback** (opt-in): if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt
+  - **Disabled by default** — loading `sentence-transformers` uses ~200MB of RAM, which exceeds Render's free tier (512MB total). Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with sufficient memory.
+  - When enabled, embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
 - Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs (exact or semantic) instruct the LLM to copy descriptions faithfully
 
 **Custom API Keys:**
