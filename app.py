@@ -187,6 +187,8 @@ class SignResponse(BaseModel):
     location: str
     movement: str
     non_manual_markers: str
+    is_fingerspelled: bool = False
+    fingerspell_letters: List[str] = []
 
 
 class TranslateResponse(BaseModel):
@@ -384,6 +386,8 @@ async def translate_to_asl(
                 location=sign.location,
                 movement=sign.movement,
                 non_manual_markers=sign.non_manual_markers,
+                is_fingerspelled=sign.is_fingerspelled,
+                fingerspell_letters=sign.fingerspell_letters,
             )
             for sign in final_output.signs
         ]
