@@ -54,6 +54,7 @@ _SIMILARITY_THRESHOLD = 0.60
 if os.getenv("ENABLE_SEMANTIC_LOOKUP", "false").lower() == "true":
     try:
         from sentence_transformers import SentenceTransformer
+
         _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
         _KB_KEYS = list(SIGN_KNOWLEDGE_BASE.keys())
         # Replace underscores with spaces so "thank_you" embeds as "thank you"
@@ -70,7 +71,9 @@ if os.getenv("ENABLE_SEMANTIC_LOOKUP", "false").lower() == "true":
             f"{Fore.YELLOW}Warning: Could not build semantic index: {e}{Style.RESET_ALL}"
         )
 else:
-    print(f"{Fore.CYAN}Semantic lookup disabled (ENABLE_SEMANTIC_LOOKUP not set){Style.RESET_ALL}")
+    print(
+        f"{Fore.CYAN}Semantic lookup disabled (ENABLE_SEMANTIC_LOOKUP not set){Style.RESET_ALL}"
+    )
 
 # --- Pydantic Schemas (Reuse yours) ---
 # ... (DescriptionSchema and SentenceDescriptionSchema remain the same) ...
@@ -267,7 +270,9 @@ def _semantic_lookup(gloss: str) -> Optional[Tuple[str, dict, float]]:
         return None
 
     query = gloss.lower().replace("-", " ").replace("_", " ").lstrip("#")
-    query_vec = _EMBED_MODEL.encode([query], normalize_embeddings=True, show_progress_bar=False)
+    query_vec = _EMBED_MODEL.encode(
+        [query], normalize_embeddings=True, show_progress_bar=False
+    )
     similarities = (_KB_EMBEDDINGS @ query_vec.T).flatten()
     best_idx = int(similarities.argmax())
     best_score = float(similarities[best_idx])
@@ -302,7 +307,7 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
         return ""
 
     glosses = gloss_sequence.split()
-    matched = []   # (gloss, entry, matched_key_or_None, similarity_or_None)
+    matched = []  # (gloss, entry, matched_key_or_None, similarity_or_None)
     unmatched = []
     fs_glosses = []  # (display_word, letters)
 
@@ -334,10 +339,14 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
     lines = []
 
     if matched:
-        lines.append("## VERIFIED SIGN DESCRIPTIONS (use these exactly — do not deviate)\n")
+        lines.append(
+            "## VERIFIED SIGN DESCRIPTIONS (use these exactly — do not deviate)\n"
+        )
         for gloss, entry, matched_key, score in matched:
             if matched_key:
-                lines.append(f"### {gloss} (semantic match → {matched_key}, similarity={score:.2f})")
+                lines.append(
+                    f"### {gloss} (semantic match → {matched_key}, similarity={score:.2f})"
+                )
             else:
                 lines.append(f"### {gloss}")
             lines.append(f"- Hand shape: {entry['hand_shape']}")
@@ -355,12 +364,14 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
         for word, letters in fs_glosses:
             lines.append(f"### {word}")
             lines.append(f"- word: {word}")
-            lines.append(f"- is_fingerspelled: true")
+            lines.append("- is_fingerspelled: true")
             lines.append(f"- fingerspell_letters: {letters}")
-            lines.append(f"- hand_shape: Varies per letter of the ASL manual alphabet")
-            lines.append(f"- location: In front of the chest/shoulder, dominant hand")
-            lines.append(f"- movement: Transition smoothly between each letter shape")
-            lines.append(f"- non_manual_markers: Neutral expression; slight nod after completing the name")
+            lines.append("- hand_shape: Varies per letter of the ASL manual alphabet")
+            lines.append("- location: In front of the chest/shoulder, dominant hand")
+            lines.append("- movement: Transition smoothly between each letter shape")
+            lines.append(
+                "- non_manual_markers: Neutral expression; slight nod after completing the name"
+            )
             lines.append("")
 
     if unmatched:
@@ -441,7 +452,11 @@ def sign_instructor_node(state: ASLState) -> dict:
                 clean_word = sign.word.upper()
                 if clean_word.startswith("FS-"):
                     clean_word = clean_word[3:]
-                    sign.word = sign.word[3:] if sign.word.upper().startswith("FS-") else sign.word
+                    sign.word = (
+                        sign.word[3:]
+                        if sign.word.upper().startswith("FS-")
+                        else sign.word
+                    )
                 if clean_word in fs_map:
                     sign.is_fingerspelled = True
                     sign.fingerspell_letters = fs_map[clean_word]
