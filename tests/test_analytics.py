@@ -35,7 +35,7 @@ class TestAnalyticsModel:
         assert event.id is not None
         assert event.event_type == "translation"
         assert event.query == "hello"
-        assert event.cache_hit == False
+        assert not event.cache_hit
         assert event.ip_hash is not None
         assert len(event.ip_hash) == 64  # SHA-256 produces 64 hex characters
         assert event.user_agent == "Mozilla/5.0"

@@ -256,7 +256,6 @@ async def translate_to_asl(
     Supports shared API key with IP-based rate limiting
     """
     start_time = time.time()
-    cache_hit = False
     using_shared_key = False
     rate_limit_info = None
 
@@ -266,7 +265,6 @@ async def translate_to_asl(
         # Check cache first
         cached_result = await get_cached_translation(translate_req.text)
         if cached_result:
-            cache_hit = True
             response_time_ms = int((time.time() - start_time) * 1000)
 
             # Track cache hit analytics in background

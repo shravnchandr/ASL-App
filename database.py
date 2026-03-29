@@ -273,12 +273,12 @@ async def get_translations_count(
 
     # Cache hits
     hits_query = select(func.count(Analytics.id)).where(
-        Analytics.event_type == "translation", Analytics.cache_hit == True
+        Analytics.event_type == "translation", Analytics.cache_hit
     )
 
     # Cache misses
     misses_query = select(func.count(Analytics.id)).where(
-        Analytics.event_type == "translation", Analytics.cache_hit == False
+        Analytics.event_type == "translation", ~Analytics.cache_hit
     )
 
     # Apply date filters
