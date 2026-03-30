@@ -82,9 +82,30 @@
 .loading-spinner {
     position: absolute;
     right: 24px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    bottom: 0;
+    margin: auto 0;
+    height: 32px;
+    width: 32px;
     z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-spinner {
+    color: var(--md-sys-color-primary);
+}
+
+@keyframes searchSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.spinner {
+    animation: searchSpin 0.8s linear infinite;
+    transform-origin: center;
+    display: block;
 }
 
 .clear-button {

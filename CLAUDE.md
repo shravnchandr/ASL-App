@@ -58,23 +58,35 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 ### Request Flow
 
-1. **User Input** → Frontend (React) → `src/services/api.ts` → axios request
-2. **Backend API** → FastAPI (`app.py`) → Rate limiting check → Route handler
-3. **AI Processing** → LangGraph workflow (`python_code/asl_dict_langgraph.py`)
+1. **User Input** → Frontend (React) → `src/services/api/` → axios request
+2. **Backend API** → FastAPI (`app.py`) → Rate limiting check → Route handler in `routes/`
+3. **AI Processing** → LangGraph workflow (`python_code/asl/`)
 4. **Grammar Agent** → Analyzes English input, determines if reordering needed (ASL uses Time-Topic-Comment structure)
 5. **Translation Agent** → Generates detailed ASL sign descriptions (hand shape, location, movement, facial expressions)
 6. **Response** → FastAPI → Frontend → Display in SignCard components
 
 ### Backend Architecture (Python/FastAPI)
 
-**Core Entry Point:** `app.py`
-- FastAPI application with async/await support
-- Lifespan events: Initialize database and LangGraph on startup
-- Rate limiting: SlowAPI with IP-based tracking (10/min dev, 100/min prod)
-- Security middleware: Adds CSP, HSTS, X-Frame-Options headers
+**Entry Point:** `app.py` (~60 lines — slim orchestrator only)
+- FastAPI setup, lifespan (database + Redis + LangGraph init), middleware registration, router includes, static file serving, uvicorn entry point
 - **CRITICAL**: Production mode serves static files from `dist/` directory
   - `/assets/*` mounted BEFORE catch-all route to prevent interception
   - Catch-all `/{full_path:path}` returns `index.html` for SPA routing
+
+**Shared Dependencies:** `deps.py`
+- Single `Limiter` instance imported by both `app.py` and all route modules (avoids duplication)
+
+**Middleware:** `middleware.py`
+- `add_security_headers` — CSP (production only), HSTS, X-Frame-Options, X-Content-Type-Options
+- `analytics_tracking_middleware` — records page views to the Analytics table in the background
+- Both are registered in `app.py` via `app.middleware("http")(fn)`
+
+**Routes:** `routes/` package
+- `routes/models.py` — Pydantic request/response models (TranslateRequest, SignResponse, FeedbackRequest, …)
+- `routes/translate.py` — `POST /translate` (LangGraph invocation, caching, shared-key rate limiting), `GET /rate-limit`
+- `routes/feedback.py` — `POST /feedback`, `POST /feedback/general`, `GET /feedback/stats`
+- `routes/admin.py` — `GET/DELETE /admin/feedback`, `GET /admin/stats`, `GET /admin/analytics/*`
+- Included in `app.py` via `app.include_router(router, prefix=settings.api_prefix)`
 
 **Configuration:** `config.py`
 - Pydantic BaseSettings for environment-based config
@@ -82,20 +94,26 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - Database URL, API keys, logging config
 - Cached with `@lru_cache()` for performance
 
-**Database:** `database.py`
-- Async SQLAlchemy with aiosqlite
-- `Feedback` model: Stores translation feedback and general app feedback
-- IP addresses are hashed (SHA-256) for privacy
-- Two feedback types: "translation" and "general"
+**Database:** `db/` package (`database.py` is a backwards-compat shim that re-exports everything)
+- `db/engine.py` — async engine, `AsyncSessionLocal`, `Base`, `init_db`, `get_db`, `hash_ip`
+- `db/models.py` — `Feedback` and `Analytics` ORM models
+- `db/crud/feedback.py` — `create_feedback`, `get_feedback_stats`, `get_paginated_feedback`, `get_recent_feedback`
+- `db/crud/analytics.py` — `create_analytics_event`, `get_unique_users_count`, `check_shared_key_rate_limit`, and all aggregation queries
+- IP addresses are hashed (SHA-256) for privacy; two feedback types: "translation" and "general"
 - **Currently using SQLite in production** (switched from PostgreSQL when Render trial expired)
 - SQLite file: `asl_feedback.db` — note Render's filesystem is **ephemeral**, so data resets on each deploy
 - All queries use `func.date()` and SQLite-compatible syntax — no code changes needed to switch back
 - To re-enable PostgreSQL: set `DATABASE_URL=postgresql+asyncpg://...` in `render.yaml` and uncomment the `databases:` block
 
-**AI Workflow:** `python_code/asl_dict_langgraph.py`
+**AI Workflow:** `python_code/asl/` package (`python_code/asl_dict_langgraph.py` is a backwards-compat shim)
+- `asl/schemas.py` — Pydantic models (`DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`) and `ASLState` TypedDict
+- `asl/knowledge_base.py` — KB loading, exact lookup, optional semantic lookup (`_build_knowledge_context`, `_extract_fs_glosses`, `_get_kb_matched_words`)
+- `asl/nodes.py` — Grammar Agent (`grammar_planner_node`), Translation Agent (`sign_instructor_node`), reorder node, conditional edge
+- `asl/graph.py` — `build_asl_graph()` compiles the LangGraph workflow
+- `asl/cli.py` — interactive CLI for local testing (`python -m python_code.asl.cli`)
 - LangGraph state machine with two agents:
-  1. **Grammar Agent**: Analyzes English input and applies 10 ASL grammar rules — TTC structure, function-word omission, negation placement, topicalization, wh-question formation, yes/no questions, conditionals, verb directionality, aspect, and classifiers
-  2. **Translation Agent**: Generates detailed sign descriptions using structured output, grounded by the verified sign knowledge base (see below). Also identifies proper nouns (names, cities, brands) and sets `is_fingerspelled=true` + `fingerspell_letters` on those signs
+  1. **Grammar Agent**: Applies 10 ASL grammar rules — TTC structure, function-word omission, negation placement, topicalization, wh-question formation, yes/no questions, conditionals, verb directionality, aspect, and classifiers
+  2. **Translation Agent**: Generates detailed sign descriptions using structured output, grounded by the verified sign knowledge base. Also identifies proper nouns and sets `is_fingerspelled=true` + `fingerspell_letters` on those signs
 - Uses Google Gemini 2.5 Flash model
 - Built at startup and stored in `app.state.asl_graph`
 - Invoked via `await asyncio.to_thread(asl_graph.invoke, {"english_input": text})` — runs in a thread pool to avoid blocking the async event loop
@@ -132,12 +150,13 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `src/components/FeedbackWidget.tsx`: Rating system (thumbs up/down)
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
-**API Layer:** `src/services/api.ts`
-- Axios instance with 30s timeout (AI processing takes time)
-- `setCustomApiKey()`: Sets `X-Custom-API-Key` header for requests
-- All API calls go to `/api/*` prefix
-- Dev mode: Proxied to localhost:8000 via Vite config
-- Prod mode: Same-origin requests to FastAPI
+**API Layer:** `src/services/api/` package (`src/services/api.ts` is a re-export shim — existing imports unchanged)
+- `api/client.ts` — shared axios instance (30s timeout), `setCustomApiKey()`
+- `api/translate.ts` — `translateToASL`, `getRateLimitStatus`, `checkHealth`
+- `api/feedback.ts` — `submitFeedback`, `submitGeneralFeedback`, `getFeedbackStats`
+- `api/admin.ts` — `getAdminFeedback`, `deleteAdminFeedback`, `getAdminStats`, `getAnalyticsOverview`
+- `api/index.ts` — barrel re-export (all consumers import from `'../services/api'` as before)
+- All API calls go to `/api/*` prefix; dev mode proxied to localhost:8000 via Vite config
 
 **Utilities:**
 - `src/utils/storage.ts`: LocalStorage wrapper (search history, favorites, theme, API key)
@@ -204,21 +223,22 @@ VITE_API_URL=                         # Empty for same-origin (production)
 
 ### Adding New API Endpoints
 
-1. Add Pydantic request/response models in `app.py`
-2. Create route handler with `@app.post()` or `@app.get()`
-3. Add `@limiter.limit(settings.rate_limit)` decorator for rate limiting
+1. Add Pydantic request/response models in `routes/models.py`
+2. Create route handler in the appropriate `routes/` module (`translate.py`, `feedback.py`, or `admin.py`) using `@router.post()` / `@router.get()`
+3. Add `@limiter.limit(settings.rate_limit)` decorator for rate limiting (import `limiter` from `deps`)
 4. Use `async def` and `await` for all database operations
-5. Add corresponding function in `src/services/api.ts`
+5. Add corresponding function in the appropriate `src/services/api/` module and re-export it from `api/index.ts`
 6. Update TypeScript types in `src/types.ts`
 
 ### Modifying AI Translation Logic
 
-The LangGraph workflow in `python_code/asl_dict_langgraph.py`:
+The LangGraph workflow lives in `python_code/asl/`:
 - Two-agent system: Grammar → Translation
 - Uses Pydantic structured output for type safety
-- State flows through `ASLState` TypedDict
-- Modify Grammar Agent prompt in `grammar_planner_node()` — rules are documented inline
-- Modify Translation Agent prompt in `sign_instructor_node()`
+- State flows through `ASLState` TypedDict (defined in `asl/schemas.py`)
+- Modify Grammar Agent prompt in `asl/nodes.py` → `_GRAMMAR_SYSTEM_PROMPT` constant
+- Modify Translation Agent prompt in `asl/nodes.py` → `sign_instructor_node()`
+- KB lookup and context injection logic is in `asl/knowledge_base.py`
 - Always test with various phrase types (questions, statements, temporal phrases, negations, conditionals)
 
 **`DescriptionSchema` fields:**
@@ -276,7 +296,7 @@ Or set `CORS_ORIGINS` environment variable as JSON array.
 
 ### Security Headers
 
-Configured in `app.py` middleware (lines 76-98):
+Configured in `middleware.py` → `add_security_headers`:
 - CSP (Content Security Policy): Production only, allows inline styles/scripts
 - HSTS: Enforces HTTPS
 - X-Frame-Options: Prevents clickjacking
@@ -291,7 +311,7 @@ Modify CSP if adding external scripts or resources.
 3. **CORS errors**: Production domain not added to config.py
 4. **Static files 404**: Catch-all route intercepting `/assets/*` requests
 5. **Rate limiting in dev**: Clear rate limit with API restart (in-memory storage)
-6. **Import errors**: LangGraph code is in `python_code/`, must be in sys.path
+6. **Import errors**: Backend packages (`db/`, `routes/`, `deps.py`, `middleware.py`) and `python_code/asl/` must be on sys.path — `app.py` sets this via `sys.path.insert(0, "python_code")` at startup
 
 ## Testing Changes Locally
 
@@ -315,17 +335,42 @@ Modify CSP if adding external scripts or resources.
 
 ## Key Files Reference
 
-**Backend:**
-- `app.py`: FastAPI application, routes, middleware
-- `python_code/asl_dict_langgraph.py`: AI translation workflow (Grammar Agent + Translation Agent)
+**Backend — Entry Point:**
+- `app.py`: Slim FastAPI entry point — lifespan, router registration, static file serving
+- `deps.py`: Shared `limiter` (SlowAPI) instance imported by all route modules
+- `middleware.py`: `add_security_headers` + `analytics_tracking_middleware`
+- `config.py`: Pydantic-based environment configuration (cached with `@lru_cache`)
+
+**Backend — Routes (`routes/`):**
+- `routes/models.py`: All Pydantic request/response models
+- `routes/translate.py`: `/translate` and `/rate-limit` endpoints
+- `routes/feedback.py`: `/feedback`, `/feedback/general`, `/feedback/stats` endpoints
+- `routes/admin.py`: All `/admin/*` endpoints (feedback management + analytics)
+
+**Backend — Database (`db/`):**
+- `db/engine.py`: SQLAlchemy engine, session factory, `init_db`, `get_db`, `hash_ip`
+- `db/models.py`: `Feedback` and `Analytics` ORM models
+- `db/crud/feedback.py`: Feedback CRUD operations
+- `db/crud/analytics.py`: Analytics CRUD and aggregation queries
+- `database.py`: Backwards-compat shim — re-exports everything from `db/`
+
+**Backend — AI (`python_code/asl/`):**
+- `asl/schemas.py`: `DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`, `ASLState`
+- `asl/knowledge_base.py`: KB loading, semantic lookup, `_build_knowledge_context`
+- `asl/nodes.py`: `_GRAMMAR_SYSTEM_PROMPT` constant + all LangGraph node functions
+- `asl/graph.py`: `build_asl_graph()` — compiles and returns the StateGraph
+- `asl/cli.py`: Interactive CLI for local testing
 - `python_code/sign_knowledge_base.json`: Verified sign descriptions for all 100 signs (grounding source)
-- `config.py`: Environment configuration
-- `database.py`: Database models and operations
+- `python_code/asl_dict_langgraph.py`: Backwards-compat shim — re-exports from `asl/`
 
 **Frontend Core:**
 - `src/App.tsx`: Main React component with lazy loading
 - `src/main.tsx`: Entry point with ErrorBoundary
-- `src/services/api.ts`: API client
+- `src/services/api/client.ts`: Axios instance, `setCustomApiKey`, `API_PREFIX`
+- `src/services/api/translate.ts`: `translateToASL`, `getRateLimitStatus`, `checkHealth`
+- `src/services/api/feedback.ts`: `submitFeedback`, `submitGeneralFeedback`, `getFeedbackStats`
+- `src/services/api/admin.ts`: `getAdminFeedback`, `deleteAdminFeedback`, `getAdminStats`, `getAnalyticsOverview`
+- `src/services/api.ts`: Backwards-compat shim — re-exports from `api/index.ts`
 - `src/components/ErrorBoundary.tsx`: Global error handling
 
 **Learning Feature:**

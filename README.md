@@ -200,12 +200,12 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 - **MediaPipe Hands** - Real-time hand landmark detection
 
 ### Backend
-- **FastAPI** - Modern Python web framework
+- **FastAPI** - Modern Python web framework with modular routing (`routes/translate.py`, `routes/feedback.py`, `routes/admin.py`)
 - **Python 3.11+** - Programming language
 - **Google Gemini AI** - LLM for ASL translation
-- **LangGraph** - Agentic workflow orchestration
+- **LangGraph** - Agentic workflow orchestration (`python_code/asl/` package: schemas, knowledge base, nodes, graph)
 - **sentence-transformers** - Local semantic similarity for knowledge base lookup (all-MiniLM-L6-v2, opt-in via `ENABLE_SEMANTIC_LOOKUP=true`)
-- **SQLAlchemy** - ORM with async support
+- **SQLAlchemy** - Async ORM (`db/` package: engine, models, CRUD modules)
 - **SQLite/PostgreSQL** - Database (SQLite for dev, PostgreSQL for production)
 - **Redis** - Optional caching layer for improved performance
 - **pytest** - Testing framework with async support
@@ -234,17 +234,20 @@ This app is production-ready with:
 
 **Bundle Size (with code splitting):**
 ```
-dist/index.html              0.84 kB │ gzip:   0.46 kB
-dist/assets/Admin.css       20.89 kB │ gzip:   3.40 kB  (lazy)
-dist/assets/LearnPage.css   55.19 kB │ gzip:   6.48 kB  (lazy)
-dist/assets/index.css       86.35 kB │ gzip:  13.32 kB
-dist/assets/Admin.js        11.25 kB │ gzip:   2.72 kB  (lazy)
-dist/assets/LearnPage.js    44.15 kB │ gzip:  12.20 kB  (lazy)
-dist/assets/purify.js       22.58 kB │ gzip:   8.47 kB
-dist/assets/api.js          35.79 kB │ gzip:  14.00 kB
-dist/assets/vendor.js      139.10 kB │ gzip:  44.89 kB
-dist/assets/index.js       442.78 kB │ gzip: 139.23 kB
-Initial load (gzipped):   ~220 kB (Admin & Learn lazy loaded)
+dist/index.html                        1.09 kB │ gzip:   0.55 kB
+dist/assets/CameraPage.css            15.86 kB │ gzip:   3.19 kB  (lazy)
+dist/assets/Admin.css                 20.89 kB │ gzip:   3.40 kB  (lazy)
+dist/assets/LearnPage.css             60.63 kB │ gzip:   7.31 kB  (lazy)
+dist/assets/index.css                 90.74 kB │ gzip:  14.06 kB
+dist/assets/Admin.js                  12.25 kB │ gzip:   3.07 kB  (lazy)
+dist/assets/CameraPage.js             17.59 kB │ gzip:   5.24 kB  (lazy)
+dist/assets/purify.js                 22.58 kB │ gzip:   8.47 kB
+dist/assets/api.js                    35.79 kB │ gzip:  14.00 kB
+dist/assets/LearnPage.js              48.57 kB │ gzip:  13.46 kB  (lazy)
+dist/assets/vendor.js                139.62 kB │ gzip:  45.02 kB
+dist/assets/index.js                 447.68 kB │ gzip: 140.72 kB
+dist/assets/predictionBuffer.js    1,004.27 kB │ gzip: 257.86 kB  (lazy, TF.js)
+Initial load (gzipped): ~222 kB (Admin, Learn & Camera lazy loaded)
 ```
 
 ---

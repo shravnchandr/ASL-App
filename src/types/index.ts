@@ -10,12 +10,14 @@ export interface ASLSign {
     non_manual_markers: string;
     is_fingerspelled?: boolean;
     fingerspell_letters?: string[];
+    kb_verified?: boolean;
 }
 
 export interface TranslateResponse {
     query: string;
     signs: ASLSign[];
     note: string;
+    asl_gloss_order?: string;
 }
 
 export interface FeedbackData {

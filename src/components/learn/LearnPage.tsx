@@ -425,6 +425,7 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                         </svg>
                         Back to Levels
                     </button>
+                    <span className="learn-page__title">🤟 Learn Signs</span>
                     <button className="learn-page__browse-btn" onClick={() => setShowSignBrowser(true)}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" fill="currentColor" />
@@ -541,6 +542,7 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                     </svg>
                     Back to Home
                 </button>
+                <span className="learn-page__title">🤟 Learn Signs</span>
                 <button className="learn-page__browse-btn" onClick={() => setShowSignBrowser(true)}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" fill="currentColor" />

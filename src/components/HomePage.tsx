@@ -21,7 +21,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectMode }) => {
             <header className="home-page__header">
                 <h1 className="home-page__title">ASL Guide</h1>
                 <p className="home-page__subtitle">
-                    Your companion for learning American Sign Language
+                    AI-powered ASL translation built on 10 documented grammar rules and a verified sign knowledge base
                 </p>
             </header>
 
@@ -41,7 +41,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectMode }) => {
                     </div>
                     <h2 className="home-card__title">Text to Signs</h2>
                     <p className="home-card__description">
-                        Enter any English phrase and get detailed ASL sign instructions with hand shapes, movements, and facial expressions.
+                        Enter any English phrase. The grammar engine applies ASL's Time-Topic-Comment structure and 9 other documented rules, then generates verified sign descriptions.
                     </p>
                     <span className="home-card__cta" aria-hidden="true">
                         Start Translating
@@ -101,7 +101,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectMode }) => {
             </main>
 
             <footer className="home-page__footer">
-                <p>Powered by AI for accurate ASL guidance</p>
+                <p>Sign descriptions sourced from <a href="https://www.lifeprint.com" target="_blank" rel="noopener noreferrer">Lifeprint/ASLU</a> (Bill Vicars) · Powered by Google Gemini</p>
             </footer>
         </div>
     );

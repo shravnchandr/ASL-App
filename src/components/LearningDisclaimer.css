@@ -1,94 +1,68 @@
 /**
  * Learning Disclaimer Styles
+ * Subtle inline note — surface background with primary accent border
  */
 
 .learning-disclaimer {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border-left: 4px solid #1976d2;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    animation: slideIn 0.4s ease-out;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: 12px var(--spacing-lg);
+    background: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-large);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-left: 3px solid var(--md-sys-color-primary);
+    margin-bottom: var(--spacing-xl);
+    animation: slideIn var(--md-sys-motion-duration-medium-2) var(--md-sys-motion-easing-standard);
 }
 
 @keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .disclaimer-icon {
-    font-size: 24px;
+    font-size: 16px;
     flex-shrink: 0;
+    opacity: 0.8;
     line-height: 1;
 }
 
 .disclaimer-content {
     flex: 1;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #0d47a1;
+    font-size: var(--md-sys-typescale-body-small-size, 0.8125rem);
+    line-height: 1.5;
+    color: var(--md-sys-color-on-surface-variant);
 }
 
 .disclaimer-content strong {
-    font-weight: 700;
-    color: #01579b;
+    font-weight: 600;
+    color: var(--md-sys-color-primary);
 }
 
-/* Dark theme support */
 [data-theme="dark"] .learning-disclaimer {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
-    border-left-color: #5c6bc0;
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline-variant);
+    border-left-color: var(--md-sys-color-primary);
 }
 
-[data-theme="dark"] .disclaimer-content {
-    color: #c5cae9;
-}
-
-[data-theme="dark"] .disclaimer-content strong {
-    color: #e8eaf6;
-}
-
-/* High contrast theme */
 [data-theme="high-contrast"] .learning-disclaimer {
-    background: #000;
-    border: 3px solid #fff;
-    border-left-width: 6px;
+    background: transparent;
+    border: 2px solid var(--md-sys-color-on-surface);
+    border-left-width: 4px;
 }
 
-[data-theme="high-contrast"] .disclaimer-content {
-    color: #fff;
-}
-
+[data-theme="high-contrast"] .disclaimer-content,
 [data-theme="high-contrast"] .disclaimer-content strong {
-    color: #ffeb3b;
+    color: var(--md-sys-color-on-surface);
 }
 
-/* Responsive */
 @media (max-width: 640px) {
     .learning-disclaimer {
-        padding: 14px 16px;
-        gap: 10px;
-    }
-
-    .disclaimer-icon {
-        font-size: 20px;
-    }
-
-    .disclaimer-content {
-        font-size: 13px;
+        padding: 10px var(--spacing-md);
     }
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .learning-disclaimer {
         animation: none;

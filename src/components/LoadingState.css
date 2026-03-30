@@ -71,6 +71,26 @@
     }
 }
 
+.loading-steps {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: var(--spacing-md);
+}
+
+.loading-step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--md-sys-color-outline-variant);
+    transition: background 0.4s ease, transform 0.4s ease;
+}
+
+.loading-step-dot--active {
+    background: var(--md-sys-color-primary);
+    transform: scale(1.25);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
 

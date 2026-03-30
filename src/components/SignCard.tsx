@@ -53,9 +53,19 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
             aria-labelledby={`sign-${index}-word`}
         >
             <header className="sign-card-header">
-                <h3 id={`sign-${index}-word`} className="sign-word">
-                    {sign.word.toUpperCase()}
-                </h3>
+                <div className="sign-word-row">
+                    <h3 id={`sign-${index}-word`} className="sign-word">
+                        {sign.word.toUpperCase()}
+                    </h3>
+                    {sign.kb_verified && (
+                        <span className="kb-badge" title="Description verified against Lifeprint/ASLU knowledge base">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                            </svg>
+                            Verified
+                        </span>
+                    )}
+                </div>
                 <span className="sign-number" aria-label={`Sign ${index + 1}`}>
                     #{index + 1}
                 </span>
@@ -147,6 +157,15 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                 <p className="video-resources-label">🎥 Watch video tutorials:</p>
                 <div className="video-links">
                     <a
+                        href={`https://www.lifeprint.com/asl101/pages-signs/${encodeURIComponent(sign.word.toLowerCase().charAt(0))}/${encodeURIComponent(sign.word.toLowerCase())}.htm`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="video-link"
+                        aria-label={`Look up ${sign.word} on Lifeprint/ASLU`}
+                    >
+                        Lifeprint/ASLU
+                    </a>
+                    <a
                         href={`https://www.signingsavvy.com/search/${encodeURIComponent(sign.word)}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -156,6 +175,15 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                         Signing Savvy
                     </a>
                     <a
+                        href={`https://www.spreadthesign.com/en.us/search/?query=${encodeURIComponent(sign.word)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="video-link"
+                        aria-label={`Look up ${sign.word} on Spread The Sign`}
+                    >
+                        Spread The Sign
+                    </a>
+                    <a
                         href={`https://www.youtube.com/results?search_query=how+to+sign+${encodeURIComponent(sign.word)}+in+asl`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -163,15 +191,6 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                         aria-label={`Search ${sign.word} on YouTube`}
                     >
                         YouTube
-                    </a>
-                    <a
-                        href={`https://www.spreadthesign.com/en.us/search/?q=${encodeURIComponent(sign.word)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="video-link"
-                        aria-label={`Watch ${sign.word} on Spread The Sign`}
-                    >
-                        Spread The Sign
                     </a>
                 </div>
             </div>

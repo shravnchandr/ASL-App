@@ -3,13 +3,12 @@
  * Two modes: Text to Signs (Dictionary) and Learn Signs (Animations)
  */
 
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
 import { SearchBar } from './components/SearchBar';
 import { SignCard } from './components/SignCard';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { FeedbackModal } from './components/FeedbackModal';
 import { LoadingState } from './components/LoadingState';
-import { LearningDisclaimer } from './components/LearningDisclaimer';
 import { SearchHistory } from './components/features/SearchHistory';
 import { ApiKeyModal } from './components/features/ApiKeyModal';
 import { SessionTimeoutWarning } from './components/features/SessionTimeoutWarning';
@@ -41,6 +40,58 @@ import type { TranslateResponse } from './types';
 import './App.css';
 
 type AppMode = 'home' | 'dictionary' | 'learn' | 'camera';
+
+// Gloss order bar shown below results header
+const GlossBar: React.FC<{ query: string; gloss: string }> = ({ gloss }) => {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(gloss).then(() => {
+      setCopied(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const tokens = gloss.split(' ');
+
+  return (
+    <div className="gloss-bar" aria-label="ASL gloss order">
+      <span className="gloss-bar__label">ASL gloss</span>
+      <span className="gloss-bar__sequence">
+        {tokens.map((token, i) => (
+          <span
+            key={i}
+            className={`gloss-token ${token.toLowerCase().startsWith('fs-') ? 'gloss-token--fs' : ''}`}
+          >
+            {token}
+          </span>
+        ))}
+      </span>
+      <button
+        className="gloss-bar__copy"
+        onClick={handleCopy}
+        aria-label="Copy ASL gloss sequence"
+        title="Copy gloss"
+      >
+        {copied ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2" />
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        )}
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+  );
+};
 
 function App() {
   // Check if we're on special routes
@@ -266,9 +317,6 @@ function App() {
                 </button>
               </div>
             </div>
-            <p className="app-subtitle">
-              Enter any English phrase and get detailed ASL sign instructions
-            </p>
           </div>
         </div>
       </header>
@@ -332,7 +380,9 @@ function App() {
                 </p>
               </div>
 
-              <LearningDisclaimer />
+              {result.asl_gloss_order && (
+                <GlossBar query={result.query} gloss={result.asl_gloss_order} />
+              )}
 
               <ActionButtons query={result.query} signsCount={result.signs.length} />
 
@@ -363,7 +413,7 @@ function App() {
       <footer className="app-footer">
         <div className="container">
           <p className="footer-text">
-            Built with Material 3 Expressive Design • Powered by Google Gemini
+            Sign descriptions sourced from <a href="https://www.lifeprint.com" target="_blank" rel="noopener noreferrer" className="footer-link">Lifeprint/ASLU</a> (Bill Vicars) · Powered by Google Gemini
           </p>
         </div>
       </footer>

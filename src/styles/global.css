@@ -183,20 +183,26 @@ textarea:focus-visible,
 }
 
 .skip-link {
-    position: absolute;
-    top: -40px;
-    left: 0;
+    position: fixed;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 9999;
+}
+
+.skip-link:focus {
+    left: var(--spacing-md);
+    top: var(--spacing-md);
+    width: auto;
+    height: auto;
+    overflow: visible;
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
     padding: var(--spacing-md) var(--spacing-lg);
     text-decoration: none;
     border-radius: var(--md-sys-shape-corner-medium);
-    z-index: 100;
-}
-
-.skip-link:focus {
-    top: var(--spacing-md);
-    left: var(--spacing-md);
 }
 
 /* ===== LAYOUT UTILITIES ===== */

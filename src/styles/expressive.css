@@ -84,27 +84,13 @@ button[type="submit"]:active::after {
 
 /* ===== GRADIENT ACCENTS ===== */
 
-/* Enhanced header gradient with shimmer */
+/* Header is intentionally transparent — gradient background comes from .app */
 .app-header {
-    background: linear-gradient(135deg,
-        var(--md-sys-color-primary) 0%,
-        var(--md-sys-color-primary-container) 50%,
-        var(--md-sys-color-tertiary) 100%);
-    position: relative;
+    background: transparent;
 }
 
 .app-header::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        transparent 100%);
-    animation: shimmer 3s infinite;
+    display: none;
 }
 
 @keyframes shimmer {

@@ -329,6 +329,50 @@
     transform: translateY(0);
 }
 
+/* Sign word row with KB-verified badge */
+.sign-word-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.kb-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px 3px 6px;
+    background: linear-gradient(135deg, hsla(174, 60%, 85%, 1), hsla(152, 60%, 85%, 1));
+    color: hsla(152, 50%, 28%, 1);
+    border-radius: var(--md-sys-shape-corner-pill);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid hsla(152, 50%, 60%, 0.4);
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .kb-badge {
+    background: linear-gradient(135deg, hsla(174, 50%, 20%, 1), hsla(152, 50%, 20%, 1));
+    color: hsla(152, 70%, 70%, 1);
+    border-color: hsla(152, 50%, 40%, 0.4);
+}
+
+/* Primary video link (Lifeprint) — chained selector beats .video-link specificity */
+.video-link.video-link--primary {
+    background: linear-gradient(135deg, hsl(205, 87%, 45%) 0%, hsl(174, 62%, 47%) 100%);
+    color: #ffffff;
+    border-color: transparent;
+    font-weight: 700;
+}
+
+.video-link.video-link--primary:hover {
+    background: var(--gradient-ocean);
+    color: #ffffff;
+    box-shadow: var(--shadow-ocean);
+    transform: translateY(-3px) scale(1.02);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .sign-card {
