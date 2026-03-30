@@ -48,6 +48,10 @@ COPY logger.py ./
 COPY database.py ./
 COPY auth.py ./
 COPY cache.py ./
+COPY deps.py ./
+COPY middleware.py ./
+COPY routes ./routes
+COPY db ./db
 COPY python_code ./python_code
 
 # Copy built frontend from previous stage
