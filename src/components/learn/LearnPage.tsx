@@ -147,7 +147,7 @@ const LearnPageContent: React.FC = () => {
                 setShowXp(false);
             }
         }, 2000);
-    }, [answerExercise, currentExercise, isLastExercise, nextExercise]);
+    }, [answerExercise, currentExercise, isLastExercise, nextExercise, playSuccess, playSoundError]);
 
     const handleSkip = useCallback(() => {
         skipExercise();

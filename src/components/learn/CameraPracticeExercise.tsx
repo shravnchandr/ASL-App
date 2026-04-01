@@ -27,6 +27,10 @@ const DIGIT_TO_WORD: Record<string, string> = {
   '10': 'ten',
 };
 
+const TARGET_FPS = 15;
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+const MATCH_THRESHOLD = 1500; // 1.5 seconds to confirm match
+
 interface CameraPracticeExerciseProps {
   targetSign: string;
   levelId: number;
@@ -57,9 +61,7 @@ export function CameraPracticeExercise({
   const lastFrameTimeRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
-  const TARGET_FPS = 15;
-  const FRAME_INTERVAL = 1000 / TARGET_FPS;
-  const MATCH_THRESHOLD = 1500; // 1.5 seconds to confirm match
+  // Constants moved outside component to avoid dep-array warnings — see module scope
 
   const isLoading = handLoading || modelLoading;
 

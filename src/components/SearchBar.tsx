@@ -3,7 +3,7 @@
  * Search input with autocomplete from the 100-sign knowledge base
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import './SearchBar.css';
 
 // Available signs for autocomplete — loaded once from metadata
@@ -33,9 +33,11 @@ interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = false }) => {
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
-    const [suggestions, setSuggestions] = useState<string[]>([]);
     const [selectedIdx, setSelectedIdx] = useState(-1);
     const [allSigns, setAllSigns] = useState<string[]>([]);
+    // Tracks the query value when suggestions were dismissed.
+    // When query changes (user types), the dismissal no longer applies.
+    const [dismissedForQuery, setDismissedForQuery] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
 
@@ -44,20 +46,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
         getAvailableSigns().then(setAllSigns);
     }, []);
 
-    // Update suggestions when query changes
-    useEffect(() => {
-        if (!query.trim() || allSigns.length === 0) {
-            setSuggestions([]);
-            setSelectedIdx(-1);
-            return;
-        }
+    // Derive suggestions from query + allSigns (no effect needed)
+    const suggestions = useMemo(() => {
+        if (!query.trim() || allSigns.length === 0) return [];
         const q = query.toLowerCase().replace(/\s+/g, '_');
-        const matches = allSigns
+        return allSigns
             .filter(s => s.startsWith(q) || s.includes(q))
             .slice(0, 6);
-        setSuggestions(matches);
-        setSelectedIdx(-1);
     }, [query, allSigns]);
+
+    // Suggestions are hidden only if dismissed for the current query value
+    const suggestionsHidden = dismissedForQuery === query;
 
     const handleSubmit = useCallback((e?: React.FormEvent) => {
         e?.preventDefault();
@@ -66,7 +65,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
             : query.trim();
         if (value && !isLoading) {
             onSearch(value);
-            setSuggestions([]);
+            setDismissedForQuery(query);
             setSelectedIdx(-1);
         }
     }, [query, selectedIdx, suggestions, isLoading, onSearch]);
@@ -80,7 +79,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
             e.preventDefault();
             setSelectedIdx(i => Math.max(i - 1, -1));
         } else if (e.key === 'Escape') {
-            setSuggestions([]);
+            setDismissedForQuery(query);
             setSelectedIdx(-1);
         }
     };
@@ -88,18 +87,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
     const handleSelectSuggestion = (sign: string) => {
         const value = formatSignName(sign);
         setQuery(value);
-        setSuggestions([]);
+        setDismissedForQuery(value);
         setSelectedIdx(-1);
         onSearch(value);
     };
 
     const handleClear = () => {
         setQuery('');
-        setSuggestions([]);
+        setDismissedForQuery('');
         inputRef.current?.focus();
     };
 
-    const showSuggestions = isFocused && suggestions.length > 0;
+    const showSuggestions = isFocused && suggestions.length > 0 && !suggestionsHidden;
 
     return (
         <form className="search-bar" onSubmit={handleSubmit} role="search">
