@@ -1,379 +1,352 @@
 /**
- * SignCard Styles
- * Expressive card design with varied shapes and gradients
+ * SignCard Styles — M3 Expressive reference card
  */
 
 .sign-card {
-    background: var(--glass-bg-strong);
-    backdrop-filter: var(--glass-blur-light);
-    -webkit-backdrop-filter: var(--glass-blur-light);
+    background: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--md-sys-shape-corner-extra-large);
-    padding: var(--spacing-xl);
-    box-shadow: var(--md-sys-elevation-2);
-    border: 1px solid var(--glass-border);
-    transition: all var(--md-sys-motion-duration-medium-2) var(--md-sys-motion-easing-emphasized);
-    animation: slideUp var(--md-sys-motion-duration-medium-3) var(--md-sys-motion-easing-emphasized) both;
-    position: relative;
     overflow: hidden;
+    transition: transform var(--duration-quick) var(--spring-smooth),
+                box-shadow var(--duration-quick) ease;
 }
 
-/* Gradient top accent bar - always visible but subtle */
-.sign-card::before {
+.sign-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--md-sys-elevation-3);
+}
+
+/* Header — gradient accent bar */
+.sign-card__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--md-sys-color-surface-container);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    position: relative;
+}
+
+.sign-card__header::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 4px;
-    background: var(--gradient-ocean);
-    opacity: 0.6;
-    transition: opacity var(--md-sys-motion-duration-short-4) var(--md-sys-motion-easing-standard), height var(--duration-smooth) ease;
+    background: var(--gradient-primary);
+    border-radius: 4px 4px 0 0;
 }
 
-/* Decorative glow */
-.sign-card::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -30%;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, hsla(205, 90%, 55%, 0.1) 0%, transparent 60%);
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity var(--duration-smooth) ease;
-    pointer-events: none;
-}
-
-.sign-card:hover {
-    box-shadow: var(--shadow-ocean);
-    transform: translateY(-6px);
-    border-color: hsla(205, 90%, 55%, 0.3);
-}
-
-.sign-card:hover::before {
-    opacity: 1;
-    height: 5px;
-}
-
-.sign-card:hover::after {
-    opacity: 1;
-}
-
-[data-theme="dark"] .sign-card {
-    background: var(--glass-bg-strong);
-    border-color: var(--glass-border);
-}
-
-.sign-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-md);
-    border-bottom: 2px solid var(--md-sys-color-outline-variant);
-}
-
-.sign-word {
-    font-size: var(--md-sys-typescale-headline-medium-size);
-    font-weight: var(--md-sys-typescale-headline-medium-weight);
+.sign-card__word {
+    font-family: var(--md-sys-typescale-font-family-display);
+    font-size: 1.2rem;
+    font-weight: 800;
     color: var(--md-sys-color-primary);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
+    margin: 0;
 }
 
-.sign-number {
-    background: var(--gradient-ocean);
-    color: var(--md-sys-color-on-primary);
-    padding: 6px 16px;
+.sign-card__badge {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
     border-radius: var(--md-sys-shape-corner-pill);
-    font-size: var(--md-sys-typescale-label-medium-size);
-    font-weight: var(--md-sys-typescale-label-medium-weight);
-    box-shadow: var(--shadow-primary);
 }
 
-.sign-details {
+/* Body */
+.sign-card__body {
+    padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: 18px;
 }
 
-.sign-detail-item {
+/* Animation embed */
+.sign-card__anim {
     display: flex;
-    gap: var(--spacing-md);
     align-items: flex-start;
+    gap: 14px;
+    padding: 14px;
+    background: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-large);
+    border: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.detail-icon {
-    flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, hsla(205, 80%, 88%, 1) 100%);
-    color: var(--md-sys-color-on-primary-container);
-    border-radius: var(--md-sys-shape-corner-medium);
+.sign-card__play-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 16px;
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--md-sys-shape-corner-pill);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-top: 6px;
+    box-shadow: var(--shadow-primary);
+    transition: all var(--duration-quick) var(--spring-smooth);
+}
+
+.sign-card__play-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--md-sys-elevation-3), var(--shadow-primary);
+}
+
+.sign-card__play-btn:active {
+    transform: scale(0.96);
+}
+
+/* Fingerspelling — prominent */
+.sign-card__fingerspell {
+    padding: 14px 16px;
+    background: var(--md-sys-color-primary-container);
+    border-radius: var(--md-sys-shape-corner-large);
+}
+
+.sign-card__fs-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: all var(--md-sys-motion-duration-short-3) var(--md-sys-motion-easing-standard);
-    box-shadow: 0 2px 8px hsla(205, 90%, 50%, 0.15);
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
 }
 
-.sign-card:hover .detail-icon {
-    transform: scale(1.08) rotate(3deg);
-    box-shadow: var(--shadow-primary);
+.sign-card__fs-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--md-sys-color-on-primary-container);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
-[data-theme="dark"] .detail-icon {
-    background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, hsla(205, 70%, 25%, 1) 100%);
-}
-
-.detail-content {
-    flex: 1;
+.sign-card__fs-chips {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 4px;
 }
 
-.detail-label {
-    font-size: var(--md-sys-typescale-label-medium-size);
-    font-weight: var(--md-sys-typescale-label-medium-weight);
-    color: var(--md-sys-color-on-surface-variant);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.detail-value {
-    font-size: var(--md-sys-typescale-body-large-size);
-    color: var(--md-sys-color-on-surface);
-    line-height: 1.5;
-}
-
-/* Stagger animation for multiple cards */
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .sign-card {
-        padding: var(--spacing-lg);
-    }
-
-    .sign-word {
-        font-size: var(--md-sys-typescale-headline-small-size);
-    }
-
-    .detail-icon {
-        width: 40px;
-        height: 40px;
-    }
-
-    .detail-icon svg {
-        width: 20px;
-        height: 20px;
-    }
-}
-
-/* Fingerspell Section */
-.fingerspell-section {
-    margin-top: var(--spacing-lg);
-    padding-top: var(--spacing-lg);
-    border-top: 2px solid var(--md-sys-color-outline-variant);
-}
-
-.fingerspell-header {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    flex-wrap: wrap;
-    margin-bottom: 10px;
-}
-
-.fingerspell-label {
-    font-size: var(--md-sys-typescale-label-medium-size);
-    font-weight: var(--md-sys-typescale-label-medium-weight);
-    color: var(--md-sys-color-on-surface-variant);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    flex-shrink: 0;
-}
-
-.fingerspell-sequence {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.fingerspell-chip {
+.sign-card__fs-chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: var(--md-sys-shape-corner-small);
-    background: linear-gradient(135deg, var(--md-sys-color-primary-container), hsla(205, 80%, 88%, 1));
-    color: var(--md-sys-color-on-primary-container);
-    font-size: var(--md-sys-typescale-label-large-size);
-    font-weight: 700;
-    letter-spacing: 0;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-primary);
+    font-size: 0.9rem;
+    font-weight: 800;
+    box-shadow: var(--md-sys-elevation-1);
 }
 
-[data-theme="dark"] .fingerspell-chip {
-    background: linear-gradient(135deg, var(--md-sys-color-primary-container), hsla(205, 70%, 25%, 1));
-}
-
-.fingerspell-toggle {
+.sign-card__fs-toggle {
     background: none;
     border: none;
-    padding: 4px 0;
-    font-size: var(--md-sys-typescale-label-medium-size);
-    font-weight: var(--md-sys-typescale-label-medium-weight);
+    padding: 2px 0;
+    font-size: 0.75rem;
+    font-weight: 600;
     color: var(--md-sys-color-primary);
     cursor: pointer;
-    letter-spacing: 0.02em;
-    transition: opacity var(--md-sys-motion-duration-short-3) ease;
 }
 
-.fingerspell-toggle:hover {
-    opacity: 0.75;
+.sign-card__fs-toggle:hover {
+    text-decoration: underline;
 }
 
-.fingerspell-toggle:focus-visible {
-    outline: 2px solid var(--md-sys-color-primary);
-    outline-offset: 2px;
-    border-radius: 4px;
-}
-
-.fingerspell-guide {
+.sign-card__fs-guide {
     margin-top: 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
-.fingerspell-row {
+.sign-card__fs-row {
     display: grid;
-    grid-template-columns: 32px 1fr;
-    gap: var(--spacing-md);
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
     align-items: baseline;
 }
 
-.fingerspell-row-letter {
-    font-size: var(--md-sys-typescale-title-medium-size);
-    font-weight: 700;
+.sign-card__fs-row dt {
+    font-size: 1rem;
+    font-weight: 800;
     color: var(--md-sys-color-primary);
     text-align: center;
 }
 
-.fingerspell-row-desc {
-    font-size: var(--md-sys-typescale-body-medium-size);
+.sign-card__fs-row dd {
+    font-size: 0.875rem;
     color: var(--md-sys-color-on-surface);
-    line-height: 1.5;
+    line-height: 1.55;
+    margin: 0;
 }
 
-/* Video Resources */
-.video-resources {
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 2px solid var(--surface-variant);
+/* Details — definition list */
+.sign-card__details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
 }
 
-.video-resources-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--on-surface-variant);
-    margin-bottom: 12px;
+.sign-card__detail {
+    display: flex;
+    gap: 0;
+    flex-direction: column;
 }
 
-.video-links {
+.sign-card__detail dt {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--md-sys-color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 3px;
+}
+
+.sign-card__detail dd {
+    font-size: 0.9375rem;
+    color: var(--md-sys-color-on-surface);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* Video links */
+.sign-card__links {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.sign-card__links a {
+    display: inline-block;
+    padding: 6px 14px;
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-primary);
+    text-decoration: none;
+    border-radius: var(--md-sys-shape-corner-pill);
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    transition: all var(--duration-quick) var(--spring-smooth);
+}
+
+.sign-card__links a:hover {
+    background: var(--md-sys-color-primary-container);
+    border-color: var(--md-sys-color-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--md-sys-elevation-2);
+}
+
+/* Desktop: inline labels */
+@media (min-width: 600px) {
+    .sign-card__detail {
+        flex-direction: row;
+        gap: 12px;
+        align-items: baseline;
+    }
+
+    .sign-card__detail dt {
+        flex-shrink: 0;
+        width: 85px;
+        text-align: right;
+        margin-bottom: 0;
+    }
+}
+
+/* Expand/collapse toggle */
+.sign-card__expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: 8px;
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-medium);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--duration-quick) ease;
+}
+
+.sign-card__expand-btn:hover {
+    background: var(--md-sys-color-primary-container);
+    border-color: var(--md-sys-color-primary);
+}
+
+.sign-card__chevron {
+    transition: transform var(--duration-quick) var(--spring-smooth);
+}
+
+.sign-card__chevron--open {
+    transform: rotate(180deg);
+}
+
+/* Expanded content */
+.sign-card__expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    animation: fadeSlideIn var(--duration-quick) ease;
+}
+
+/* Practice links (Feature 1) */
+.sign-card__practice {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
 }
 
-.video-link {
+.sign-card__practice-link {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     padding: 8px 16px;
-    background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, hsla(205, 80%, 90%, 1) 100%);
-    color: var(--md-sys-color-on-primary-container);
-    text-decoration: none;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.3s var(--spring-bounce);
-    border: 1px solid var(--glass-border);
-}
-
-.video-link:hover {
-    background: var(--gradient-ocean);
-    color: var(--md-sys-color-on-primary);
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: var(--shadow-ocean);
-}
-
-.video-link:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
-}
-
-.video-link:active {
-    transform: translateY(0);
-}
-
-/* Sign word row with KB-verified badge */
-.sign-word-row {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    flex-wrap: wrap;
-}
-
-.kb-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px 3px 6px;
-    background: linear-gradient(135deg, hsla(174, 60%, 85%, 1), hsla(152, 60%, 85%, 1));
-    color: hsla(152, 50%, 28%, 1);
     border-radius: var(--md-sys-shape-corner-pill);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    border: 1px solid hsla(152, 50%, 60%, 0.4);
-    white-space: nowrap;
-}
-
-[data-theme="dark"] .kb-badge {
-    background: linear-gradient(135deg, hsla(174, 50%, 20%, 1), hsla(152, 50%, 20%, 1));
-    color: hsla(152, 70%, 70%, 1);
-    border-color: hsla(152, 50%, 40%, 0.4);
-}
-
-/* Primary video link (Lifeprint) — chained selector beats .video-link specificity */
-.video-link.video-link--primary {
-    background: linear-gradient(135deg, hsl(205, 87%, 45%) 0%, hsl(174, 62%, 47%) 100%);
-    color: #ffffff;
-    border-color: transparent;
+    font-size: 0.8125rem;
     font-weight: 700;
+    text-decoration: none;
+    transition: all var(--duration-quick) var(--spring-smooth);
 }
 
-.video-link.video-link--primary:hover {
-    background: var(--gradient-ocean);
-    color: #ffffff;
-    box-shadow: var(--shadow-ocean);
-    transform: translateY(-3px) scale(1.02);
+.sign-card__practice-link--learn {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
 }
 
-/* Reduced motion */
+.sign-card__practice-link--learn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-secondary);
+}
+
+.sign-card__practice-link--camera {
+    background: var(--md-sys-color-accent-violet-container);
+    color: var(--md-sys-color-accent-violet);
+}
+
+.sign-card__practice-link--camera:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--md-sys-elevation-2);
+}
+
+@media (max-width: 480px) {
+    .sign-card__anim {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .sign-card {
         animation: none;
@@ -383,11 +356,7 @@
         transform: none;
     }
 
-    .sign-card:hover .detail-icon {
-        transform: none;
-    }
-
-    .video-link:hover {
-        transform: none;
+    .sign-card__expanded {
+        animation: none;
     }
 }

@@ -3,7 +3,7 @@
  * Base styles, resets, and utility classes
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 @import './tokens.css';
 
 /* ===== CSS RESET ===== */

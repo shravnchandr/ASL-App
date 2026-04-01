@@ -14,14 +14,20 @@ const STORAGE_KEYS = {
     LEARNING_SETTINGS: 'asl_learn_settings',
     LEARNING_STATS: 'asl_learn_stats',
     LEVEL_PROGRESS: 'asl_level_progress',
+    ONBOARDING_DISMISSED: 'asl_onboarding_dismissed',
 } as const;
 
-// Learning feature types
+// Learning feature types (SM-2 spaced repetition)
 interface SignProgress {
     timesStudied: number;
     timesCorrect: number;
     lastStudied: string;
     mastery: number;
+    // SM-2 fields
+    easeFactor: number;   // starts at 2.5, minimum 1.3
+    interval: number;     // days until next review
+    repetitions: number;  // consecutive correct count
+    nextReview: string;   // ISO date of next scheduled review
 }
 
 interface LearningStats {
@@ -191,6 +197,10 @@ export const storage = {
                 timesCorrect: 0,
                 lastStudied: '',
                 mastery: 0,
+                easeFactor: 2.5,
+                interval: 0,
+                repetitions: 0,
+                nextReview: '',
             };
 
             existing.timesStudied += 1;
@@ -198,16 +208,63 @@ export const storage = {
                 existing.timesCorrect += 1;
             }
             existing.lastStudied = new Date().toISOString();
-            // Calculate mastery as percentage (with minimum 5 attempts for stable score)
-            existing.mastery = existing.timesStudied >= 5
-                ? Math.round((existing.timesCorrect / existing.timesStudied) * 100)
-                : Math.round((existing.timesCorrect / Math.max(existing.timesStudied, 1)) * 100 * 0.8);
+
+            // SM-2 algorithm: map correct/incorrect to quality 0-5
+            // correct = quality 4 (correct with some effort)
+            // incorrect = quality 1 (remembered after seeing answer)
+            const quality = isCorrect ? 4 : 1;
+
+            if (quality >= 3) {
+                // Correct response
+                if (existing.repetitions === 0) {
+                    existing.interval = 1;
+                } else if (existing.repetitions === 1) {
+                    existing.interval = 6;
+                } else {
+                    existing.interval = Math.round(existing.interval * existing.easeFactor);
+                }
+                existing.repetitions += 1;
+            } else {
+                // Incorrect — reset interval but keep ease factor
+                existing.repetitions = 0;
+                existing.interval = 1;
+            }
+
+            // Update ease factor: EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+            existing.easeFactor = existing.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+            existing.easeFactor = Math.max(1.3, existing.easeFactor);
+
+            // Schedule next review
+            const next = new Date();
+            next.setDate(next.getDate() + existing.interval);
+            existing.nextReview = next.toISOString().split('T')[0];
+
+            // Calculate mastery from SM-2 state
+            // Combines accuracy with spaced repetition confidence
+            const accuracy = existing.timesStudied >= 3
+                ? existing.timesCorrect / existing.timesStudied
+                : (existing.timesCorrect / Math.max(existing.timesStudied, 1)) * 0.8;
+            const repetitionBonus = Math.min(existing.repetitions / 5, 1) * 0.2;
+            existing.mastery = Math.round((accuracy * 0.8 + repetitionBonus) * 100);
 
             progress[sign] = existing;
             localStorage.setItem(STORAGE_KEYS.LEARNING_PROGRESS, JSON.stringify(progress));
         } catch (error) {
             console.error('Failed to update sign progress:', error);
         }
+    },
+
+    /**
+     * Get signs that are due for review based on SM-2 scheduling.
+     * Returns sign names sorted by most overdue first.
+     */
+    getSignsDueForReview(): string[] {
+        const progress = this.getLearningProgress();
+        const today = new Date().toISOString().split('T')[0];
+        return Object.entries(progress)
+            .filter(([, p]) => p.nextReview && p.nextReview <= today)
+            .sort(([, a], [, b]) => (a.nextReview || '').localeCompare(b.nextReview || ''))
+            .map(([sign]) => sign);
     },
 
     // Learning Stats
@@ -339,5 +396,22 @@ export const storage = {
     isLevelUnlocked(levelId: number): boolean {
         const progress = this.getLevelProgress();
         return progress.unlockedLevels.includes(levelId);
+    },
+
+    // Onboarding
+    isOnboardingDismissed(): boolean {
+        try {
+            return localStorage.getItem(STORAGE_KEYS.ONBOARDING_DISMISSED) === 'true';
+        } catch {
+            return false;
+        }
+    },
+
+    dismissOnboarding(): void {
+        try {
+            localStorage.setItem(STORAGE_KEYS.ONBOARDING_DISMISSED, 'true');
+        } catch (error) {
+            console.error('Failed to dismiss onboarding:', error);
+        }
     },
 };

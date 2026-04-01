@@ -7,6 +7,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="ASL Guide - Your companion for learning American Sign Language. Get AI-powered sign instructions or practice with interactive animations." />
   <meta name="theme-color" content="#0B75BC" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="ASL Guide - Learn American Sign Language" />
+  <meta property="og:description" content="AI-powered ASL dictionary with interactive sign animations, Duolingo-style learning, and live camera recognition." />
+  <meta property="og:url" content="https://asl-guide.onrender.com" />
+  <meta property="og:site_name" content="ASL Guide" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="ASL Guide - Learn American Sign Language" />
+  <meta name="twitter:description" content="AI-powered ASL dictionary with interactive sign animations, Duolingo-style learning, and live camera recognition." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ASL Guide" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
@@ -16,6 +36,13 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 
 </html>

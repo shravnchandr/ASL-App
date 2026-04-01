@@ -124,10 +124,20 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - Loaded once at module startup into `SIGN_KNOWLEDGE_BASE` dict
 - `_build_knowledge_context()` extracts glosses from the Grammar Agent's output, looks up matches, and injects verified descriptions directly into the Translation Agent's system prompt
   - **Exact lookup first**: case-insensitive, handles hyphenated compounds (`THANK-YOU → thank_you`)
-  - **Semantic fallback** (opt-in): if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt
+  - **Alphabet guard**: Single-letter KB keys (a-z) are collected into `_ALPHABET_KEYS` frozenset and **only match `fs-` prefixed glosses** (fingerspelling). Bare single-letter glosses like "I" (pronoun) or "A" (article) are routed to the "Signs to generate" section so the LLM describes the word sign, not the alphabet handshape. This prevents homograph collisions across all 26 letters.
+  - **Translation Agent context-awareness**: The system prompt includes a `CRITICAL: CONTEXT-AWARE SIGN DESCRIPTIONS` section instructing the LLM that bare glosses are words/concepts, not alphabet letters. Includes explicit examples (e.g. "I" = pointing at chest, not pinky-up handshape).
+  - **Semantic fallback** (opt-in): if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt. Semantic matches to alphabet keys are also guarded.
   - **Disabled by default** — loading `sentence-transformers` uses ~200MB of RAM, which exceeds Render's free tier (512MB total). Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with sufficient memory.
   - When enabled, embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
 - Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs (exact or semantic) instruct the LLM to copy descriptions faithfully
+
+**Caching:** `cache.py`
+- Dual-layer caching: Redis (when available) + in-memory LRU fallback
+- `_MemoryCache` class: OrderedDict-based LRU with TTL expiry, max 256 entries
+- Always writes to memory cache; also writes to Redis if connected
+- Reads try Redis first, then memory cache
+- Works without Redis configured (Render free tier has no Redis)
+- `init_redis()` imports `redis.asyncio` lazily — no import error if redis package isn't installed
 
 **Custom API Keys:**
 - Users can provide their own Google Gemini API key
@@ -146,7 +156,9 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 **Key Components:**
 - `src/components/SearchBar.tsx`: Main search input with URL query param support
-- `src/components/SignCard.tsx`: Displays individual ASL sign descriptions
+- `src/components/SignCard.tsx`: Displays individual ASL sign descriptions with compact/expanded toggle, embedded animations, and practice links. Skips loading letter animation files for single-letter non-fingerspelled words (prevents pronoun "I" from showing letter animation)
+- `src/components/SentenceAnimator.tsx`: Plays sign animations in sequence for multi-sign results. Word chips show progress, skips single-letter non-fingerspelled words
+- `src/components/DictionaryPage.tsx`: Main dictionary page with landing content (Sign of the Day, onboarding callout, quick-try chips, learn progress card, category cards) and post-search follow-up suggestions
 - `src/components/FeedbackWidget.tsx`: Rating system (thumbs up/down)
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
@@ -159,7 +171,8 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - All API calls go to `/api/*` prefix; dev mode proxied to localhost:8000 via Vite config
 
 **Utilities:**
-- `src/utils/storage.ts`: LocalStorage wrapper (search history, favorites, theme, API key)
+- `src/utils/storage.ts`: LocalStorage wrapper with SM-2 spaced repetition (search history, favorites, theme, API key, learning progress with `easeFactor`, `interval`, `repetitions`, `nextReview`, and `getSignsDueForReview()`)
+- `src/utils/signOfTheDay.ts`: Deterministic daily sign picker using date hash
 - `src/utils/accessibility.ts`: Screen reader announcements
 - `src/utils/print.ts`: Print-optimized layouts
 - `src/utils/share.ts`: Web Share API integration
@@ -399,22 +412,42 @@ Modify CSP if adding external scripts or resources.
 
 **Utilities:**
 - `src/utils/sanitize.ts`: XSS protection with DOMPurify
-- `src/utils/storage.ts`: LocalStorage with level persistence
+- `src/utils/storage.ts`: LocalStorage with level persistence and SM-2 spaced repetition
+- `src/utils/signOfTheDay.ts`: Deterministic daily sign picker
+- `src/utils/format.ts`: `formatSignName()` display helper
+
+**Testing:**
+- `vitest.config` embedded in `vite.config.ts` (test block)
+- `src/test/setup.ts`: Test setup file
+- `src/utils/__tests__/predictionBuffer.test.ts`: PredictionBuffer unit tests (8 tests)
+- `src/utils/__tests__/signOfTheDay.test.ts`: Sign of the Day tests (4 tests)
+- `src/utils/__tests__/storage.test.ts`: SM-2 spaced repetition tests (7 tests)
+- Run: `npm test` (single run) or `npm run test:watch` (watch mode)
+
+**PWA:**
+- `public/manifest.json`: Web App Manifest (name, icons, theme color, display mode)
+- `public/sw.js`: Service Worker with three cache strategies:
+  - App shell (stale-while-revalidate)
+  - Sign data `/sign-data/*` (cache-first)
+  - ML models `/models/*` (cache-first)
+  - API calls `/api/*` (network-only)
+- `index.html`: SW registration script, Open Graph + Twitter Card meta tags
 
 **Configuration:**
-- `vite.config.ts`: Build configuration, dev proxy
+- `vite.config.ts`: Build configuration, dev proxy, vitest config
 - `Dockerfile`: Multi-stage production build
 - `docker-compose.yml`: Development environment
 - `render.yaml`: Render.com deployment config
 
 ## Tech Stack Summary
 
-- **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Material 3 Design
+- **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Vitest, Material 3 Design
 - **Backend**: FastAPI, Python 3.11+, uvicorn
 - **AI**: Google Gemini 2.5 Flash, LangGraph, LangChain, sentence-transformers (all-MiniLM-L6-v2)
 - **Browser ML**: TensorFlow.js, MediaPipe Hands (Tasks Vision API)
 - **Database**: SQLAlchemy (async), aiosqlite/PostgreSQL
-- **Deployment**: Docker, Render.com
+- **Caching**: Redis (optional) + in-memory LRU fallback
+- **Deployment**: Docker, Render.com, PWA (Service Worker + Web Manifest)
 
 ---
 
@@ -553,19 +586,32 @@ MediaPipe models are auto-downloaded to `mediapipe_models/` on first run.
 
 - `src/utils/format.ts` - `formatSignName()` converts "thank_you" to "Thank You"
 - `src/utils/signDataLoader.ts` - Loads sign JSON data, handles caching
-- `src/utils/storage.ts` - Learning progress persistence (localStorage)
+- `src/utils/signOfTheDay.ts` - Deterministic daily sign picker (date hash → sign index)
+- `src/utils/storage.ts` - Learning progress persistence with SM-2 spaced repetition (localStorage)
 
 ### Learning Progress Storage Keys
 
 ```typescript
-LEARNING_PROGRESS: 'asl_learn_progress',  // Per-sign mastery
+LEARNING_PROGRESS: 'asl_learn_progress',  // Per-sign mastery + SM-2 state
 LEARNING_SETTINGS: 'asl_learn_settings',  // Animation speed, difficulty
 LEARNING_STATS: 'asl_learn_stats',        // Total XP, level, streak
+LEVEL_PROGRESS: 'asl_level_progress',     // Unlocked levels, current level
+ONBOARDING_DISMISSED: 'asl_onboarding_dismissed',  // First-visit callout
 
 // Camera feature keys
 SOUND_EFFECTS_KEY: 'asl_sound_effects_enabled',  // Sound toggle
 TUTORIAL_KEY: 'asl_camera_tutorial_seen',        // Tutorial completed
 ```
+
+### SM-2 Spaced Repetition
+
+`storage.updateSignProgress()` implements the SM-2 algorithm:
+- **`easeFactor`**: Starts at 2.5, minimum 1.3. Adjusted after each review: `EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))`
+- **`interval`**: Days until next review. Correct: 1 → 6 → `interval * easeFactor`. Incorrect: reset to 1
+- **`repetitions`**: Consecutive correct count. Reset to 0 on incorrect
+- **`nextReview`**: ISO date string for next scheduled review
+- **`mastery`**: Combines accuracy (80% weight) + repetition confidence (20% weight)
+- **`getSignsDueForReview()`**: Returns signs with `nextReview <= today`, sorted most overdue first
 
 ### Python Scripts Reference
 

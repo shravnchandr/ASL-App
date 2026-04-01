@@ -1,0 +1,19 @@
+{
+  "name": "ASL Guide - Learn American Sign Language",
+  "short_name": "ASL Guide",
+  "description": "AI-powered ASL dictionary with interactive learning and live camera recognition",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8fa",
+  "theme_color": "#0B75BC",
+  "orientation": "portrait-primary",
+  "categories": ["education", "reference"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

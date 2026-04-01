@@ -12,21 +12,14 @@ import { RecallExercise } from './RecallExercise';
 import { CameraPracticeExercise } from './CameraPracticeExercise';
 import { SignBrowser } from './SignBrowser';
 import { LevelSelector } from './LevelSelector';
-import { GeneralFeedbackModal } from '../features/GeneralFeedbackModal';
-import { FloatingFeedbackButton } from '../features/FloatingFeedbackButton';
 import { formatSignName } from '../../utils/format';
 import { getLevelById, MASTERY_THRESHOLD } from '../../constants/levels';
-import { submitGeneralFeedback } from '../../services/api';
-import { announceToScreenReader } from '../../utils/accessibility';
+import { useSoundEffects } from '../../hooks/useSoundEffects';
 import type { SignData } from '../../types';
 import './LearnPage.css';
 
-interface LearnPageContentProps {
-    onBack?: () => void;
-}
-
 // Inner component that uses the context
-const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
+const LearnPageContent: React.FC = () => {
     const {
         state,
         startLevelSession,
@@ -49,7 +42,7 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
     const [signData, setSignData] = useState<SignData | null>(null);
     const [optionSignData, setOptionSignData] = useState<Array<{ sign: string; data: SignData | null }>>([]);
     const [showSignBrowser, setShowSignBrowser] = useState(false);
-    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const { isEnabled: soundEnabled, toggleSounds, playSuccess, playError: playSoundError } = useSoundEffects();
 
     // Refs for cleanup
     const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,11 +125,13 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
             setLastXp(xp);
             setShowXp(true);
             setFeedback({ isCorrect: true, message: 'Correct! Great job!' });
+            playSuccess();
         } else {
             setFeedback({
                 isCorrect: false,
                 message: `Not quite. The answer was "${formatSignName(correctAnswer)}".`,
             });
+            playSoundError();
         }
 
         // Auto-advance after delay with cleanup support
@@ -181,12 +176,8 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
     }, [startLevelSession, state.selectedLevel, state.currentLevel]);
 
     const handleBackToHome = useCallback(() => {
-        if (onBack) {
-            onBack();
-        } else {
-            window.location.href = '/';
-        }
-    }, [onBack]);
+        window.location.href = '/';
+    }, []);
 
     const handleBackToLevels = useCallback(() => {
         endSession();
@@ -200,30 +191,6 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
         setFeedback(null);
     }, [endSession, selectLevel]);
 
-    const handleFeedbackSubmit = useCallback(async (
-        category: string,
-        feedbackText: string,
-        email?: string
-    ) => {
-        try {
-            // Add context about current exercise/sign if in a session
-            let contextText = feedbackText;
-            if (state.isSessionActive && currentExercise) {
-                contextText = `[Learning Mode - Sign: "${currentExercise.sign}", Exercise Type: "${currentExercise.type}"]\n\n${feedbackText}`;
-            }
-
-            await submitGeneralFeedback({
-                category,
-                feedback_text: contextText,
-                email,
-            });
-            announceToScreenReader('Feedback submitted successfully. Thank you!');
-            setShowFeedbackModal(false);
-        } catch (error) {
-            console.error('Failed to submit feedback:', error);
-            throw error;
-        }
-    }, [state.isSessionActive, currentExercise]);
 
     // Unlock celebration overlay
     if (showUnlockCelebration && state.justUnlockedLevel) {
@@ -314,13 +281,6 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                     </div>
                 </main>
 
-                <FloatingFeedbackButton onClick={() => setShowFeedbackModal(true)} />
-
-                <GeneralFeedbackModal
-                    isOpen={showFeedbackModal}
-                    onClose={() => setShowFeedbackModal(false)}
-                    onSubmit={handleFeedbackSubmit}
-                />
             </div>
         );
     }
@@ -337,6 +297,18 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                         End Session
                     </button>
                     <div className="learn-page__stats">
+                        <button
+                            className="learn-page__sound-btn"
+                            onClick={toggleSounds}
+                            aria-label={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+                            title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+                        >
+                            {soundEnabled ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                            ) : (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                            )}
+                        </button>
                         <span className="learn-page__xp">XP: {state.totalXP}</span>
                         <span className="learn-page__level">Level {state.currentLevel}</span>
                     </div>
@@ -396,13 +368,6 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                     </ExerciseCard>
                 </main>
 
-                <FloatingFeedbackButton onClick={() => setShowFeedbackModal(true)} />
-
-                <GeneralFeedbackModal
-                    isOpen={showFeedbackModal}
-                    onClose={() => setShowFeedbackModal(false)}
-                    onSubmit={handleFeedbackSubmit}
-                />
             </div>
         );
     }
@@ -521,13 +486,6 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                     </div>
                 </main>
 
-                <FloatingFeedbackButton onClick={() => setShowFeedbackModal(true)} />
-
-                <GeneralFeedbackModal
-                    isOpen={showFeedbackModal}
-                    onClose={() => setShowFeedbackModal(false)}
-                    onSubmit={handleFeedbackSubmit}
-                />
             </div>
         );
     }
@@ -576,26 +534,15 @@ const LearnPageContent: React.FC<LearnPageContentProps> = ({ onBack }) => {
                 />
             </main>
 
-            <FloatingFeedbackButton onClick={() => setShowFeedbackModal(true)} />
-
-            <GeneralFeedbackModal
-                isOpen={showFeedbackModal}
-                onClose={() => setShowFeedbackModal(false)}
-                onSubmit={handleFeedbackSubmit}
-            />
         </div>
     );
 };
 
-interface LearnPageProps {
-    onBack?: () => void;
-}
-
 // Wrapper component with provider
-export const LearnPage: React.FC<LearnPageProps> = ({ onBack }) => {
+export const LearnPage: React.FC = () => {
     return (
         <LearnProvider>
-            <LearnPageContent onBack={onBack} />
+            <LearnPageContent />
         </LearnProvider>
     );
 };

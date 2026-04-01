@@ -31,6 +31,12 @@ except Exception as e:
     )
     SIGN_KNOWLEDGE_BASE = {}
 
+# Keys that represent individual alphabet letters — these should only match
+# fs-prefixed glosses, never bare word glosses in a sentence context.
+_ALPHABET_KEYS: frozenset[str] = frozenset(
+    k for k in SIGN_KNOWLEDGE_BASE if len(k) == 1 and k.isalpha()
+)
+
 # --- Semantic Similarity Index ---
 # Disabled by default — loading sentence-transformers exceeds Render free tier (512MB RAM).
 # Set ENABLE_SEMANTIC_LOOKUP=true to enable (requires ~200MB extra RAM).
@@ -91,18 +97,28 @@ def _get_kb_matched_words(gloss_sequence: str) -> set[str]:
     """
     Return the set of uppercase gloss words that have a KB match (exact or semantic).
     Fast — only dict lookups and optional vector dot product, no LLM calls.
+
+    Single-letter alphabet entries are skipped for bare glosses — they only
+    match via the fs- prefix path, preventing "I" (pronoun) from hitting the
+    letter "i" entry (and similar collisions for any letter).
     """
     matched: set[str] = set()
     for gloss in gloss_sequence.split():
         if gloss.lower().startswith("fs-") or gloss.startswith("#"):
             continue
         key = gloss.lower().replace("-", "_")
-        if SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(
+        entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(
             key.replace("_", "")
-        ):
+        )
+        if entry:
+            resolved_key = key if SIGN_KNOWLEDGE_BASE.get(key) else key.replace("_", "")
+            if resolved_key in _ALPHABET_KEYS:
+                continue
             matched.add(gloss.upper())
-        elif _semantic_lookup(gloss) is not None:
-            matched.add(gloss.upper())
+        else:
+            sem = _semantic_lookup(gloss)
+            if sem and sem[0] not in _ALPHABET_KEYS:
+                matched.add(gloss.upper())
     return matched
 
 
@@ -148,16 +164,27 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
             key.replace("_", "")
         )
         if entry:
+            # Skip alphabet-letter entries for bare glosses — a sentence gloss
+            # like "I" means the pronoun, not the letter.  Letters only enter
+            # the pipeline via fs- prefix (handled above).
+            resolved_key = key if SIGN_KNOWLEDGE_BASE.get(key) else key.replace("_", "")
+            if resolved_key in _ALPHABET_KEYS:
+                unmatched.append(gloss)
+                continue
             matched.append((gloss, entry, None, None))
         else:
             result = _semantic_lookup(gloss)
             if result:
                 matched_key, sem_entry, score = result
-                print(
-                    f"{Fore.YELLOW}   -> Semantic match: {gloss} → {matched_key} "
-                    f"(similarity={score:.2f}){Style.RESET_ALL}"
-                )
-                matched.append((gloss, sem_entry, matched_key, score))
+                # Guard: don't let semantic search resolve to an alphabet letter
+                if matched_key in _ALPHABET_KEYS:
+                    unmatched.append(gloss)
+                else:
+                    print(
+                        f"{Fore.YELLOW}   -> Semantic match: {gloss} → {matched_key} "
+                        f"(similarity={score:.2f}){Style.RESET_ALL}"
+                    )
+                    matched.append((gloss, sem_entry, matched_key, score))
             else:
                 unmatched.append(gloss)
 

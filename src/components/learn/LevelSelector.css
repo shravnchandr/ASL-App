@@ -31,7 +31,7 @@
 /* Grid layout */
 .level-selector__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-lg, 24px);
     margin-bottom: var(--spacing-xl, 32px);
 }
@@ -78,7 +78,7 @@
     }
 
     .level-selector__grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: var(--spacing-md, 16px);
     }
 

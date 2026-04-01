@@ -4,23 +4,9 @@
  */
 
 .learn-page {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: hsl(210, 50%, 97%);
-    background-image:
-        radial-gradient(at 15% 25%, hsla(205, 90%, 82%, 0.35) 0px, transparent 55%),
-        radial-gradient(at 85% 75%, hsla(174, 70%, 82%, 0.28) 0px, transparent 50%),
-        radial-gradient(at 50% 50%, hsla(210, 60%, 96%, 0.8) 0px, transparent 70%);
-    background-attachment: fixed;
-}
-
-[data-theme="dark"] .learn-page {
-    background-color: hsl(215, 35%, 10%);
-    background-image:
-        radial-gradient(at 15% 25%, hsla(205, 70%, 20%, 0.4) 0px, transparent 55%),
-        radial-gradient(at 85% 75%, hsla(174, 50%, 18%, 0.3) 0px, transparent 50%),
-        radial-gradient(at 50% 50%, hsla(215, 50%, 13%, 0.9) 0px, transparent 70%);
+    min-height: calc(100vh - 56px - 68px);
 }
 
 /* Header */
@@ -141,6 +127,25 @@
 .learn-page__level {
     background: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
+}
+
+.learn-page__sound-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-medium);
+    cursor: pointer;
+    transition: all var(--duration-quick) ease;
+}
+
+.learn-page__sound-btn:hover {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-primary);
 }
 
 /* Main content */

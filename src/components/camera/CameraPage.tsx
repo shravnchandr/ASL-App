@@ -15,7 +15,7 @@ import { CameraTutorial } from './CameraTutorial';
 import './CameraPage.css';
 
 interface CameraPageProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 type CameraState = 'loading' | 'permission' | 'active' | 'error';
@@ -25,6 +25,7 @@ const TARGET_FPS = 15;
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
 export default function CameraPage({ onBack }: CameraPageProps) {
+  const handleBack = onBack ?? (() => { window.location.href = '/'; });
   const { videoRef, isReady: cameraReady, isLoading: cameraLoading, error: cameraError, facingMode, flipCamera, startCamera, stopCamera } = useCamera();
   const { landmarks, normalizedLandmarks, isHandDetected, isLoading: handLoading, error: handError, processFrame } = useHandDetection();
   const { predict, isLoading: modelLoading, error: modelError } = useASLClassifier();
@@ -248,7 +249,7 @@ export default function CameraPage({ onBack }: CameraPageProps) {
             <button onClick={handleRetry} className="camera-page__button camera-page__button--primary">
               Try Again
             </button>
-            <button onClick={onBack} className="camera-page__button">
+            <button onClick={handleBack} className="camera-page__button">
               Go Back
             </button>
           </div>
@@ -300,7 +301,7 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           )}
 
           <CameraControls
-            onBack={onBack}
+            onBack={handleBack}
             onFlipCamera={flipCamera}
             facingMode={facingMode}
             soundEnabled={soundEnabled}

@@ -17,8 +17,11 @@ A modern, production-ready web application that helps you learn American Sign La
 ### Core Functionality
 - 🔤 **ASL Sign Breakdowns** - Detailed descriptions with beginner-friendly language: "How to Form Your Hands", "Where to Place Your Hands", "How to Move", "Facial Expressions & Body Language"
 - 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU. Exact matches are looked up directly; synonyms and near-matches (e.g. "glad" → happy) can be resolved via semantic similarity search using sentence-transformers (opt-in, requires `ENABLE_SEMANTIC_LOOKUP=true`)
+- 🧠 **Context-Aware Disambiguation** - Single-letter glosses (like "I" the pronoun) are correctly distinguished from alphabet letters via an alphabet guard in the KB lookup and context-aware Translation Agent prompt. Letters only match via `fs-` prefix (fingerspelling)
 - 🔡 **Fingerspelling Guide** - Proper nouns (names, cities, brands) are automatically identified via `fs-` gloss prefix and shown with a collapsible letter-by-letter breakdown directly on the sign card — each letter displays its ASL hand shape description. Detection is deterministic (Python post-processing), not dependent on LLM output
 - 🔤 **Advanced ASL Grammar Engine** - Grammar Agent applies 10 documented ASL grammar rules: TTC structure, topicalization, wh-question formation, negation placement, conditionals, verb directionality, aspect, and classifiers
+- 🎬 **Sentence Animations** - Multi-sign results include a SentenceAnimator that plays sign animations in sequence with word chip indicators, progress bar, and playback controls
+- 🌟 **Sign of the Day** - Landing page features a daily sign with animation preview, deterministically selected via date hashing
 - 🎥 **Video Resource Links** - Direct links to Handspeak, ASL University, and YouTube for each sign to watch proper demonstrations
 - 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
 - 🔗 **Share, Print & Export** - Share sign breakdowns via Web Share API, print-optimized views, or export to PDF
@@ -32,7 +35,9 @@ A modern, production-ready web application that helps you learn American Sign La
 - 🤖 **100 Animated Signs** - MediaPipe landmark-based stick figure animations (26 letters, 10 numbers, 12 months, 52 common signs)
 - 📖 **Sign Library** - Browse all available signs with search, category filters, and lazy loading
 - 🎮 **Four Exercise Types** - Sign-to-Word (easiest), Word-to-Sign (medium), Recall (hardest), and Camera Practice
+- 🧠 **SM-2 Spaced Repetition** - Signs are scheduled for review using the SM-2 algorithm (ease factor, interval, repetitions). `getSignsDueForReview()` returns signs due today
 - 📈 **Progress Tracking** - XP system, per-sign mastery, level completion, and day streaks
+- 🔊 **Sound Effects** - Optional audio feedback during exercises (success/error tones via Web Audio API)
 - ⚡ **Playback Controls** - Adjustable animation speed (0.5x, 1x, 1.5x) with play/pause
 - 🏆 **Level Progression** - Alphabet → Numbers → Greetings → Family → Feelings → Actions → Questions → Time → Places → Months
 
@@ -51,8 +56,12 @@ A modern, production-ready web application that helps you learn American Sign La
 ### User Experience
 - 🎨 **Material 3 Expressive UI** - Glassmorphism, colored shadows, gradient accents, and spring physics animations
 - 🌙 **Auto Theme** - Automatically follows system preference, or choose Light, Dark, and High Contrast modes
+- 📱 **Progressive Web App** - Installable PWA with Service Worker for offline caching of sign data, ML models, and app shell
 - 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile (single-column on small phones)
-- ⚡ **Fast & Optimized** - Lazy loading, code splitting, memoization, and Redis caching
+- 👋 **Onboarding** - First-visit callout guides new users to key features (dismissible, persisted)
+- 💡 **Smart Suggestions** - Post-search follow-up phrase suggestions based on context and category
+- 📝 **Compact Sign Cards** - Collapsible sign cards with embedded animations, "Practice in Learn" and "Try with Camera" links
+- ⚡ **Fast & Optimized** - Lazy loading, code splitting, memoization, dual-layer caching (Redis + in-memory LRU fallback)
 - 📄 **PDF Export** - Download lightweight (~16KB), professionally formatted PDFs of translation results for offline reference
 - 🛡️ **Error Recovery** - React Error Boundary catches crashes with recovery UI
 
@@ -75,10 +84,11 @@ A modern, production-ready web application that helps you learn American Sign La
 - 🐳 **Docker Support** - Multi-stage Docker build for easy deployment
 - 📊 **Structured Logging** - JSON logging for production monitoring
 - 🔄 **Auto-Deploy** - Render.com integration with PR previews
-- 🧪 **Comprehensive Testing** - Backend tests with pytest (28 passing tests, 53% coverage)
+- 🧪 **Comprehensive Testing** - Backend tests with pytest (28 passing), frontend tests with Vitest (19 passing: predictionBuffer, signOfTheDay, storage/SM-2)
 - 💾 **Flexible Database** - SQLite for development, PostgreSQL for production with async support
-- 🚀 **Redis Caching** - Optional Redis integration for faster repeat translations
+- 🚀 **Dual-Layer Caching** - Redis (optional) + in-memory LRU fallback (256 entries, TTL-based) for translations that works without Redis
 - 🔒 **Admin Panel** - Secure admin dashboard for feedback management and analytics
+- 🌐 **Social Sharing** - Open Graph and Twitter Card meta tags for rich link previews
 
 ---
 
@@ -190,10 +200,11 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **React 18.3** - UI library
+- **React 18.3** - UI library with React Router for SPA navigation
 - **TypeScript 5.9** - Type safety
 - **Vite 7** - Build tool with HMR
-- **Material 3 Design** - Design system
+- **Vitest** - Unit testing framework (19 tests)
+- **Material 3 Expressive Design** - Design system with Nunito font, gradients, colored shadows
 - **Axios** - HTTP client
 - **jsPDF** - Lightweight PDF generation
 - **TensorFlow.js** - Browser-based ML inference for ASL classification
@@ -207,7 +218,7 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 - **sentence-transformers** - Local semantic similarity for knowledge base lookup (all-MiniLM-L6-v2, opt-in via `ENABLE_SEMANTIC_LOOKUP=true`)
 - **SQLAlchemy** - Async ORM (`db/` package: engine, models, CRUD modules)
 - **SQLite/PostgreSQL** - Database (SQLite for dev, PostgreSQL for production)
-- **Redis** - Optional caching layer for improved performance
+- **Redis + In-Memory LRU** - Dual-layer caching (Redis optional, in-memory fallback always active)
 - **pytest** - Testing framework with async support
 
 ### DevOps
@@ -225,8 +236,9 @@ This app is production-ready with:
 
 - ✅ **Security Headers** - CSP, HSTS, X-Frame-Options, XSS Protection
 - ✅ **Code Minification** - Terser minification with console removal
-- ✅ **Code Splitting** - Separate vendor and API bundles
-- ✅ **Gzip Compression** - ~270KB total bundle size
+- ✅ **Code Splitting** - Separate vendor, API, and lazy-loaded bundles
+- ✅ **PWA Support** - Service Worker with offline caching (sign data, ML models, app shell)
+- ✅ **Gzip Compression** - ~270KB initial load (gzipped)
 - ✅ **Rate Limiting** - 100 requests/minute in production
 - ✅ **Error Handling** - Comprehensive error handling and logging
 - ✅ **Health Checks** - `/health` endpoint for monitoring
@@ -284,16 +296,23 @@ Access the admin panel at `/admin` or add `?admin=true` to your URL. Features in
 
 Set the `ADMIN_PASSWORD` environment variable to enable admin access.
 
-### Redis Caching
-Enable Redis caching for faster repeat translations:
+### Translation Caching
+The app uses a dual-layer caching system for faster repeat translations:
+
+**In-Memory Cache (always active):**
+- LRU cache with 256 max entries and TTL expiry
+- No configuration needed — works out of the box
+- Provides instant responses for recently translated phrases
+
+**Redis Cache (optional, for persistence across restarts):**
 1. Set `REDIS_URL` environment variable (e.g., `redis://localhost:6379`)
 2. Optionally configure `CACHE_TTL` (default: 3600 seconds)
-3. Translations are automatically cached and retrieved
+3. Writes go to both Redis and memory; reads check Redis first, then memory
 
 Benefits:
 - Instant responses for previously translated phrases
 - Reduced API costs
-- Better user experience
+- Works without Redis on free-tier hosts (Render, etc.)
 
 ### PostgreSQL Database
 For production deployments, use PostgreSQL instead of SQLite:

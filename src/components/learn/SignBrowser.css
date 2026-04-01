@@ -1,256 +1,188 @@
 /**
- * SignBrowser Styles
- * M3 Expressive with spring physics and playful interactions
+ * SignBrowser Styles — M3 Expressive
+ * Clean, modern card grid within Layout
  */
 
 .sign-browser {
-    min-height: 100vh;
-    background: var(--md-sys-color-surface);
     display: flex;
     flex-direction: column;
+    gap: 20px;
 }
 
-[data-theme="dark"] .sign-browser {
-    background: var(--md-sys-color-background);
-}
-
+/* Header — inline with close button */
 .sign-browser__header {
-    background: var(--gradient-ocean);
-    color: var(--md-sys-color-on-primary);
-    padding: var(--spacing-xl) var(--spacing-2xl);
     display: flex;
     align-items: center;
-    gap: var(--spacing-lg);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    box-shadow: var(--shadow-ocean);
+    gap: 14px;
+    padding: 4px 0;
 }
 
 .sign-browser__close-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-sm);
-    background: rgba(255, 255, 255, 0.2);
-    color: var(--md-sys-color-on-primary);
+    width: 38px;
+    height: 38px;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface-variant);
     border: none;
-    border-radius: var(--md-sys-shape-corner-pill);
+    border-radius: var(--md-sys-shape-corner-medium);
     cursor: pointer;
-    transition:
-        background-color var(--duration-quick) ease,
-        transform var(--duration-quick) var(--spring-bounce);
+    transition: all var(--duration-quick) var(--spring-smooth);
 }
 
 .sign-browser__close-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    transform: scale(1.05);
 }
 
 .sign-browser__title {
-    font-size: var(--md-sys-typescale-headline-medium-size);
-    font-weight: var(--md-sys-typescale-headline-medium-weight);
+    font-family: var(--md-sys-typescale-font-family-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--md-sys-color-on-surface);
     flex: 1;
+    margin: 0;
 }
 
 .sign-browser__count {
-    font-size: var(--md-sys-typescale-label-large-size);
-    opacity: 0.9;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+    padding: 4px 12px;
+    border-radius: var(--md-sys-shape-corner-pill);
 }
 
+/* Search */
 .sign-browser__search {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md) var(--spacing-2xl);
-    background: var(--md-sys-color-surface-container);
-}
-
-[data-theme="dark"] .sign-browser__search {
-    background: var(--md-sys-color-surface-container-high);
+    position: relative;
 }
 
 .sign-browser__search-icon {
+    position: absolute;
+    left: 16px;
     color: var(--md-sys-color-on-surface-variant);
-    flex-shrink: 0;
+    pointer-events: none;
 }
 
 .sign-browser__search-input {
-    flex: 1;
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--md-sys-typescale-body-large-size);
-    background: var(--md-sys-color-surface);
+    width: 100%;
+    padding: 12px 44px 12px 44px;
+    font-size: 0.9375rem;
+    font-weight: 500;
     color: var(--md-sys-color-on-surface);
+    background: var(--md-sys-color-surface);
     border: 2px solid var(--md-sys-color-outline-variant);
-    border-radius: var(--md-sys-shape-corner-pill);
+    border-radius: var(--md-sys-shape-corner-extra-large);
     outline: none;
-    transition:
-        border-color var(--duration-quick) ease,
-        box-shadow var(--duration-quick) ease;
-}
-
-[data-theme="dark"] .sign-browser__search-input {
-    background: var(--md-sys-color-surface-container);
+    transition: border-color var(--duration-quick) ease,
+                box-shadow var(--duration-quick) ease;
 }
 
 .sign-browser__search-input:focus {
     border-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 0 3px hsla(205, 87%, 45%, 0.15);
-}
-
-[data-theme="dark"] .sign-browser__search-input:focus {
-    box-shadow: 0 0 0 3px hsla(205, 90%, 70%, 0.15);
+    box-shadow: 0 0 0 3px hsla(205, 90%, 48%, 0.12);
 }
 
 .sign-browser__search-input::placeholder {
     color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.55;
 }
 
 .sign-browser__search-clear {
+    position: absolute;
+    right: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-xs);
-    background: transparent;
+    width: 28px;
+    height: 28px;
+    background: var(--md-sys-color-surface-container-high);
     color: var(--md-sys-color-on-surface-variant);
     border: none;
-    border-radius: var(--md-sys-shape-corner-pill);
+    border-radius: 50%;
     cursor: pointer;
-    transition:
-        background-color var(--duration-quick) ease,
-        color var(--duration-quick) ease,
-        transform var(--duration-quick) var(--spring-bounce);
+    padding: 0;
+    transition: all var(--duration-quick) ease;
 }
 
 .sign-browser__search-clear:hover {
-    background: var(--md-sys-color-surface-container-high);
-    color: var(--md-sys-color-on-surface);
-    transform: scale(1.1);
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
 }
 
+/* Filter pills */
 .sign-browser__filters {
     display: flex;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-lg) var(--spacing-2xl);
-    background: var(--md-sys-color-surface-container);
-    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    gap: 8px;
     overflow-x: auto;
-}
-
-[data-theme="dark"] .sign-browser__filters {
-    background: var(--md-sys-color-surface-container-high);
+    padding: 2px 0;
+    -webkit-overflow-scrolling: touch;
 }
 
 .sign-browser__filter {
-    padding: var(--spacing-sm) var(--spacing-lg);
-    font-size: var(--md-sys-typescale-label-large-size);
-    font-weight: var(--md-sys-typescale-label-large-weight);
+    padding: 8px 18px;
+    font-size: 0.8125rem;
+    font-weight: 700;
     background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface-variant);
-    border: 1px solid var(--md-sys-color-outline-variant);
+    border: 1.5px solid var(--md-sys-color-outline-variant);
     border-radius: var(--md-sys-shape-corner-pill);
     cursor: pointer;
     white-space: nowrap;
-    transition:
-        background-color var(--duration-quick) ease,
-        border-color var(--duration-quick) ease,
-        color var(--duration-quick) ease,
-        transform var(--duration-quick) var(--spring-bounce);
+    transition: all var(--duration-quick) var(--spring-smooth);
 }
 
-[data-theme="dark"] .sign-browser__filter {
-    background: var(--md-sys-color-surface-container);
-}
-
-.sign-browser__filter:hover:not(:disabled):not(.sign-browser__filter--active) {
+.sign-browser__filter:hover:not(.sign-browser__filter--active) {
     background: var(--md-sys-color-surface-container-high);
+    border-color: var(--md-sys-color-outline);
     transform: translateY(-1px);
 }
 
 .sign-browser__filter--active {
-    background: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
-    border-color: var(--md-sys-color-primary);
-    box-shadow: var(--shadow-ocean);
-}
-
-.sign-browser__filter:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.sign-browser__loading,
-.sign-browser__empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-lg);
-    color: var(--md-sys-color-on-surface-variant);
-    padding: var(--spacing-3xl);
-    text-align: center;
-}
-
-.sign-browser__clear-btn {
-    padding: var(--spacing-sm) var(--spacing-lg);
-    font-size: var(--md-sys-typescale-label-large-size);
-    font-weight: var(--md-sys-typescale-label-large-weight);
-    background: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
-    border: none;
-    border-radius: var(--md-sys-shape-corner-pill);
-    cursor: pointer;
-    transition:
-        background-color var(--duration-quick) ease,
-        transform var(--duration-quick) var(--spring-bounce),
-        box-shadow var(--duration-quick) ease;
-}
-
-.sign-browser__clear-btn:hover {
-    background: var(--md-sys-color-tertiary);
-    transform: translateY(-2px);
+    background: var(--gradient-primary);
+    color: white;
+    border-color: transparent;
     box-shadow: var(--shadow-primary);
 }
 
+/* Grid */
 .sign-browser__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: var(--spacing-xl);
-    padding: var(--spacing-2xl);
-    flex: 1;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
 }
 
-/* Card with asymmetric shape and spring physics */
+/* Card */
 .sign-browser__card {
     background: var(--md-sys-color-surface);
-    border-radius: var(--shape-asymmetric-2);
-    padding: var(--spacing-lg);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-large);
+    padding: 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--spacing-md);
-    box-shadow: var(--md-sys-elevation-1);
-    transition:
-        transform var(--duration-smooth) var(--spring-bounce),
-        box-shadow var(--duration-smooth) var(--spring-smooth);
+    gap: 10px;
+    transition: transform var(--duration-quick) var(--spring-smooth),
+                box-shadow var(--duration-quick) ease;
+    animation: fadeSlideIn var(--duration-smooth) var(--spring-smooth) backwards;
 }
 
-[data-theme="dark"] .sign-browser__card {
-    background: var(--md-sys-color-surface-container);
-}
+.sign-browser__card:nth-child(1) { animation-delay: 0ms; }
+.sign-browser__card:nth-child(2) { animation-delay: 40ms; }
+.sign-browser__card:nth-child(3) { animation-delay: 80ms; }
+.sign-browser__card:nth-child(4) { animation-delay: 120ms; }
+.sign-browser__card:nth-child(5) { animation-delay: 160ms; }
+.sign-browser__card:nth-child(6) { animation-delay: 200ms; }
 
 .sign-browser__card:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: var(--md-sys-elevation-3), var(--shadow-teal);
+    transform: translateY(-4px);
+    box-shadow: var(--md-sys-elevation-3);
 }
-
-/* Stagger animation for cards */
-.sign-browser__card:nth-child(1) { animation-delay: 0ms; }
-.sign-browser__card:nth-child(2) { animation-delay: 50ms; }
-.sign-browser__card:nth-child(3) { animation-delay: 100ms; }
-.sign-browser__card:nth-child(4) { animation-delay: 150ms; }
-.sign-browser__card:nth-child(5) { animation-delay: 200ms; }
 
 .sign-browser__animation {
     width: 100%;
@@ -258,23 +190,22 @@
     justify-content: center;
     background: var(--md-sys-color-surface-container);
     border-radius: var(--md-sys-shape-corner-medium);
-    padding: var(--spacing-sm);
-}
-
-[data-theme="dark"] .sign-browser__animation {
-    background: var(--md-sys-color-surface-container-high);
+    padding: 6px;
 }
 
 .sign-browser__sign-name {
-    font-size: var(--md-sys-typescale-title-medium-size);
-    font-weight: var(--md-sys-typescale-title-medium-weight);
+    font-family: var(--md-sys-typescale-font-family-display);
+    font-size: 1rem;
+    font-weight: 800;
     color: var(--md-sys-color-on-surface);
     text-align: center;
+    margin: 0;
 }
 
+/* Buttons */
 .sign-browser__actions {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: 6px;
     width: 100%;
 }
 
@@ -284,130 +215,117 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--md-sys-typescale-label-medium-size);
-    font-weight: var(--md-sys-typescale-label-medium-weight);
+    gap: 4px;
+    padding: 8px 14px;
+    font-size: 0.8125rem;
+    font-weight: 700;
     border: none;
     border-radius: var(--md-sys-shape-corner-pill);
     cursor: pointer;
-    transition:
-        background-color var(--duration-quick) ease,
-        color var(--duration-quick) ease,
-        transform var(--duration-quick) var(--spring-bounce),
-        box-shadow var(--duration-quick) ease;
+    transition: all var(--duration-quick) var(--spring-smooth);
 }
 
 .sign-browser__play-btn {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: var(--shadow-primary);
+}
+
+.sign-browser__play-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--md-sys-elevation-3), var(--shadow-primary);
+}
+
+.sign-browser__play-btn:active {
+    transform: scale(0.96);
+}
+
+.sign-browser__practice-btn {
     background: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
 }
 
-.sign-browser__play-btn:hover {
-    background: var(--md-sys-color-secondary);
-    color: var(--md-sys-color-on-secondary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-teal);
+.sign-browser__practice-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--md-sys-elevation-2);
 }
 
-.sign-browser__practice-btn {
+/* Footer */
+.sign-browser__footer {
+    padding: 16px 0;
+    text-align: center;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.8125rem;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.sign-browser__footer p {
+    margin: 0;
+}
+
+/* Loading / Empty / Error */
+.sign-browser__loading,
+.sign-browser__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 60px 20px;
+    color: var(--md-sys-color-on-surface-variant);
+    text-align: center;
+}
+
+.sign-browser__clear-btn {
+    padding: 8px 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-pill);
+    cursor: pointer;
+    transition: all var(--duration-quick) var(--spring-smooth);
 }
 
-.sign-browser__practice-btn:hover {
-    background: var(--md-sys-color-tertiary);
+.sign-browser__clear-btn:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-primary);
 }
 
-.sign-browser__footer {
-    padding: var(--spacing-xl) var(--spacing-2xl);
+.sign-browser__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
     text-align: center;
-    color: var(--md-sys-color-on-surface-variant);
-    font-size: var(--md-sys-typescale-body-medium-size);
-    background: var(--md-sys-color-surface-container);
-    border-top: 1px solid var(--md-sys-color-outline-variant);
+    color: var(--md-sys-color-error);
 }
 
-[data-theme="dark"] .sign-browser__footer {
-    background: var(--md-sys-color-surface-container-high);
+.sign-browser__error p {
+    margin: 0 0 14px;
+    font-size: 0.9375rem;
 }
 
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-    .sign-browser__header {
-        padding: var(--spacing-lg);
-    }
-
-    .sign-browser__title {
-        font-size: var(--md-sys-typescale-title-large-size);
-    }
-
-    .sign-browser__count {
-        display: none;
-    }
-
-    .sign-browser__search {
-        padding: var(--spacing-md) var(--spacing-lg);
-    }
-
-    .sign-browser__filters {
-        padding: var(--spacing-md) var(--spacing-lg);
-    }
-
-    .sign-browser__grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: var(--spacing-md);
-        padding: var(--spacing-lg);
-    }
-
-    .sign-browser__card {
-        padding: var(--spacing-md);
-    }
-
-    .sign-browser__actions {
-        flex-direction: column;
-    }
+.sign-browser__retry-btn {
+    padding: 8px 20px;
+    background: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-pill);
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--duration-quick) var(--spring-smooth);
 }
 
-@media (max-width: 480px) {
-    .sign-browser__grid {
-        grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-md);
-    }
-
-    .sign-browser__sign-name {
-        font-size: var(--md-sys-typescale-label-large-size);
-    }
+.sign-browser__retry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px hsla(0, 70%, 50%, 0.3);
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .sign-browser__card,
-    .sign-browser__close-btn,
-    .sign-browser__search-clear,
-    .sign-browser__filter,
-    .sign-browser__clear-btn,
-    .sign-browser__play-btn,
-    .sign-browser__practice-btn,
-    .sign-browser__search-input {
-        transition: none;
-    }
-
-    .sign-browser__card:hover,
-    .sign-browser__close-btn:hover,
-    .sign-browser__search-clear:hover,
-    .sign-browser__filter:hover:not(:disabled):not(.sign-browser__filter--active),
-    .sign-browser__clear-btn:hover,
-    .sign-browser__play-btn:hover,
-    .sign-browser__practice-btn:hover {
-        transform: none;
-    }
-}
-
-/* Lazy loading placeholder */
+/* Placeholder */
 .sign-browser__placeholder {
     width: 100%;
     aspect-ratio: 1;
@@ -421,58 +339,48 @@
     50% { opacity: 0.3; }
 }
 
-/* Error state */
-.sign-browser__error {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-2xl);
-    text-align: center;
-    color: var(--md-sys-color-error);
+/* Responsive */
+@media (max-width: 768px) {
+    .sign-browser__grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+    }
+
+    .sign-browser__card {
+        padding: 10px;
+    }
+
+    .sign-browser__count {
+        display: none;
+    }
+
+    .sign-browser__actions {
+        flex-direction: column;
+    }
 }
 
-.sign-browser__error p {
-    margin: 0 0 var(--spacing-lg);
-    font-size: var(--md-sys-typescale-body-large-size);
-}
+@media (max-width: 480px) {
+    .sign-browser__grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
 
-.sign-browser__retry-btn {
-    padding: var(--spacing-sm) var(--spacing-lg);
-    background: var(--md-sys-color-error);
-    color: var(--md-sys-color-on-error);
-    border: none;
-    border-radius: var(--md-sys-shape-corner-pill);
-    font-size: var(--md-sys-typescale-label-large-size);
-    font-weight: var(--md-sys-typescale-label-large-weight);
-    cursor: pointer;
-    transition:
-        transform var(--duration-quick) var(--spring-bounce),
-        box-shadow var(--duration-quick) ease;
-}
-
-.sign-browser__retry-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px hsla(0, 70%, 50%, 0.3);
-}
-
-.sign-browser__retry-btn:focus-visible {
-    outline: 2px solid var(--md-sys-color-error);
-    outline-offset: 2px;
+    .sign-browser__sign-name {
+        font-size: 0.875rem;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .sign-browser__card {
+        animation: none;
+    }
+
+    .sign-browser__card:hover {
+        transform: none;
+    }
+
     .sign-browser__placeholder {
         animation: none;
         opacity: 0.4;
-    }
-
-    .sign-browser__retry-btn {
-        transition: none;
-    }
-
-    .sign-browser__retry-btn:hover {
-        transform: none;
     }
 }
