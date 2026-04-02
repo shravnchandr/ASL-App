@@ -795,6 +795,11 @@
         padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
     }
 
+    /* Title is absolutely-positioned and overlaps buttons at narrow widths */
+    .learn-page__title {
+        display: none;
+    }
+
     .learn-page__content {
         padding: var(--spacing-md, 16px);
     }

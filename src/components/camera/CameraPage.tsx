@@ -256,59 +256,60 @@ export default function CameraPage({ onBack }: CameraPageProps) {
         </div>
       )}
 
-      {(state === 'permission' || state === 'active') && (
-        <>
-          <CameraView
-            videoRef={videoRef}
-            isLoading={cameraLoading}
-            facingMode={facingMode}
-            landmarks={normalizedLandmarks}
+      {/* CameraView is always mounted so videoRef is available when startCamera fires.
+          Visibility is controlled via display style to avoid a race condition on mobile
+          where the video element wouldn't exist yet when the models finish loading. */}
+      <div style={{ display: state === 'permission' || state === 'active' ? undefined : 'none' }}>
+        <CameraView
+          videoRef={videoRef}
+          isLoading={cameraLoading}
+          facingMode={facingMode}
+          landmarks={normalizedLandmarks}
+        />
+
+        {/* Only show hand guide when no hand detected and no letters spelled yet */}
+        {!isHandDetected && spelledLetters.length === 0 && (
+          <HandGuide
+            isHandDetected={isHandDetected}
+            showGuide={true}
           />
+        )}
 
-          {/* Only show hand guide when no hand detected and no letters spelled yet */}
-          {!isHandDetected && spelledLetters.length === 0 && (
-            <HandGuide
-              isHandDetected={isHandDetected}
-              showGuide={true}
-            />
-          )}
-
-          {/* Only show stats when hand has been detected at least once */}
-          {signsRecognized > 0 && (
-            <SessionStats
-              signsRecognized={signsRecognized}
-              accuracy={0} // Accuracy calculation would require tracking attempts
-            />
-          )}
-
-          {/* Only show prediction when hand is detected or we have spelled letters */}
-          {(isHandDetected || spelledLetters.length > 0) && (
-            <PredictionDisplay
-              prediction={prediction}
-              confidence={confidence}
-              isHandDetected={isHandDetected}
-              holdProgress={holdProgress}
-            />
-          )}
-
-          {/* Only show spelling display when we have letters or hand is detected */}
-          {(spelledLetters.length > 0 || isHandDetected) && (
-            <SpellingDisplay
-              letters={spelledLetters}
-              onClear={handleClearSpelling}
-              onBackspace={handleBackspace}
-            />
-          )}
-
-          <CameraControls
-            onBack={handleBack}
-            onFlipCamera={flipCamera}
-            facingMode={facingMode}
-            soundEnabled={soundEnabled}
-            onToggleSound={toggleSounds}
+        {/* Only show stats when hand has been detected at least once */}
+        {signsRecognized > 0 && (
+          <SessionStats
+            signsRecognized={signsRecognized}
+            accuracy={0}
           />
-        </>
-      )}
+        )}
+
+        {/* Only show prediction when hand is detected or we have spelled letters */}
+        {(isHandDetected || spelledLetters.length > 0) && (
+          <PredictionDisplay
+            prediction={prediction}
+            confidence={confidence}
+            isHandDetected={isHandDetected}
+            holdProgress={holdProgress}
+          />
+        )}
+
+        {/* Only show spelling display when we have letters or hand is detected */}
+        {(spelledLetters.length > 0 || isHandDetected) && (
+          <SpellingDisplay
+            letters={spelledLetters}
+            onClear={handleClearSpelling}
+            onBackspace={handleBackspace}
+          />
+        )}
+
+        <CameraControls
+          onBack={handleBack}
+          onFlipCamera={flipCamera}
+          facingMode={facingMode}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSounds}
+        />
+      </div>
 
       {/* First-time user tutorial */}
       {!tutorialComplete && (

@@ -60,7 +60,10 @@ export function useCamera(): UseCameraResult {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
 
-        // Wait for video to be ready
+        // Wait for video metadata — use loadedmetadata + canplay + readyState check.
+        // On Android Chrome and iOS Safari, canplay may not fire for MediaStream
+        // sources; loadedmetadata is more reliable. A 5s timeout resolves the
+        // promise anyway so we never hang if neither event fires.
         await new Promise<void>((resolve, reject) => {
           const video = videoRef.current;
           if (!video) {
@@ -68,20 +71,46 @@ export function useCamera(): UseCameraResult {
             return;
           }
 
-          const handleCanPlay = () => {
-            video.removeEventListener('canplay', handleCanPlay);
-            video.removeEventListener('error', handleError);
+          // Already has metadata (e.g. stream was previously attached)
+          if (video.readyState >= 1) {
+            resolve();
+            return;
+          }
+
+          let settled = false;
+          const cleanup = () => {
+            video.removeEventListener('loadedmetadata', onReady);
+            video.removeEventListener('canplay', onReady);
+            video.removeEventListener('error', onError);
+            clearTimeout(timer);
+          };
+
+          const onReady = () => {
+            if (settled) return;
+            settled = true;
+            cleanup();
             resolve();
           };
 
-          const handleError = () => {
-            video.removeEventListener('canplay', handleCanPlay);
-            video.removeEventListener('error', handleError);
+          const onError = () => {
+            if (settled) return;
+            settled = true;
+            cleanup();
             reject(new Error('Video failed to load'));
           };
 
-          video.addEventListener('canplay', handleCanPlay);
-          video.addEventListener('error', handleError);
+          // 5 s safety timeout — resolve (not reject) so the camera still starts
+          // even if neither event fires (seen on some Android WebViews).
+          const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            resolve();
+          }, 5000);
+
+          video.addEventListener('loadedmetadata', onReady);
+          video.addEventListener('canplay', onReady);
+          video.addEventListener('error', onError);
         });
 
         await videoRef.current.play();
