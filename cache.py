@@ -56,7 +56,8 @@ class _MemoryCache:
     def count_prefix(self, prefix: str) -> int:
         now = time.monotonic()
         return sum(
-            1 for k, (exp, _) in self._store.items()
+            1
+            for k, (exp, _) in self._store.items()
             if k.startswith(prefix) and now <= exp
         )
 
@@ -115,6 +116,7 @@ def get_redis():
 
 # ───────────────────────────── Cache operations ─────────────────────────────
 
+
 def generate_cache_key(text: str, prefix: str = "asl:translation") -> str:
     """
     Generate a cache key for a given text.
@@ -167,7 +169,9 @@ async def cache_translation(text: str, translation_data: dict) -> bool:
     if _redis_client:
         try:
             await _redis_client.setex(cache_key, ttl, cached_json)
-            app_logger.debug(f"Cached translation (Redis + memory) for key: {cache_key}")
+            app_logger.debug(
+                f"Cached translation (Redis + memory) for key: {cache_key}"
+            )
             return True
         except Exception as e:
             app_logger.warning(f"Redis write error: {e}")
