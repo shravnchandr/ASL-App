@@ -346,6 +346,38 @@ Modify CSP if adding external scripts or resources.
 - Update `CORS_ORIGINS` environment variable after first deploy
 - Health check endpoint: `/health` (used by Render and Docker)
 
+## Domain / URL Status
+
+**Current production URL:** `https://asl-dictionary.onrender.com`
+**Render service name:** `asl-guide` (display name only — does not affect URL)
+
+**Do not change the URL yet.** The `asl-dictionary.onrender.com` URL has been shared with professors and changing it would break those links before they respond.
+
+### When ready to migrate to `asl-guide.onrender.com` (or a custom domain):
+
+All domain references are in exactly 4 files — do a global replace of `asl-dictionary.onrender.com` → new domain:
+
+```bash
+sed -i '' 's|asl-dictionary\.onrender\.com|NEW-DOMAIN|g' \
+  public/sitemap.xml \
+  public/robots.txt \
+  public/og-image.svg \
+  index.html
+```
+
+Then update Render environment variable:
+- `CORS_ORIGINS` → `["https://NEW-DOMAIN"]`
+
+Then re-verify Google Search Console for the new domain (the verification file `public/googleed041497d630e95f.html` is already deployed — just add the new property in Search Console and click Verify).
+
+### SEO files in place (as of April 2026):
+- `public/robots.txt` — allows all crawlers, points to sitemap
+- `public/sitemap.xml` — covers `/`, `/dictionary`, `/learn`, `/camera`
+- `public/og-image.svg` — 1200×630 social share image
+- `public/googleed041497d630e95f.html` — Google Search Console verification
+- `index.html` — JSON-LD (`WebSite` + `SearchAction` + `EducationalApplication`), og:image, keywords, canonical
+- `src/components/DictionaryPage.tsx` — `?q=` param synced to URL (shareable search results)
+
 ## Key Files Reference
 
 **Backend — Entry Point:**
