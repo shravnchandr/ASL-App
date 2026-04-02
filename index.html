@@ -5,20 +5,31 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="ASL Guide - Your companion for learning American Sign Language. Get AI-powered sign instructions or practice with interactive animations." />
+  <meta name="description" content="Free ASL learning app — translate English to American Sign Language with AI, practice 100+ signs with interactive animations, and use live camera recognition. No sign-up needed." />
+  <meta name="keywords" content="ASL, American Sign Language, learn ASL, ASL dictionary, sign language translator, ASL alphabet, sign language learning, free ASL, ASL for beginners, fingerspelling" />
   <meta name="theme-color" content="#0B75BC" />
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://asl-guide.onrender.com/" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="ASL Guide - Learn American Sign Language" />
-  <meta property="og:description" content="AI-powered ASL dictionary with interactive sign animations, Duolingo-style learning, and live camera recognition." />
+  <meta property="og:title" content="ASL Guide - Learn American Sign Language Free" />
+  <meta property="og:description" content="Translate English to ASL with AI, practice 100+ signs with animated demos, and use live camera recognition. Free, no sign-up needed." />
   <meta property="og:url" content="https://asl-guide.onrender.com" />
   <meta property="og:site_name" content="ASL Guide" />
+  <meta property="og:image" content="https://asl-guide.onrender.com/og-image.svg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="ASL Guide — Learn American Sign Language" />
+  <meta property="og:locale" content="en_US" />
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="ASL Guide - Learn American Sign Language" />
-  <meta name="twitter:description" content="AI-powered ASL dictionary with interactive sign animations, Duolingo-style learning, and live camera recognition." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ASL Guide - Learn American Sign Language Free" />
+  <meta name="twitter:description" content="Translate English to ASL with AI, practice 100+ signs with animated demos, and use live camera recognition." />
+  <meta name="twitter:image" content="https://asl-guide.onrender.com/og-image.svg" />
+  <meta name="twitter:image:alt" content="ASL Guide — Learn American Sign Language" />
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json" />
@@ -27,10 +38,60 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="ASL Guide" />
 
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://asl-guide.onrender.com/#website",
+        "url": "https://asl-guide.onrender.com/",
+        "name": "ASL Guide",
+        "description": "Free American Sign Language learning app with AI translation, animated sign demos, and live camera recognition.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://asl-guide.onrender.com/dictionary?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "EducationalApplication",
+        "@id": "https://asl-guide.onrender.com/#app",
+        "name": "ASL Guide",
+        "url": "https://asl-guide.onrender.com/",
+        "description": "Learn American Sign Language for free. Translate any English phrase to ASL with AI-powered sign descriptions, practice 100+ signs with animated demonstrations, and use live camera recognition to practice fingerspelling.",
+        "applicationCategory": "EducationApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "AI-powered English to ASL translation",
+          "100+ animated sign demonstrations",
+          "10-level structured learning curriculum",
+          "Live camera fingerspelling recognition",
+          "ASL alphabet and numbers",
+          "Spaced repetition learning system"
+        ],
+        "educationalLevel": "Beginner",
+        "teaches": "American Sign Language",
+        "inLanguage": "en-US",
+        "isAccessibleForFree": true
+      }
+    ]
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <title>ASL Guide - Learn American Sign Language</title>
+  <title>ASL Guide - Learn American Sign Language Free</title>
 </head>
 
 <body>

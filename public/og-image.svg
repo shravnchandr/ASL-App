@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1628"/>
+      <stop offset="100%" style="stop-color:#0d2244"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0B75BC"/>
+      <stop offset="100%" style="stop-color:#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="pill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0B75BC;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#14b8a6;stop-opacity:0.2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle grid lines -->
+  <line x1="0" y1="210" x2="1200" y2="210" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="0" y1="420" x2="1200" y2="420" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="400" y1="0" x2="400" y2="630" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="800" y1="0" x2="800" y2="630" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+
+  <!-- Glow circle -->
+  <circle cx="600" cy="315" r="280" fill="url(#accent)" fill-opacity="0.06"/>
+
+  <!-- Hand emoji area — stylised sign language hands -->
+  <text x="600" y="240" font-size="120" text-anchor="middle" dominant-baseline="middle">🤟</text>
+
+  <!-- Gradient accent bar -->
+  <rect x="440" y="280" width="320" height="4" rx="2" fill="url(#accent)"/>
+
+  <!-- App name -->
+  <text x="600" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="800"
+        text-anchor="middle" dominant-baseline="middle" fill="white" letter-spacing="-2">ASL Guide</text>
+
+  <!-- Tagline -->
+  <text x="600" y="430" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="400"
+        text-anchor="middle" dominant-baseline="middle" fill="#94a3b8">
+    Learn American Sign Language — free &amp; interactive
+  </text>
+
+  <!-- Feature pills -->
+  <rect x="238" y="490" width="200" height="44" rx="22" fill="url(#pill)" stroke="#0B75BC" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="338" y="512" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600"
+        text-anchor="middle" dominant-baseline="middle" fill="#38bdf8">AI Translation</text>
+
+  <rect x="500" y="490" width="200" height="44" rx="22" fill="url(#pill)" stroke="#14b8a6" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="600" y="512" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600"
+        text-anchor="middle" dominant-baseline="middle" fill="#2dd4bf">10-Level Learning</text>
+
+  <rect x="762" y="490" width="200" height="44" rx="22" fill="url(#pill)" stroke="#0B75BC" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="862" y="512" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600"
+        text-anchor="middle" dominant-baseline="middle" fill="#38bdf8">Live Camera</text>
+
+  <!-- URL -->
+  <text x="600" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="400"
+        text-anchor="middle" dominant-baseline="middle" fill="#475569">asl-guide.onrender.com</text>
+</svg>

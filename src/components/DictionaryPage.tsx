@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { SearchBar } from './SearchBar';
 import { SignCard } from './SignCard';
 import { FeedbackWidget } from './FeedbackWidget';
@@ -209,12 +209,16 @@ const QUICK_TRIES = ['Hello', 'Thank you', 'I love you', 'How are you', 'My name
 // ─── Main component ─────────────────────────────────────────────
 export const DictionaryPage: React.FC = () => {
     const { customApiKey, addToHistory } = useApp();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<TranslateResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [selectedRating, setSelectedRating] = useState<'up' | 'down' | null>(null);
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+    // Capture initial ?q= before any renders so the effect dep stays stable
+    const initialQueryRef = useRef(searchParams.get('q'));
 
     useEffect(() => {
         setCustomApiKey(customApiKey);
@@ -230,6 +234,9 @@ export const DictionaryPage: React.FC = () => {
         setError(null);
         setResult(null);
 
+        // Keep the query in the URL so results are shareable and indexable
+        setSearchParams({ q: query }, { replace: true });
+
         announceToScreenReader('Searching for ASL translation', 'polite');
         addToHistory(query);
 
@@ -244,15 +251,12 @@ export const DictionaryPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [addToHistory]);
+    }, [addToHistory, setSearchParams]);
 
-    // Handle URL query parameter for sharing
+    // Auto-search when the page loads with a ?q= param (e.g. from a shared link)
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const query = params.get('q');
-        if (query) {
-            handleSearch(query);
-            window.history.replaceState({}, '', window.location.pathname);
+        if (initialQueryRef.current) {
+            handleSearch(initialQueryRef.current);
         }
     }, [handleSearch]);
 
