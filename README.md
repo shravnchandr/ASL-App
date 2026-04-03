@@ -17,7 +17,7 @@ A modern, production-ready web application that helps you learn American Sign La
 ## ✨ Features
 
 ### Core Functionality
-- 🔤 **ASL Sign Breakdowns** - Detailed descriptions with beginner-friendly language: "How to Form Your Hands", "Where to Place Your Hands", "How to Move", "Facial Expressions & Body Language"
+- 🔤 **ASL Sign Breakdowns** - Each sign card shows a plain-English summary upfront (e.g. "cup your fingers near your mouth, then slide up to your ear") so beginners can act on it immediately. Full technical detail (hand shape, location, movement, facial expression) is available under "More details"
 - 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU. Exact matches are looked up directly; synonyms and near-matches (e.g. "glad" → happy) can be resolved via semantic similarity search using sentence-transformers (opt-in, requires `ENABLE_SEMANTIC_LOOKUP=true`)
 - 🧠 **Context-Aware Disambiguation** - Single-letter glosses (like "I" the pronoun) are correctly distinguished from alphabet letters via an alphabet guard in the KB lookup and context-aware Translation Agent prompt. Letters only match via `fs-` prefix (fingerspelling)
 - 🔡 **Fingerspelling Guide** - Proper nouns (names, cities, brands) are automatically identified via `fs-` gloss prefix and shown with a collapsible letter-by-letter breakdown directly on the sign card — each letter displays its ASL hand shape description. Detection is deterministic (Python post-processing), not dependent on LLM output
@@ -327,7 +327,7 @@ Example: `DATABASE_URL=postgres://user:pass@host:5432/dbname`
 Users can export translation results to PDF with a single click:
 - **Lightweight files** - ~16KB per PDF using jsPDF text API
 - **Professional formatting** - Clean layout with headers, borders, and sign cards
-- **Complete content** - All sign details (hand shape, location, movement, non-manual markers)
+- **Complete content** - Plain-English summary plus all sign details (hand shape, location, movement, non-manual markers)
 - **Multi-page support** - Automatic page breaks for long translations
 - **Dark, readable text** - High contrast black text on white background
 - **Optimized for printing** - Perfect for offline reference and archiving

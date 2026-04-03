@@ -4,6 +4,7 @@
 
 export interface ASLSign {
     word: string;
+    simple_description?: string;
     hand_shape: string;
     location: string;
     movement: string;

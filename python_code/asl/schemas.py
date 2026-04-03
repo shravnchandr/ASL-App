@@ -8,6 +8,15 @@ from pydantic import BaseModel, Field
 
 class DescriptionSchema(BaseModel):
     word: str = Field(description="The English word or gloss being described.")
+    simple_description: str = Field(
+        description=(
+            "A 1-2 sentence plain English description of how to perform the sign, "
+            "written for a complete beginner. Use everyday language and avoid technical "
+            "ASL handshape letter codes. Describe the hand shape with a relatable metaphor "
+            "(e.g. 'cup your fingers' instead of 'O handshape'). "
+            "Generate this for every sign, including KB-verified ones."
+        )
+    )
     hand_shape: str = Field(
         description="Description of the hand shape (e.g., 'Open 5', 'A')."
     )

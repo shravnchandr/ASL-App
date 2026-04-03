@@ -262,6 +262,14 @@
     }
 }
 
+/* Simple beginner-friendly description */
+.sign-card__simple-desc {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.925rem;
+    line-height: 1.55;
+    color: var(--md-sys-color-on-surface);
+}
+
 /* Expand/collapse toggle */
 .sign-card__expand-btn {
     display: flex;

@@ -120,6 +120,11 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                     </div>
                 )}
 
+                {/* Simple description — always visible */}
+                {sign.simple_description && (
+                    <p className="sign-card__simple-desc">{sign.simple_description}</p>
+                )}
+
                 {/* Expand/collapse toggle */}
                 <button
                     className="sign-card__expand-btn"
