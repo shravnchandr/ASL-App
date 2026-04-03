@@ -8,7 +8,7 @@ import time
 
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
-from slowapi.util import get_remote_address
+from deps import get_real_ip
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import get_settings
@@ -58,7 +58,7 @@ async def translate_to_asl(
                         await create_analytics_event(
                             session=session,
                             event_type="translation",
-                            ip_address=get_remote_address(request),
+                            ip_address=get_real_ip(request),
                             query=translate_req.text,
                             cache_hit=True,
                             user_agent=request.headers.get("user-agent"),
@@ -82,7 +82,7 @@ async def translate_to_asl(
             app_logger.info("Using custom API key from request header")
         elif settings.shared_api_key:
             using_shared_key = True
-            ip_hash = hash_ip(get_remote_address(request))
+            ip_hash = hash_ip(get_real_ip(request))
             rate_limit_info = await check_shared_key_rate_limit(
                 db, ip_hash, settings.shared_key_daily_limit
             )
@@ -171,7 +171,7 @@ async def translate_to_asl(
                     await create_analytics_event(
                         session=session,
                         event_type="translation",
-                        ip_address=get_remote_address(request),
+                        ip_address=get_real_ip(request),
                         query=translate_req.text,
                         cache_hit=False,
                         user_agent=request.headers.get("user-agent"),
@@ -216,7 +216,7 @@ async def get_rate_limit_status(request: Request, db: AsyncSession = Depends(get
                 "message": "Shared API key not configured",
             }
 
-        ip_hash = hash_ip(get_remote_address(request))
+        ip_hash = hash_ip(get_real_ip(request))
         rate_limit_info = await check_shared_key_rate_limit(
             db, ip_hash, settings.shared_key_daily_limit
         )

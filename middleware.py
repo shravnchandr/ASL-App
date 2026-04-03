@@ -7,7 +7,7 @@ import asyncio
 import time
 
 from fastapi import Request
-from slowapi.util import get_remote_address
+from deps import get_real_ip
 
 from config import get_settings
 from logger import app_logger
@@ -60,7 +60,7 @@ async def analytics_tracking_middleware(request: Request, call_next):
                 await create_analytics_event(
                     session=session,
                     event_type="page_view",
-                    ip_address=get_remote_address(request),
+                    ip_address=get_real_ip(request),
                     endpoint=request.url.path,
                     user_agent=request.headers.get("user-agent"),
                     response_time_ms=response_time_ms,
