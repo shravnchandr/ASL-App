@@ -350,27 +350,26 @@ Modify CSP if adding external scripts or resources.
 
 ## Domain / URL Status
 
-**Current production URL:** `https://asl-dictionary.onrender.com`
-**Render service name:** `asl-guide` (display name only — does not affect URL)
+**Current production URL:** `https://asl-guide.onrender.com`
+**Render service name:** `asl-guide`
+**Old URL (still live, kept for shared professor links):** `https://asl-dictionary.onrender.com`
 
-**Do not change the URL yet.** The `asl-dictionary.onrender.com` URL has been shared with professors and changing it would break those links before they respond.
-
-### When ready to migrate to `asl-guide.onrender.com` (or a custom domain):
-
-All domain references are in exactly 4 files — do a global replace of `asl-dictionary.onrender.com` → new domain:
+Migration was completed in April 2026. Domain references were updated across 4 files:
 
 ```bash
-sed -i '' 's|asl-dictionary\.onrender\.com|NEW-DOMAIN|g' \
+sed -i '' 's|asl-dictionary\.onrender\.com|asl-guide.onrender.com|g' \
   public/sitemap.xml \
   public/robots.txt \
   public/og-image.svg \
   index.html
 ```
 
-Then update Render environment variable:
+### To migrate to a custom domain in the future:
+
+Run the same sed command replacing `asl-guide.onrender.com` with the new domain, then update the Render environment variable:
 - `CORS_ORIGINS` → `["https://NEW-DOMAIN"]`
 
-Then re-verify Google Search Console for the new domain (the verification file `public/googleed041497d630e95f.html` is already deployed — just add the new property in Search Console and click Verify).
+Re-verify Google Search Console for the new domain (the verification file `public/googleed041497d630e95f.html` is already deployed — just add the new property in Search Console and click Verify).
 
 ### SEO files in place (as of April 2026):
 - `public/robots.txt` — allows all crawlers, points to sitemap

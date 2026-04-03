@@ -10,6 +10,8 @@ A modern, production-ready web application that helps you learn American Sign La
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+**Live App:** [https://asl-guide.onrender.com](https://asl-guide.onrender.com)
+
 ---
 
 ## ✨ Features
@@ -176,8 +178,8 @@ npm run dev
 docker-compose up
 
 # Or build manually
-docker build -t asl-dictionary .
-docker run -p 8000:8000 -e GOOGLE_API_KEY=your_key asl-dictionary
+docker build -t asl-guide .
+docker run -p 8000:8000 -e GOOGLE_API_KEY=your_key asl-guide
 ```
 
 Visit: http://localhost:8000
