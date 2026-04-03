@@ -32,6 +32,7 @@ const LearnPageContent: React.FC = () => {
         isLastExercise,
         selectLevel,
         calculateLevelMastery,
+        getReviewDueCountForLevel,
         clearJustUnlocked,
         levels,
     } = useLearn();
@@ -380,6 +381,7 @@ const LearnPageContent: React.FC = () => {
     // Level detail view (after selecting a level)
     if (selectedLevelInfo && !state.isSessionActive) {
         const levelMastery = calculateLevelMastery(selectedLevelInfo.id);
+        const dueCount = getReviewDueCountForLevel(selectedLevelInfo.id);
 
         return (
             <div className="learn-page">
@@ -431,6 +433,12 @@ const LearnPageContent: React.FC = () => {
                                     : `${MASTERY_THRESHOLD - levelMastery}% more to unlock next level`}
                             </span>
                         </div>
+
+                        {dueCount > 0 && (
+                            <p className="level-detail__review-notice" role="status">
+                                {dueCount} sign{dueCount !== 1 ? 's' : ''} scheduled for review today — they'll appear first in your session.
+                            </p>
+                        )}
 
                         {state.error && (
                             <div className="level-detail__error" role="alert">
@@ -531,6 +539,7 @@ const LearnPageContent: React.FC = () => {
                     currentLevel={state.currentLevel}
                     onSelectLevel={selectLevel}
                     getLevelMastery={calculateLevelMastery}
+                    getReviewDueCount={getReviewDueCountForLevel}
                 />
             </main>
 

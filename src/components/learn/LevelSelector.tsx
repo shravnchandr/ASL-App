@@ -14,6 +14,7 @@ interface LevelSelectorProps {
     currentLevel: number;
     onSelectLevel: (levelId: number) => void;
     getLevelMastery: (levelId: number) => number;
+    getReviewDueCount: (levelId: number) => number;
 }
 
 export const LevelSelector: React.FC<LevelSelectorProps> = ({
@@ -22,6 +23,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
     currentLevel,
     onSelectLevel,
     getLevelMastery,
+    getReviewDueCount,
 }) => {
     return (
         <div className="level-selector">
@@ -47,6 +49,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                             isUnlocked={isUnlocked}
                             isCurrent={isCurrent}
                             isCompleted={isCompleted}
+                            reviewDue={getReviewDueCount(level.id)}
                             onClick={() => isUnlocked && onSelectLevel(level.id)}
                         />
                     );

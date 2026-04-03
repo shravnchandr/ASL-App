@@ -185,9 +185,26 @@
     gap: var(--spacing-xs, 4px);
 }
 
+.level-card__footer-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+}
+
 .level-card__sign-count {
     font-size: var(--md-sys-typescale-label-small-size, 0.75rem);
     color: var(--md-sys-color-on-surface-variant);
+}
+
+.level-card__review-due {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--md-sys-color-error);
+    background: color-mix(in srgb, var(--md-sys-color-error) 12%, transparent);
+    padding: 2px 7px;
+    border-radius: var(--md-sys-shape-corner-pill);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
 }
 
 /* Progress bar */

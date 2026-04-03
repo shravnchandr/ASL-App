@@ -219,6 +219,7 @@ interface LearnContextType {
     selectLevel: (levelId: number | null) => void;
     calculateLevelMastery: (levelId: number) => number;
     canUnlockLevel: (levelId: number) => boolean;
+    getReviewDueCountForLevel: (levelId: number) => number;
     clearJustUnlocked: () => void;
     levels: LevelInfo[];
 }
@@ -446,30 +447,50 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         const exercises: Exercise[] = [];
-        const usedSigns = new Set<string>();
 
-        for (let i = 0; i < count; i++) {
-            // Pick a sign (allow repeats if we've used all signs)
-            let sign: string;
-            if (usedSigns.size >= levelSigns.length) {
-                // All signs used, pick randomly from all
-                sign = levelSigns[Math.floor(Math.random() * levelSigns.length)];
-            } else {
-                const availableForPick = levelSigns.filter(s => !usedSigns.has(s));
-                sign = availableForPick[Math.floor(Math.random() * availableForPick.length)];
-                usedSigns.add(sign);
-            }
-
-            // If camera practice mode, all exercises are camera-practice type
-            if (cameraPractice) {
+        // Camera practice: simple cycling order, no SM-2 priority needed
+        if (cameraPractice) {
+            const usedSigns = new Set<string>();
+            for (let i = 0; i < count; i++) {
+                let sign: string;
+                if (usedSigns.size >= levelSigns.length) {
+                    sign = levelSigns[Math.floor(Math.random() * levelSigns.length)];
+                } else {
+                    const available = levelSigns.filter(s => !usedSigns.has(s));
+                    sign = available[Math.floor(Math.random() * available.length)];
+                    usedSigns.add(sign);
+                }
                 exercises.push({
                     id: `${sign}-${i}-${Date.now()}`,
                     type: 'camera-practice',
                     sign,
                     correctAnswer: sign,
                 });
-                continue;
             }
+            return exercises;
+        }
+
+        // SM-2 priority ordering within the level:
+        // 1. Signs due for review today (most overdue first — order preserved from getSignsDueForReview)
+        // 2. Signs never studied (new material, randomised)
+        // 3. Signs studied but not yet due (randomised for variety)
+        const dueSet = new Set(storage.getSignsDueForReview());
+        const dueSigns = levelSigns.filter(s => dueSet.has(s));
+        const unseenSigns = levelSigns
+            .filter(s => !state.signProgress[s])
+            .sort(() => Math.random() - 0.5);
+        const knownSigns = levelSigns
+            .filter(s => state.signProgress[s] && !dueSet.has(s))
+            .sort(() => Math.random() - 0.5);
+
+        const orderedPool = [...dueSigns, ...unseenSigns, ...knownSigns];
+        let poolIndex = 0;
+
+        for (let i = 0; i < count; i++) {
+            // Work through the prioritised pool; repeat randomly once exhausted
+            const sign = poolIndex < orderedPool.length
+                ? orderedPool[poolIndex++]
+                : levelSigns[Math.floor(Math.random() * levelSigns.length)];
 
             // Determine exercise type based on mastery
             const progress = state.signProgress[sign];
@@ -488,7 +509,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (type !== 'recall') {
                 const otherSigns = levelSigns.filter(s => s !== sign);
                 const distractors = otherSigns.sort(() => Math.random() - 0.5).slice(0, 3);
-                // If not enough distractors in level, get from global
                 if (distractors.length < 3) {
                     const moreDistractors = await getDistractors(sign, 3 - distractors.length);
                     distractors.push(...moreDistractors);
@@ -543,6 +563,14 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const selectLevel = useCallback((levelId: number | null) => {
         dispatch({ type: 'SELECT_LEVEL', payload: levelId });
     }, []);
+
+    // Count how many signs in a level are due for SM-2 review today
+    const getReviewDueCountForLevel = useCallback((levelId: number): number => {
+        const level = getLevelById(levelId);
+        if (!level) return 0;
+        const dueSet = new Set(storage.getSignsDueForReview());
+        return level.signs.filter(s => dueSet.has(s)).length;
+    }, [state.signProgress]);
 
     // Clear the just unlocked notification
     const clearJustUnlocked = useCallback(() => {
@@ -605,6 +633,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectLevel,
         calculateLevelMastery,
         canUnlockLevel,
+        getReviewDueCountForLevel,
         clearJustUnlocked,
         levels: LEVELS,
     };

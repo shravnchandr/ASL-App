@@ -535,6 +535,18 @@
     color: var(--md-sys-color-on-surface-variant);
 }
 
+.level-detail__review-notice {
+    padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
+    margin-bottom: var(--spacing-md, 16px);
+    background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
+    color: var(--md-sys-color-primary);
+    border-left: 3px solid var(--md-sys-color-primary);
+    border-radius: var(--md-sys-shape-corner-small);
+    font-size: var(--md-sys-typescale-body-small-size, 0.875rem);
+    width: 100%;
+    margin-top: 0;
+}
+
 .level-detail__error {
     padding: var(--spacing-md, 16px);
     margin-bottom: var(--spacing-lg, 24px);

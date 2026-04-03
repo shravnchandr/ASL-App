@@ -13,6 +13,7 @@ interface LevelCardProps {
     isUnlocked: boolean;
     isCurrent: boolean;
     isCompleted: boolean;
+    reviewDue?: number;
     onClick: () => void;
 }
 
@@ -22,6 +23,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({
     isUnlocked,
     isCurrent,
     isCompleted,
+    reviewDue = 0,
     onClick,
 }) => {
     const cardClasses = [
@@ -71,7 +73,17 @@ export const LevelCard: React.FC<LevelCardProps> = ({
             <p className="level-card__description">{level.description}</p>
 
             <div className="level-card__footer">
-                <span className="level-card__sign-count">{level.signs.length} signs</span>
+                <div className="level-card__footer-meta">
+                    <span className="level-card__sign-count">{level.signs.length} signs</span>
+                    {isUnlocked && reviewDue > 0 && (
+                        <span
+                            className="level-card__review-due"
+                            aria-label={`${reviewDue} sign${reviewDue !== 1 ? 's' : ''} due for review`}
+                        >
+                            {reviewDue} due
+                        </span>
+                    )}
+                </div>
                 {isUnlocked && (
                     <div className="level-card__progress">
                         <div className="level-card__progress-bar">
