@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ASL Dictionary is a full-stack web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. The app uses a React TypeScript frontend with Material 3 design and a FastAPI Python backend with LangGraph for AI workflow orchestration.
+ASL Dictionary is a full-stack web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. The app uses a React TypeScript frontend with Material 3 design and a FastAPI Python backend with a direct google-genai SDK pipeline for AI workflow orchestration.
 
 ## Development Commands
 
@@ -60,7 +60,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 1. **User Input** → Frontend (React) → `src/services/api/` → axios request
 2. **Backend API** → FastAPI (`app.py`) → Rate limiting check → Route handler in `routes/`
-3. **AI Processing** → LangGraph workflow (`python_code/asl/`)
+3. **AI Processing** → direct google-genai pipeline (`python_code/asl/pipeline.py`)
 4. **Grammar Agent** → Analyzes English input, determines if reordering needed (ASL uses Time-Topic-Comment structure)
 5. **Translation Agent** → Generates detailed ASL sign descriptions (hand shape, location, movement, facial expressions)
 6. **Response** → FastAPI → Frontend → Display in SignCard components
@@ -68,7 +68,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 ### Backend Architecture (Python/FastAPI)
 
 **Entry Point:** `app.py` (~60 lines — slim orchestrator only)
-- FastAPI setup, lifespan (database + Redis + LangGraph init), middleware registration, router includes, static file serving, uvicorn entry point
+- FastAPI setup, lifespan (database + Redis + pipeline init), middleware registration, router includes, static file serving, uvicorn entry point
 - **CRITICAL**: Production mode serves static files from `dist/` directory
   - `/assets/*` mounted BEFORE catch-all route to prevent interception
   - Catch-all `/{full_path:path}` returns `index.html` for SPA routing
@@ -83,7 +83,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 **Routes:** `routes/` package
 - `routes/models.py` — Pydantic request/response models (TranslateRequest, SignResponse, FeedbackRequest, …)
-- `routes/translate.py` — `POST /translate` (LangGraph invocation, caching, shared-key rate limiting), `GET /rate-limit`
+- `routes/translate.py` — `POST /translate` (pipeline invocation, caching, shared-key rate limiting), `GET /rate-limit`
 - `routes/feedback.py` — `POST /feedback`, `POST /feedback/general`, `GET /feedback/stats`
 - `routes/admin.py` — `GET/DELETE /admin/feedback`, `GET /admin/stats`, `GET /admin/analytics/*`
 - Included in `app.py` via `app.include_router(router, prefix=settings.api_prefix)`
@@ -108,15 +108,17 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 **AI Workflow:** `python_code/asl/` package (`python_code/asl_dict_langgraph.py` is a backwards-compat shim)
 - `asl/schemas.py` — Pydantic models (`DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`) and `ASLState` TypedDict
 - `asl/knowledge_base.py` — KB loading, exact lookup, optional semantic lookup (`_build_knowledge_context`, `_extract_fs_glosses`, `_get_kb_matched_words`)
-- `asl/nodes.py` — Grammar Agent (`grammar_planner_node`), Translation Agent (`sign_instructor_node`), reorder node, conditional edge
-- `asl/graph.py` — `build_asl_graph()` compiles the LangGraph workflow
+- `asl/pipeline.py` — **active implementation**: `ASLPipeline` class with `.invoke()`, `build_asl_graph()` factory. Uses `google-genai` SDK directly (no LangChain/LangGraph) for ~120MB RAM savings on Render Starter. Two-agent logic: Grammar Agent → Translation Agent
+- `asl/nodes.py` — **reference only**: original LangChain/LangGraph implementation (Grammar Agent, Translation Agent, conditional edge). Not imported in the production path; preserved for reference.
+- `asl/graph.py` — thin shim that re-exports `build_asl_graph` from `pipeline.py`
 - `asl/cli.py` — interactive CLI for local testing (`python -m python_code.asl.cli`)
-- LangGraph state machine with two agents:
+- Two-agent pipeline (in `pipeline.py`):
   1. **Grammar Agent**: Applies 10 ASL grammar rules — TTC structure, function-word omission, negation placement, topicalization, wh-question formation, yes/no questions, conditionals, verb directionality, aspect, and classifiers
-  2. **Translation Agent**: Generates detailed sign descriptions using structured output, grounded by the verified sign knowledge base. Also identifies proper nouns and sets `is_fingerspelled=true` + `fingerspell_letters` on those signs
-- Uses Google Gemini 2.5 Flash model
-- Built at startup and stored in `app.state.asl_graph`
+  2. **Translation Agent**: Generates detailed sign descriptions using structured output (`response_mime_type="application/json"`, `response_schema=SentenceDescriptionSchema`), grounded by the verified sign knowledge base. Also identifies proper nouns and sets `is_fingerspelled=true` + `fingerspell_letters` on those signs
+- Uses Google Gemini 2.5 Flash model via `google-genai` SDK
+- `ASLPipeline` instance built at startup and stored in `app.state.asl_graph`
 - Invoked via `await asyncio.to_thread(asl_graph.invoke, {"english_input": text})` — runs in a thread pool to avoid blocking the async event loop
+- **Modifying prompts**: edit `_GRAMMAR_SYSTEM_PROMPT` and `_run_instructor_agent()` in `asl/pipeline.py` (not `nodes.py`)
 
 **Sign Knowledge Base:** `python_code/sign_knowledge_base.json`
 - Verified hand shape, location, movement, and non-manual marker descriptions for all 100 signs (A-Z, 0-9, 12 months, 52 common signs)
@@ -127,8 +129,8 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
   - **Alphabet guard**: Single-letter KB keys (a-z) are collected into `_ALPHABET_KEYS` frozenset and **only match `fs-` prefixed glosses** (fingerspelling). Bare single-letter glosses like "I" (pronoun) or "A" (article) are routed to the "Signs to generate" section so the LLM describes the word sign, not the alphabet handshape. This prevents homograph collisions across all 26 letters.
   - **Translation Agent context-awareness**: The system prompt includes a `CRITICAL: CONTEXT-AWARE SIGN DESCRIPTIONS` section instructing the LLM that bare glosses are words/concepts, not alphabet letters. Includes explicit examples (e.g. "I" = pointing at chest, not pinky-up handshape).
   - **Semantic fallback** (opt-in): if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt. Semantic matches to alphabet keys are also guarded.
-  - **Disabled by default** — loading `sentence-transformers` uses ~200MB of RAM, which exceeds Render's free tier (512MB total). Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with sufficient memory.
-  - When enabled, embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
+  - **Disabled by default** — loading `sentence-transformers` + `numpy` uses ~200MB of RAM, which exceeds Render Starter (512MB total). Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with >700MB available. Both packages are excluded from `requirements.txt` by default; uncomment them to enable.
+  - When enabled, `numpy` is imported lazily (inside the `if ENABLE_SEMANTIC_LOOKUP` block), not at module level. Embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
 - Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs (exact or semantic) instruct the LLM to copy descriptions faithfully
 
 **Caching:** `cache.py`
@@ -245,12 +247,12 @@ VITE_API_URL=                         # Empty for same-origin (production)
 
 ### Modifying AI Translation Logic
 
-The LangGraph workflow lives in `python_code/asl/`:
-- Two-agent system: Grammar → Translation
-- Uses Pydantic structured output for type safety
-- State flows through `ASLState` TypedDict (defined in `asl/schemas.py`)
-- Modify Grammar Agent prompt in `asl/nodes.py` → `_GRAMMAR_SYSTEM_PROMPT` constant
-- Modify Translation Agent prompt in `asl/nodes.py` → `sign_instructor_node()`
+The pipeline lives in `python_code/asl/pipeline.py` (active) and `nodes.py` (LangChain reference, not used):
+- Two-agent system: Grammar Agent → Translation Agent
+- Uses Pydantic structured output via `google-genai` SDK (`response_mime_type="application/json"`, `response_schema=Schema`)
+- State flows as a plain `dict` with keys: `english_input`, `grammar_plan`, `translated_input`, `final_output`
+- Modify Grammar Agent prompt in `asl/pipeline.py` → `_GRAMMAR_SYSTEM_PROMPT` constant
+- Modify Translation Agent prompt in `asl/pipeline.py` → `_run_instructor_agent()` → `system_prompt` f-string
 - KB lookup and context injection logic is in `asl/knowledge_base.py`
 - Always test with various phrase types (questions, statements, temporal phrases, negations, conditionals)
 
@@ -402,8 +404,9 @@ Then re-verify Google Search Console for the new domain (the verification file `
 **Backend — AI (`python_code/asl/`):**
 - `asl/schemas.py`: `DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`, `ASLState`
 - `asl/knowledge_base.py`: KB loading, semantic lookup, `_build_knowledge_context`
-- `asl/nodes.py`: `_GRAMMAR_SYSTEM_PROMPT` constant + all LangGraph node functions
-- `asl/graph.py`: `build_asl_graph()` — compiles and returns the StateGraph
+- `asl/pipeline.py`: **active** — `_GRAMMAR_SYSTEM_PROMPT`, `_run_grammar_agent()`, `_run_instructor_agent()`, `ASLPipeline`, `build_asl_graph()`. Edit this file to change prompts or pipeline logic.
+- `asl/nodes.py`: **reference only** — original LangChain/LangGraph implementation; not imported in production
+- `asl/graph.py`: Thin shim re-exporting `build_asl_graph` from `pipeline.py`
 - `asl/cli.py`: Interactive CLI for local testing
 - `python_code/sign_knowledge_base.json`: Verified sign descriptions for all 100 signs (grounding source)
 - `python_code/asl_dict_langgraph.py`: Backwards-compat shim — re-exports from `asl/`
@@ -475,7 +478,7 @@ Then re-verify Google Search Console for the new domain (the verification file `
 
 - **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Vitest, Material 3 Design
 - **Backend**: FastAPI, Python 3.11+, uvicorn
-- **AI**: Google Gemini 2.5 Flash, LangGraph, LangChain, sentence-transformers (all-MiniLM-L6-v2)
+- **AI**: Google Gemini 2.5 Flash, google-genai SDK, sentence-transformers (all-MiniLM-L6-v2, opt-in)
 - **Browser ML**: TensorFlow.js, MediaPipe Hands (Tasks Vision API)
 - **Database**: SQLAlchemy (async), aiosqlite/PostgreSQL
 - **Caching**: Redis (optional) + in-memory LRU fallback

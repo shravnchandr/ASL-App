@@ -213,9 +213,8 @@ The API key is **free** and includes a generous free tier. Your key is stored on
 ### Backend
 - **FastAPI** - Modern Python web framework with modular routing (`routes/translate.py`, `routes/feedback.py`, `routes/admin.py`)
 - **Python 3.11+** - Programming language
-- **Google Gemini AI** - LLM for ASL translation
-- **LangGraph** - Agentic workflow orchestration (`python_code/asl/` package: schemas, knowledge base, nodes, graph)
-- **sentence-transformers** - Local semantic similarity for knowledge base lookup (all-MiniLM-L6-v2, opt-in via `ENABLE_SEMANTIC_LOOKUP=true`)
+- **Google Gemini AI** - LLM for ASL translation via `google-genai` SDK (`python_code/asl/pipeline.py`: two-agent grammar + translation workflow)
+- **sentence-transformers** - Local semantic similarity for knowledge base lookup (all-MiniLM-L6-v2, opt-in via `ENABLE_SEMANTIC_LOOKUP=true`, requires >700MB RAM)
 - **SQLAlchemy** - Async ORM (`db/` package: engine, models, CRUD modules)
 - **SQLite/PostgreSQL** - Database (SQLite for dev, PostgreSQL for production)
 - **Redis + In-Memory LRU** - Dual-layer caching (Redis optional, in-memory fallback always active)
@@ -411,7 +410,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Material 3** - Beautiful design system
 - **FastAPI** - Modern Python web framework
 - **React Team** - Excellent UI library
-- **LangGraph** - Agentic workflow orchestration
 - **Bill Vicars / Lifeprint (ASLU)** - ASL education reference used for the verified sign knowledge base
 
 ---
