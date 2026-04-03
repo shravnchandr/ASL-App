@@ -12,14 +12,14 @@ from logger import app_logger
 
 settings = get_settings()
 
-# SQLite needs a smaller pool and a busy-wait timeout to avoid lock storms
-# under concurrent analytics writes. The defaults (pool_size=5, overflow=10,
-# timeout=30s) cause tasks to queue for 30s, spiking memory under load.
+# SQLite with aiosqlite uses StaticPool and does not accept pool_size/max_overflow/
+# pool_timeout. Only connect_args is valid: timeout sets how long SQLite waits
+# (in seconds) when the DB is locked before raising OperationalError.
 _is_sqlite = "sqlite" in settings.database_url
 _engine_kwargs = (
-    dict(pool_size=2, max_overflow=3, pool_timeout=5, connect_args={"timeout": 10})
+    dict(connect_args={"timeout": 10})
     if _is_sqlite
-    else {}
+    else dict(pool_size=5, max_overflow=10, pool_timeout=5)
 )
 
 engine = create_async_engine(
