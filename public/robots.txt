@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://asl-dictionary.onrender.com/sitemap.xml
+Sitemap: https://asl-guide.onrender.com/sitemap.xml
