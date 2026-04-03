@@ -142,6 +142,7 @@ async def translate_to_asl(
         signs = [
             SignResponse(
                 word=sign.word,
+                simple_description=sign.simple_description,
                 hand_shape=sign.hand_shape,
                 location=sign.location,
                 movement=sign.movement,

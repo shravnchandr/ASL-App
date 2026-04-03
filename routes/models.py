@@ -14,6 +14,7 @@ class TranslateRequest(BaseModel):
 
 class SignResponse(BaseModel):
     word: str
+    simple_description: str = ""
     hand_shape: str
     location: str
     movement: str
