@@ -1,41 +1,11 @@
 """
-LangGraph workflow builder for the ASL translation pipeline.
+ASL translation graph builder.
 
-Graph structure:
-  planner_node → (conditional) → reorder_node → instruct_node → END
-                              ↘ instruct_node → END
+Previously used LangGraph StateGraph; now delegates to pipeline.py which calls
+the Gemini API directly (no LangChain/LangGraph) to reduce memory footprint.
+The original LangGraph implementation is preserved in nodes.py for reference.
 """
 
-from langgraph.graph import StateGraph, END
+from .pipeline import build_asl_graph, ASLPipeline
 
-from .schemas import ASLState
-from .nodes import (
-    grammar_planner_node,
-    reorder_node,
-    sign_instructor_node,
-    decide_to_reorder,
-)
-
-
-def build_asl_graph():
-    """Compile and return the LangGraph ASL translation workflow."""
-    workflow = StateGraph(ASLState)
-
-    workflow.add_node("planner_node", grammar_planner_node)
-    workflow.add_node("reorder_node", reorder_node)
-    workflow.add_node("instruct_node", sign_instructor_node)
-
-    workflow.set_entry_point("planner_node")
-    workflow.add_edge("instruct_node", END)
-
-    workflow.add_conditional_edges(
-        "planner_node",
-        decide_to_reorder,
-        {
-            "reorder_node": "reorder_node",
-            "instruct_node": "instruct_node",
-        },
-    )
-    workflow.add_edge("reorder_node", "instruct_node")
-
-    return workflow.compile()
+__all__ = ["build_asl_graph", "ASLPipeline"]

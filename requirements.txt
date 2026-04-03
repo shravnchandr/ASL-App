@@ -1,12 +1,11 @@
 # ASL Dictionary API - Python Dependencies
 
-# Core LangGraph and LangChain
-langgraph>=0.2.0
-langchain-google-genai>=2.0.0
-langchain-core>=0.3.0
+# Direct Gemini API (replaces LangChain/LangGraph to reduce ~120MB baseline RAM)
+# Original LangChain implementation preserved in python_code/asl/nodes.py for reference.
+google-genai>=1.0.0
 pydantic>=2.0.0
 
-# Existing dependencies from asl_dict_langgraph.py
+# Existing dependencies
 colorama>=0.4.6
 python-dotenv>=1.0.0
 
@@ -21,14 +20,14 @@ slowapi>=0.1.9
 # Logging
 loguru>=0.7.2
 
-# Database (Async SQLite and PostgreSQL)
+# Database (Async SQLite; asyncpg available if switching back to PostgreSQL)
 sqlalchemy[asyncio]>=2.0.0
 aiosqlite>=0.20.0
-asyncpg>=0.29.0  # PostgreSQL async driver
 
-# Semantic similarity for sign knowledge base lookup
-sentence-transformers>=3.0.0
-numpy>=1.26.0
+# Semantic similarity (optional — disabled by default, requires ENABLE_SEMANTIC_LOOKUP=true)
+# Uncomment if enabling on an instance with >700MB RAM available:
+# sentence-transformers>=3.0.0
+# numpy>=1.26.0
 
 # Caching
 redis[asyncio]>=5.0.0

@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 from typing import Optional, Tuple
 
-import numpy as np
 from colorama import Fore, Style, init
 
 init(autoreset=True)
@@ -38,15 +37,16 @@ _ALPHABET_KEYS: frozenset[str] = frozenset(
 )
 
 # --- Semantic Similarity Index ---
-# Disabled by default — loading sentence-transformers exceeds Render free tier (512MB RAM).
-# Set ENABLE_SEMANTIC_LOOKUP=true to enable (requires ~200MB extra RAM).
+# Disabled by default — loading sentence-transformers + numpy exceeds Render Starter
+# RAM (512MB). Set ENABLE_SEMANTIC_LOOKUP=true to enable (requires ~200MB extra RAM).
 _EMBED_MODEL = None
 _KB_KEYS: list[str] = []
-_KB_EMBEDDINGS: Optional[np.ndarray] = None
+_KB_EMBEDDINGS = None  # numpy array when enabled
 _SIMILARITY_THRESHOLD = 0.60
 
 if os.getenv("ENABLE_SEMANTIC_LOOKUP", "false").lower() == "true":
     try:
+        import numpy as np  # imported lazily — only when semantic lookup is enabled
         from sentence_transformers import SentenceTransformer
 
         _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
@@ -80,11 +80,12 @@ def _semantic_lookup(gloss: str) -> Optional[Tuple[str, dict, float]]:
         return None
 
     query = gloss.lower().replace("-", " ").replace("_", " ").lstrip("#")
+    import numpy as np  # noqa: PLC0415 — only reachable when semantic lookup is enabled
     query_vec = _EMBED_MODEL.encode(
         [query], normalize_embeddings=True, show_progress_bar=False
     )
     similarities = (_KB_EMBEDDINGS @ query_vec.T).flatten()
-    best_idx = int(similarities.argmax())
+    best_idx = int(np.argmax(similarities))
     best_score = float(similarities[best_idx])
 
     if best_score >= _SIMILARITY_THRESHOLD:

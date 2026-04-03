@@ -42,7 +42,9 @@ async def add_security_headers(request: Request, call_next):
 
 async def analytics_tracking_middleware(request: Request, call_next):
     """Track page views and API requests for the analytics dashboard."""
-    skip_paths = ["/api/admin", "/health", "/assets"]
+    # Skip /api/ entirely — translate.py already logs its own analytics for translations.
+    # Double-logging every API call floods SQLite under concurrent load.
+    skip_paths = ["/api/", "/health", "/assets"]
     should_track = not any(request.url.path.startswith(p) for p in skip_paths)
 
     if not should_track:
