@@ -99,7 +99,10 @@ _GRAMMAR_SYSTEM_PROMPT = (
     "- 'My name is Sarah' → 'MY NAME fs-SARAH'\n"
     "- 'I live in Boston' → 'I fs-BOSTON LIVE'\n\n"
     "Analyze the English input, determine if reordering/transformation is needed, "
-    "and output the correct ASL gloss sequence (capitalized words, space-separated)."
+    "and output the correct ASL gloss sequence (capitalized words, space-separated).\n\n"
+    "IMPORTANT: If the input contains multiple sentences or clauses (separated by '.', '?', '!', or ';'), "
+    "translate ALL of them into a single continuous gloss sequence. Do not stop at the first sentence. "
+    "Example: 'How are you? Nice weather outside today' → 'YOU HOW WEATHER OUTSIDE TODAY NICE'\n"
 )
 
 
@@ -113,7 +116,7 @@ def grammar_planner_node(state: ASLState) -> dict:
             ("system", _GRAMMAR_SYSTEM_PROMPT),
             (
                 "human",
-                "Analyze this English sentence for ASL grammar: '{english_input}'",
+                "Analyze this English input for ASL grammar (may contain multiple sentences — translate all of them): '{english_input}'",
             ),
         ]
     ) | llm.with_structured_output(GrammarPlanSchema)

@@ -10,7 +10,7 @@ export const API_PREFIX = '/api';
 
 export const apiClient = axios.create({
     baseURL: API_URL,
-    timeout: 30000, // 30 seconds for LLM processing
+    timeout: 60000, // 60 seconds for LLM processing (multi-sign phrases can take 30-50s)
     headers: {
         'Content-Type': 'application/json',
     },
