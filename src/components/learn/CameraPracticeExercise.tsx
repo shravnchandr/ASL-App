@@ -60,6 +60,7 @@ export function CameraPracticeExercise({
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(0);
   const isMountedRef = useRef(true);
+  const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Constants moved outside component to avoid dep-array warnings — see module scope
 
@@ -147,8 +148,8 @@ export function CameraPracticeExercise({
             if (matchTimeRef.current >= MATCH_THRESHOLD) {
               setIsMatched(true);
               announceToScreenReader(`Correct! You signed ${formatSignName(targetSign)}`);
-              setTimeout(() => {
-                onComplete(true);
+              completeTimerRef.current = setTimeout(() => {
+                if (isMountedRef.current) onComplete(true);
               }, 1000);
             }
           } else {
@@ -171,6 +172,7 @@ export function CameraPracticeExercise({
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (completeTimerRef.current) clearTimeout(completeTimerRef.current);
       stopCamera();
     };
   }, [stopCamera]);

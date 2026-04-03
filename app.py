@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from config import get_settings
 from logger import app_logger
 from deps import limiter
-from db import init_db
+from db import init_db, engine
 from cache import init_redis, close_redis
 from middleware import add_security_headers, analytics_tracking_middleware
 from routes import translate_router, feedback_router, admin_router
@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI):
     app_logger.info("LangGraph ASL application initialized")
     yield
     await close_redis()
+    await engine.dispose()
     app_logger.info("Shutting down application")
 
 

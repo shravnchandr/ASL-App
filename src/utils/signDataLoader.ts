@@ -5,7 +5,8 @@
 
 import type { SignData, SignMetadata } from '../types';
 
-// Cache for loaded sign data
+// Cache for loaded sign data — capped to prevent unbounded memory growth
+const SIGN_CACHE_MAX = 50;
 const signDataCache = new Map<string, SignData>();
 let metadataCache: SignMetadata | null = null;
 
@@ -54,6 +55,11 @@ export async function loadSignData(sign: string): Promise<SignData | null> {
         }
 
         const data: SignData = await response.json();
+        if (signDataCache.size >= SIGN_CACHE_MAX) {
+            // Evict oldest entry (Maps preserve insertion order)
+            const firstKey = signDataCache.keys().next().value;
+            if (firstKey !== undefined) signDataCache.delete(firstKey);
+        }
         signDataCache.set(signLower, data);
         return data;
     } catch (error) {
