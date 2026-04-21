@@ -14,6 +14,8 @@ Public API (identical to the old LangGraph compiled graph):
 """
 
 import os
+from dataclasses import dataclass
+from typing import Any, Optional
 
 from google import genai
 from google.genai import types
@@ -27,6 +29,32 @@ from .knowledge_base import (
 )
 
 MODEL_NAME = "gemini-2.5-flash"
+
+
+@dataclass
+class _PipelineStats:
+    """Cumulative token and cache metrics for the lifetime of this ASLPipeline instance."""
+
+    requests: int = 0
+    grammar_cache_hits: int = 0    # requests where grammar context cache was used
+    grammar_cache_misses: int = 0  # requests where inline prompt was used
+    total_prompt_tokens: int = 0   # all input tokens (includes cached subset)
+    total_cached_tokens: int = 0   # subset served from context cache (billed at 25%)
+    total_thinking_tokens: int = 0 # reasoning tokens (billed at output rate)
+    total_output_tokens: int = 0
+
+
+def _usage_counts(usage: Any) -> dict[str, int]:
+    """Extract token counts from a Gemini response's usage_metadata."""
+    if usage is None:
+        return {"prompt": 0, "cached": 0, "thinking": 0, "output": 0, "total": 0}
+    return {
+        "prompt":   getattr(usage, "prompt_token_count", 0) or 0,
+        "cached":   getattr(usage, "cached_content_token_count", 0) or 0,
+        "thinking": getattr(usage, "thoughts_token_count", 0) or 0,
+        "output":   getattr(usage, "candidates_token_count", 0) or 0,
+        "total":    getattr(usage, "total_token_count", 0) or 0,
+    }
 
 # ── Grammar system prompt ──────────────────────────────────────────────────────
 # Kept here (not imported from nodes.py) so nodes.py's LangChain imports are
@@ -119,32 +147,26 @@ def _make_client() -> genai.Client:
     return genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 
-def _run_grammar_agent(english_input: str) -> GrammarPlanSchema:
-    """Call the Grammar Agent and return a GrammarPlanSchema."""
-    print(f"{Fore.MAGENTA}🧠 Grammar Agent: Planning ASL structure...{Style.RESET_ALL}")
+def _log_usage(agent: str, usage: Any) -> None:
+    """Print token usage from a Gemini response's usage_metadata."""
+    c = _usage_counts(usage)
+    if not any(c.values()):
+        return
+    parts = [f"prompt={c['prompt']}"]
+    if c["cached"]:
+        parts.append(f"cached={c['cached']}")
+    if c["thinking"]:
+        parts.append(f"thinking={c['thinking']}")
+    parts += [f"output={c['output']}", f"total={c['total']}"]
+    print(f"{Fore.BLUE}   [{agent}] tokens — {'  '.join(parts)}{Style.RESET_ALL}")
 
-    client = _make_client()
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=(
-            f"Analyze this English input for ASL grammar "
-            f"(may contain multiple sentences — translate all of them): '{english_input}'"
-        ),
-        config=types.GenerateContentConfig(
-            system_instruction=_GRAMMAR_SYSTEM_PROMPT,
-            temperature=0.0,
-            response_mime_type="application/json",
-            response_schema=GrammarPlanSchema,
-        ),
-    )
-    plan = GrammarPlanSchema.model_validate_json(response.text)
-    print(f"{Fore.GREEN}   -> Reorder needed: {plan.should_reorder}{Style.RESET_ALL}")
-    return plan
+
+# _run_grammar_agent lives on ASLPipeline so it can access the context cache handle.
 
 
 def _run_instructor_agent(
     input_text: str, original_input: str
-) -> SentenceDescriptionSchema:
+) -> tuple[SentenceDescriptionSchema, Any]:
     """Call the Translation Agent and return a SentenceDescriptionSchema."""
     print(
         f"{Fore.MAGENTA}🤖 Instructor Agent: Generating signs for '{input_text}'...{Style.RESET_ALL}"
@@ -204,6 +226,8 @@ def _run_instructor_agent(
             response_schema=SentenceDescriptionSchema,
         ),
     )
+    usage = response.usage_metadata
+    _log_usage("translation", usage)
     result = SentenceDescriptionSchema.model_validate_json(response.text)
 
     # Post-process: deterministically set is_fingerspelled for fs- glosses
@@ -228,7 +252,7 @@ def _run_instructor_agent(
         if clean_word in kb_matched:
             sign.kb_verified = True
 
-    return result
+    return result, usage
 
 
 class ASLPipeline:
@@ -236,6 +260,102 @@ class ASLPipeline:
     Drop-in replacement for the compiled LangGraph.
     Runs the two-agent pipeline directly without LangGraph or LangChain.
     """
+
+    def __init__(self) -> None:
+        # Remember the API key active at startup so we can detect key-swap requests
+        # (custom user keys) and skip the cache for those calls.
+        self._init_api_key: Optional[str] = os.environ.get("GOOGLE_API_KEY")
+        self._grammar_cache_name: Optional[str] = (
+            self._try_create_grammar_cache() if self._init_api_key else None
+        )
+        self._stats = _PipelineStats()
+
+    # ── Context cache helpers ──────────────────────────────────────────────────
+
+    def _try_create_grammar_cache(self) -> Optional[str]:
+        """Upload _GRAMMAR_SYSTEM_PROMPT to Gemini's cache. Returns the cache name or None."""
+        try:
+            client = genai.Client(api_key=self._init_api_key)
+            cache = client.caches.create(
+                model=MODEL_NAME,
+                config=types.CreateCachedContentConfig(
+                    system_instruction=_GRAMMAR_SYSTEM_PROMPT,
+                    ttl="86400s",  # 24 hours — covers a full Render deployment cycle
+                ),
+            )
+            print(
+                f"{Fore.GREEN}✓ Grammar context cache created: {cache.name}{Style.RESET_ALL}"
+            )
+            return cache.name
+        except Exception as e:
+            print(
+                f"{Fore.YELLOW}  Grammar cache skipped ({e}); using inline prompt.{Style.RESET_ALL}"
+            )
+            return None
+
+    def _can_use_grammar_cache(self) -> bool:
+        """True only when the server's own key is active (cache was built with it)."""
+        return (
+            self._grammar_cache_name is not None
+            and os.environ.get("GOOGLE_API_KEY") == self._init_api_key
+        )
+
+    # ── Grammar Agent ──────────────────────────────────────────────────────────
+
+    def _run_grammar_agent(self, english_input: str) -> tuple[GrammarPlanSchema, Any]:
+        """Call the Grammar Agent. Uses context cache when the server key is active."""
+        print(f"{Fore.MAGENTA}🧠 Grammar Agent: Planning ASL structure...{Style.RESET_ALL}")
+        client = _make_client()
+        cache_name = self._grammar_cache_name if self._can_use_grammar_cache() else None
+
+        def _make_config(with_cache: bool) -> types.GenerateContentConfig:
+            if with_cache:
+                return types.GenerateContentConfig(
+                    cached_content=cache_name,
+                    temperature=0.0,
+                    response_mime_type="application/json",
+                    response_schema=GrammarPlanSchema,
+                )
+            return types.GenerateContentConfig(
+                system_instruction=_GRAMMAR_SYSTEM_PROMPT,
+                temperature=0.0,
+                response_mime_type="application/json",
+                response_schema=GrammarPlanSchema,
+            )
+
+        contents = (
+            f"Analyze this English input for ASL grammar "
+            f"(may contain multiple sentences — translate all of them): '{english_input}'"
+        )
+
+        try:
+            response = client.models.generate_content(
+                model=MODEL_NAME, contents=contents, config=_make_config(bool(cache_name))
+            )
+        except Exception as e:
+            # Cache expired or was evicted — attempt recreation, then retry.
+            if cache_name and any(
+                kw in str(e).lower() for kw in ("not found", "invalid", "expired")
+            ):
+                print(
+                    f"{Fore.YELLOW}  Grammar cache stale, recreating...{Style.RESET_ALL}"
+                )
+                self._grammar_cache_name = self._try_create_grammar_cache()
+                response = client.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=contents,
+                    config=_make_config(bool(self._grammar_cache_name)),
+                )
+            else:
+                raise
+
+        usage = response.usage_metadata
+        _log_usage("grammar", usage)
+        plan = GrammarPlanSchema.model_validate_json(response.text)
+        print(f"{Fore.GREEN}   -> Reorder needed: {plan.should_reorder}{Style.RESET_ALL}")
+        return plan, usage
+
+    # ── Pipeline orchestration ─────────────────────────────────────────────────
 
     def invoke(self, state: dict) -> dict:
         """
@@ -246,7 +366,7 @@ class ASLPipeline:
 
         try:
             # Step 1: Grammar Agent
-            plan = _run_grammar_agent(english_input)
+            plan, grammar_usage = self._run_grammar_agent(english_input)
         except Exception as e:
             print(f"{Fore.RED}Grammar Agent Error: {e}{Style.RESET_ALL}")
             return {"english_input": english_input, "error": str(e)}
@@ -260,7 +380,7 @@ class ASLPipeline:
 
         try:
             # Step 3: Translation Agent
-            result = _run_instructor_agent(input_text, english_input)
+            result, translation_usage = _run_instructor_agent(input_text, english_input)
         except Exception as e:
             print(f"{Fore.RED}Instructor Agent Error: {e}{Style.RESET_ALL}")
             return {
@@ -269,11 +389,53 @@ class ASLPipeline:
                 "error": str(e),
             }
 
+        # Accumulate lifetime stats and log per-request total
+        gc = _usage_counts(grammar_usage)
+        tc = _usage_counts(translation_usage)
+        self._stats.requests += 1
+        self._stats.total_prompt_tokens += gc["prompt"] + tc["prompt"]
+        self._stats.total_cached_tokens += gc["cached"] + tc["cached"]
+        self._stats.total_thinking_tokens += gc["thinking"] + tc["thinking"]
+        self._stats.total_output_tokens += gc["output"] + tc["output"]
+        if gc["cached"] > 0:
+            self._stats.grammar_cache_hits += 1
+        else:
+            self._stats.grammar_cache_misses += 1
+        req_total = gc["total"] + tc["total"]
+        print(
+            f"{Fore.BLUE}   [request] {req_total} tokens total  "
+            f"(grammar={gc['total']}  translation={tc['total']}){Style.RESET_ALL}"
+        )
+
         return {
             "english_input": english_input,
             "grammar_plan": plan,
             "translated_input": input_text,
             "final_output": result,
+        }
+
+
+    def get_stats(self) -> dict:
+        """Return lifetime token usage and cache metrics for this pipeline instance."""
+        s = self._stats
+        hit_rate = (
+            s.grammar_cache_hits / s.requests * 100 if s.requests else 0.0
+        )
+        # Full-rate tokens are prompt minus the cached subset (already discounted).
+        full_rate_prompt = s.total_prompt_tokens - s.total_cached_tokens
+        return {
+            "requests": s.requests,
+            "grammar_cache": {
+                "hits": s.grammar_cache_hits,
+                "misses": s.grammar_cache_misses,
+                "hit_rate": f"{hit_rate:.0f}%",
+            },
+            "tokens": {
+                "prompt_full_rate": full_rate_prompt,
+                "prompt_cached_rate": s.total_cached_tokens,
+                "thinking": s.total_thinking_tokens,
+                "output": s.total_output_tokens,
+            },
         }
 
 

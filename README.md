@@ -241,6 +241,8 @@ This app is production-ready with:
 - ✅ **PWA Support** - Service Worker with offline caching (sign data, ML models, app shell)
 - ✅ **Gzip Compression** - ~270KB initial load (gzipped)
 - ✅ **Rate Limiting** - 100 requests/minute in production
+- ✅ **Gemini Context Caching** - Grammar Agent system prompt (1,300 tokens) cached at startup with 24h TTL; cached tokens billed at 25% of normal rate (~73% reduction on grammar input cost)
+- ✅ **Pipeline Token Tracking** - Per-request token logging (prompt, cached, thinking, output) + lifetime stats via `get_stats()` (cache hit rate, cumulative spend by category)
 - ✅ **Error Handling** - Comprehensive error handling and logging
 - ✅ **Health Checks** - `/health` endpoint for monitoring
 - ✅ **Docker Optimized** - Multi-stage builds for small images
@@ -314,6 +316,9 @@ Benefits:
 - Instant responses for previously translated phrases
 - Reduced API costs
 - Works without Redis on free-tier hosts (Render, etc.)
+
+**Gemini Context Cache (pipeline-level):**
+The Grammar Agent's 1,300-token system prompt is uploaded to Gemini's cache at app startup (24h TTL). Subsequent requests reference the cache instead of re-sending the full prompt — cached tokens are billed at 25% of the normal input rate. Falls back to inline prompt gracefully if the cache expires or is unavailable. Bypassed automatically for custom API key requests (cache is tied to the server key).
 
 ### PostgreSQL Database
 For production deployments, use PostgreSQL instead of SQLite:

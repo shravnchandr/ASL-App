@@ -108,7 +108,10 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 **AI Workflow:** `python_code/asl/` package (`python_code/asl_dict_langgraph.py` is a backwards-compat shim)
 - `asl/schemas.py` — Pydantic models (`DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`) and `ASLState` TypedDict
 - `asl/knowledge_base.py` — KB loading, exact lookup, optional semantic lookup (`_build_knowledge_context`, `_extract_fs_glosses`, `_get_kb_matched_words`)
-- `asl/pipeline.py` — **active implementation**: `ASLPipeline` class with `.invoke()`, `build_asl_graph()` factory. Uses `google-genai` SDK directly (no LangChain/LangGraph) for ~120MB RAM savings on Render Starter. Two-agent logic: Grammar Agent → Translation Agent
+- `asl/pipeline.py` — **active implementation**: `ASLPipeline` class with `.invoke()`, `build_asl_graph()` factory. Uses `google-genai` SDK directly (no LangChain/LangGraph) for ~120MB RAM savings on Render Starter. Two-agent logic: Grammar Agent → Translation Agent. Key internals:
+  - **Context cache**: `_try_create_grammar_cache()` uploads `_GRAMMAR_SYSTEM_PROMPT` (1,300 tokens) to Gemini at startup with 24h TTL; `_can_use_grammar_cache()` bypasses it for custom API key requests; stale cache triggers recreation automatically
+  - **Token tracking**: `_usage_counts()` extracts prompt/cached/thinking/output counts from every response; `_PipelineStats` dataclass accumulates lifetime totals; `get_stats()` returns cache hit rate and token breakdown; `_log_usage()` prints per-agent counts to stdout
+  - **`_run_grammar_agent`** is an instance method (not module-level) so it can access the cache handle on `self`
 - `asl/nodes.py` — **reference only**: original LangChain/LangGraph implementation (Grammar Agent, Translation Agent, conditional edge). Not imported in the production path; preserved for reference.
 - `asl/graph.py` — thin shim that re-exports `build_asl_graph` from `pipeline.py`
 - `asl/cli.py` — interactive CLI for local testing (`python -m python_code.asl.cli`)
@@ -116,9 +119,9 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
   1. **Grammar Agent**: Applies 10 ASL grammar rules — TTC structure, function-word omission, negation placement, topicalization, wh-question formation, yes/no questions, conditionals, verb directionality, aspect, and classifiers
   2. **Translation Agent**: Generates a plain-English `simple_description` (shown upfront on the sign card) plus detailed sign descriptions using structured output (`response_mime_type="application/json"`, `response_schema=SentenceDescriptionSchema`), grounded by the verified sign knowledge base. Also identifies proper nouns and sets `is_fingerspelled=true` + `fingerspell_letters` on those signs
 - Uses Google Gemini 2.5 Flash model via `google-genai` SDK
-- `ASLPipeline` instance built at startup and stored in `app.state.asl_graph`
+- `ASLPipeline` instance built at startup and stored in `app.state.asl_graph`; `__init__` also creates the Gemini context cache for `_GRAMMAR_SYSTEM_PROMPT`
 - Invoked via `await asyncio.to_thread(asl_graph.invoke, {"english_input": text})` — runs in a thread pool to avoid blocking the async event loop
-- **Modifying prompts**: edit `_GRAMMAR_SYSTEM_PROMPT` and `_run_instructor_agent()` in `asl/pipeline.py` (not `nodes.py`)
+- **Modifying prompts**: edit `_GRAMMAR_SYSTEM_PROMPT` and `_run_instructor_agent()` in `asl/pipeline.py` (not `nodes.py`). **Note**: changing `_GRAMMAR_SYSTEM_PROMPT` requires restarting the app to recreate the context cache with the new content
 
 **Sign Knowledge Base:** `python_code/sign_knowledge_base.json`
 - Verified hand shape, location, movement, and non-manual marker descriptions for all 100 signs (A-Z, 0-9, 12 months, 52 common signs)
@@ -406,7 +409,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 **Backend — AI (`python_code/asl/`):**
 - `asl/schemas.py`: `DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`, `ASLState`
 - `asl/knowledge_base.py`: KB loading, semantic lookup, `_build_knowledge_context`
-- `asl/pipeline.py`: **active** — `_GRAMMAR_SYSTEM_PROMPT`, `_run_grammar_agent()`, `_run_instructor_agent()`, `ASLPipeline`, `build_asl_graph()`. Edit this file to change prompts or pipeline logic.
+- `asl/pipeline.py`: **active** — `_GRAMMAR_SYSTEM_PROMPT`, `_run_instructor_agent()` (module-level), `ASLPipeline` (with `__init__`, `_run_grammar_agent()` method, `_try_create_grammar_cache()`, `_can_use_grammar_cache()`, `get_stats()`), `build_asl_graph()`. Edit this file to change prompts or pipeline logic. Token helpers: `_PipelineStats` dataclass, `_usage_counts()`, `_log_usage()`.
 - `asl/nodes.py`: **reference only** — original LangChain/LangGraph implementation; not imported in production
 - `asl/graph.py`: Thin shim re-exporting `build_asl_graph` from `pipeline.py`
 - `asl/cli.py`: Interactive CLI for local testing
