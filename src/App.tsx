@@ -6,6 +6,7 @@ import { lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { DictionaryPage } from './components/DictionaryPage';
+import HomePage from './components/HomePage';
 
 const LearnPage = lazy(() => import('./components/learn/LearnPage').then(m => ({ default: m.LearnPage })));
 const CameraPage = lazy(() => import('./components/camera/CameraPage'));
@@ -17,7 +18,7 @@ function App() {
             <Routes>
                 <Route path="/admin" element={<Admin />} />
                 <Route element={<Layout />}>
-                    <Route index element={<DictionaryPage />} />
+                    <Route index element={<HomePage />} />
                     <Route path="dictionary" element={<DictionaryPage />} />
                     <Route path="translate" element={<DictionaryPage />} />
                     <Route path="learn" element={<LearnPage />} />

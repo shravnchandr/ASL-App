@@ -6,9 +6,8 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background: var(--gradient-surface);
-    background-attachment: fixed;
-    padding-bottom: 68px;
+    background: var(--md-sys-color-background);
+    padding-bottom: 96px;
 }
 
 /* ===== TOP BAR ===== */
@@ -18,7 +17,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 20px;
-    background: var(--md-sys-color-surface);
+    background: var(--md-sys-color-background);
     border-bottom: 1px solid var(--md-sys-color-outline-variant);
     position: sticky;
     top: 0;
@@ -33,13 +32,14 @@
 .layout__logo {
     font-family: var(--md-sys-typescale-font-family-display);
     font-size: 1.35rem;
-    font-weight: 800;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-weight: 900;
+    color: var(--md-sys-color-on-surface);
     text-decoration: none;
     letter-spacing: -0.02em;
+}
+
+.layout__logo .logo-accent {
+    color: var(--md-sys-color-secondary);
 }
 
 .layout__topbar-right {
@@ -91,69 +91,65 @@
     padding: 28px 20px;
 }
 
-/* ===== BOTTOM NAVIGATION ===== */
+/* ===== BOTTOM NAVIGATION — springy dark pill ===== */
 
 .layout__nav {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 14px;
+    left: 18px;
+    right: 18px;
     display: flex;
-    justify-content: center;
+    align-items: center;
     gap: 0;
-    background: var(--md-sys-color-surface);
-    border-top: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-on-surface);
+    border: none;
+    border-radius: 999px;
     z-index: 100;
-    padding: 0 16px;
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding: 6px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 10px 30px rgba(34, 19, 5, 0.22);
+}
+
+[data-theme="dark"] .layout__nav {
+    background: #3A2410;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .nav-item {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 2px;
-    padding: 8px 28px 8px;
-    color: var(--md-sys-color-on-surface-variant);
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+    padding: 0 12px;
+    height: 52px;
+    color: rgba(255, 255, 255, 0.65);
     text-decoration: none;
-    font-size: 0.75rem;
-    font-weight: 600;
-    position: relative;
-    min-width: 80px;
-    transition: color var(--duration-quick) ease;
-}
-
-.nav-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 3px;
-    background: var(--gradient-primary);
-    border-radius: 0 0 4px 4px;
-    transition: width var(--duration-quick) var(--spring-bounce);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    border-radius: 999px;
+    transition: flex 0.3s cubic-bezier(0.6, 1.5, 0.6, 1), background 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .nav-item--active {
-    color: var(--md-sys-color-primary);
-}
-
-.nav-item--active::before {
-    width: 40px;
+    flex: 1.6;
+    background: var(--md-sys-color-secondary);
+    color: #FFFFFF;
 }
 
 .nav-item:hover:not(.nav-item--active) {
-    color: var(--md-sys-color-on-surface);
+    color: rgba(255, 255, 255, 0.9);
 }
 
-/* Active indicator pill behind icon */
-.nav-item--active svg {
-    background: var(--md-sys-color-primary-container);
-    border-radius: var(--md-sys-shape-corner-pill);
-    padding: 3px 10px;
-    margin: -3px -10px;
+.nav-item span {
+    display: none;
+}
+
+.nav-item--active span {
+    display: inline;
 }
 
 /* ===== PAGE LOADER ===== */
@@ -190,40 +186,32 @@
         height: 56px;
     }
 
+    /* Keep pill nav on desktop too, but position at bottom-right or bottom-center */
     .layout__nav {
-        position: fixed;
-        bottom: auto;
-        top: 0;
+        bottom: 20px;
         left: 50%;
+        right: auto;
         transform: translateX(-50%);
-        padding: 0;
-        border: none;
-        background: none;
-        z-index: 101;
-        height: 56px;
+        width: auto;
+        min-width: 440px;
     }
 
     .nav-item {
-        flex-direction: row;
-        gap: 6px;
-        padding: 16px 20px;
+        padding: 0 20px;
         font-size: 0.875rem;
     }
 
-    .nav-item::before {
-        top: auto;
-        bottom: 0;
-        border-radius: 4px 4px 0 0;
+    .nav-item span {
+        display: none;
     }
 
-    .nav-item--active svg {
-        background: none;
-        padding: 0;
-        margin: 0;
+    .nav-item--active span {
+        display: inline;
     }
 
     .layout__main {
         padding: 36px 28px;
+        max-width: 1100px;
     }
 }
 

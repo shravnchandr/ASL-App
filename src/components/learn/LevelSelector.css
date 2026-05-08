@@ -1,99 +1,147 @@
 /**
- * LevelSelector Component Styles
- * Grid layout for level cards with progression visual
+ * LevelSelector — current-level hero + all-levels grid
  */
 
 .level-selector {
     width: 100%;
     max-width: 1000px;
-    padding: var(--spacing-lg, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-/* Header */
-.level-selector__header {
-    text-align: center;
-    margin-bottom: var(--spacing-xl, 32px);
+/* ── Current level hero card ──────────────── */
+.current-level-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 22px 24px;
+    background: var(--md-sys-color-primary);
+    border-radius: var(--md-sys-shape-corner-extra-large);
+    color: var(--md-sys-color-on-primary);
 }
 
-.level-selector__title {
-    font-size: var(--md-sys-typescale-headline-medium-size, 2rem);
-    font-weight: var(--md-sys-typescale-headline-medium-weight, 700);
+.current-level-card__badge {
+    flex-shrink: 0;
+}
+
+.current-level-card__badge-num {
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+}
+
+.current-level-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.current-level-card__eyebrow {
+    font-size: 0.5625rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 4px;
+}
+
+.current-level-card__name {
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin: 0 0 4px;
+    line-height: 1.2;
+}
+
+.current-level-card__meta {
+    margin: 0 0 10px;
+    font-size: 0.8125rem;
+    opacity: 0.85;
+}
+
+/* Progress dots */
+.current-level-card__dots {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.current-level-card__dot {
+    width: 18px;
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    transition: background 400ms ease;
+}
+
+.current-level-card__dot--filled {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.current-level-card__dot-more {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    opacity: 0.7;
+    margin-left: 2px;
+}
+
+/* Resume button */
+.current-level-card__resume-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 20px;
+    background: var(--md-sys-color-on-primary);
+    color: var(--md-sys-color-primary);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-pill);
+    font-size: 0.875rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.current-level-card__resume-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--md-sys-elevation-3);
+}
+
+/* ── Section title ────────────────────────── */
+.level-selector__section-title {
+    font-size: 1rem;
+    font-weight: 900;
     color: var(--md-sys-color-on-surface);
-    margin: 0 0 var(--spacing-sm, 8px);
 }
 
-.level-selector__subtitle {
-    font-size: var(--md-sys-typescale-body-large-size, 1rem);
-    color: var(--md-sys-color-on-surface-variant);
-    margin: 0;
-}
-
-/* Grid layout */
+/* ── All levels grid ──────────────────────── */
 .level-selector__grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: var(--spacing-lg, 24px);
-    margin-bottom: var(--spacing-xl, 32px);
+    gap: 10px;
 }
 
-/* Progress summary */
-.level-selector__progress-summary {
-    display: flex;
-    justify-content: center;
-    gap: var(--spacing-xl, 32px);
-    padding: var(--spacing-lg, 24px);
-    background: var(--md-sys-color-surface);
-    border-radius: var(--md-sys-shape-corner-large);
-    box-shadow: var(--md-sys-elevation-1);
-}
-
-[data-theme="dark"] .level-selector__progress-summary {
-    background: var(--md-sys-color-surface-container);
-}
-
-.progress-summary__stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.progress-summary__value {
-    font-size: var(--md-sys-typescale-headline-small-size, 1.5rem);
-    font-weight: var(--md-sys-typescale-headline-small-weight, 700);
-    color: var(--md-sys-color-primary);
-}
-
-.progress-summary__label {
-    font-size: var(--md-sys-typescale-label-small-size, 0.75rem);
-    color: var(--md-sys-color-on-surface-variant);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-/* Responsive */
+/* ── Responsive ───────────────────────────── */
 @media (max-width: 768px) {
-    .level-selector {
-        padding: var(--spacing-md, 16px);
+    .current-level-card {
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    .current-level-card__resume-btn {
+        width: 100%;
+        justify-content: center;
     }
 
     .level-selector__grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: var(--spacing-md, 16px);
-    }
-
-    .level-selector__title {
-        font-size: var(--md-sys-typescale-headline-small-size, 1.5rem);
     }
 }
 
 @media (max-width: 480px) {
     .level-selector__grid {
         grid-template-columns: 1fr;
-    }
-
-    .level-selector__progress-summary {
-        flex-direction: column;
-        gap: var(--spacing-md, 16px);
     }
 }

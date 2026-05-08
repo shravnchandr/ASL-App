@@ -299,16 +299,14 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const sign = availableForPick[Math.floor(Math.random() * availableForPick.length)];
             usedSigns.add(sign);
 
-            // Determine exercise type based on mastery
+            // Determine exercise type based on mastery (show variety from the start)
             const progress = state.signProgress[sign];
             let type: Exercise['type'] = 'sign-to-word';
 
-            if (progress) {
-                if (progress.mastery >= 80 && progress.timesStudied >= 5) {
-                    type = 'recall';
-                } else if (progress.mastery >= 50 && progress.timesStudied >= 3) {
-                    type = Math.random() > 0.5 ? 'word-to-sign' : 'sign-to-word';
-                }
+            if (progress && progress.mastery >= 70 && progress.timesStudied >= 3) {
+                type = 'recall';
+            } else {
+                type = Math.random() > 0.5 ? 'sign-to-word' : 'word-to-sign';
             }
 
             // Generate options for multiple choice exercises
@@ -492,16 +490,15 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 ? orderedPool[poolIndex++]
                 : levelSigns[Math.floor(Math.random() * levelSigns.length)];
 
-            // Determine exercise type based on mastery
+            // Determine exercise type based on mastery (show variety from the start)
             const progress = state.signProgress[sign];
             let type: Exercise['type'] = 'sign-to-word';
 
-            if (progress) {
-                if (progress.mastery >= 80 && progress.timesStudied >= 5) {
-                    type = 'recall';
-                } else if (progress.mastery >= 50 && progress.timesStudied >= 3) {
-                    type = Math.random() > 0.5 ? 'word-to-sign' : 'sign-to-word';
-                }
+            if (progress && progress.mastery >= 70 && progress.timesStudied >= 3) {
+                type = 'recall';
+            } else {
+                // Always mix sign-to-word and word-to-sign regardless of mastery
+                type = Math.random() > 0.5 ? 'sign-to-word' : 'word-to-sign';
             }
 
             // Generate options for multiple choice exercises (use level signs as distractors)

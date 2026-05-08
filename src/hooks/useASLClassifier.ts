@@ -9,7 +9,7 @@ export interface PredictionResult {
 }
 
 export interface UseASLClassifierResult {
-  predict: (landmarks: HandLandmark[]) => PredictionResult | null;
+  predict: (landmarks: HandLandmark[]) => Promise<PredictionResult | null>;
   isLoading: boolean;
   error: string | null;
 }
@@ -81,7 +81,7 @@ export function useASLClassifier(): UseASLClassifierResult {
     };
   }, []);
 
-  const predict = useCallback((landmarks: HandLandmark[]): PredictionResult | null => {
+  const predict = useCallback(async (landmarks: HandLandmark[]): Promise<PredictionResult | null> => {
     const model = modelRef.current;
     const scaler = scalerRef.current;
     const labels = labelsRef.current;
@@ -102,7 +102,7 @@ export function useASLClassifier(): UseASLClassifierResult {
     try {
       const outputTensor = model.predict(inputTensor) as tf.Tensor;
       const probabilities = tf.softmax(outputTensor);
-      const probArray = probabilities.dataSync();
+      const probArray = await probabilities.data();
 
       // Find argmax
       let maxIdx = 0;

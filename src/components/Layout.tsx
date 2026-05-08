@@ -52,7 +52,7 @@ export const Layout: React.FC = () => {
             <header className="layout__topbar">
                 <div className="layout__topbar-left">
                     <NavLink to="/" className="layout__logo" aria-label="ASL Guide home">
-                        ASL Guide
+                        ASL<span className="logo-accent">Guide</span>
                     </NavLink>
                 </div>
                 <div className="layout__topbar-right">
@@ -94,12 +94,23 @@ export const Layout: React.FC = () => {
                     to="/"
                     end
                     className={({ isActive }) => `nav-item ${isActive ? 'nav-item--active' : ''}`}
+                    aria-label="Home"
+                >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M3 9.5L12 3L21 9.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M9 21V12h6v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Home</span>
+                </NavLink>
+                <NavLink
+                    to="/dictionary"
+                    className={({ isActive }) => `nav-item ${isActive ? 'nav-item--active' : ''}`}
                     aria-label="Search and translate"
                 >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C13.866 3 17 6.134 17 10Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <span>Search</span>
+                    <span>Dictionary</span>
                 </NavLink>
                 <NavLink
                     to="/learn"

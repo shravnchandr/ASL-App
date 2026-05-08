@@ -99,8 +99,8 @@ export default function CameraPage({ onBack }: CameraPageProps) {
   // Run prediction when landmarks change
   useEffect(() => {
     if (landmarks && !isLoading) {
-      const result = predict(landmarks);
-      if (result) {
+      void predict(landmarks).then(result => {
+        if (!result) return;
         predictionBufferRef.current.add(result.label);
         const stablePrediction = predictionBufferRef.current.getStablePrediction();
         if (stablePrediction) {
@@ -148,7 +148,7 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           letterHoldStartRef.current = null;
           setHoldProgress(0);
         }
-      }
+      });
     } else if (!isHandDetected) {
       // Clear prediction when hand is not detected
       predictionBufferRef.current.clear();

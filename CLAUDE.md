@@ -109,9 +109,10 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `asl/schemas.py` — Pydantic models (`DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`) and `ASLState` TypedDict
 - `asl/knowledge_base.py` — KB loading, exact lookup, optional semantic lookup (`_build_knowledge_context`, `_extract_fs_glosses`, `_get_kb_matched_words`)
 - `asl/pipeline.py` — **active implementation**: `ASLPipeline` class with `.invoke()`, `build_asl_graph()` factory. Uses `google-genai` SDK directly (no LangChain/LangGraph) for ~120MB RAM savings on Render Starter. Two-agent logic: Grammar Agent → Translation Agent. Key internals:
-  - **Context cache**: `_try_create_grammar_cache()` uploads `_GRAMMAR_SYSTEM_PROMPT` (1,300 tokens) to Gemini at startup with 24h TTL; `_can_use_grammar_cache()` bypasses it for custom API key requests; stale cache triggers recreation automatically
+  - **Context cache**: `_try_create_grammar_cache()` uploads `_GRAMMAR_SYSTEM_PROMPT` (1,300 tokens) to Gemini at startup with 24h TTL; `_can_use_grammar_cache(api_key)` bypasses it for custom API key requests; stale cache triggers recreation automatically
   - **Token tracking**: `_usage_counts()` extracts prompt/cached/thinking/output counts from every response; `_PipelineStats` dataclass accumulates lifetime totals; `get_stats()` returns cache hit rate and token breakdown; `_log_usage()` prints per-agent counts to stdout
   - **`_run_grammar_agent`** is an instance method (not module-level) so it can access the cache handle on `self`
+  - **Thread-safe key passing**: `invoke(state, api_key=None)` accepts the key directly; `_make_client(api_key)` uses it per-call. No `os.environ` mutation — concurrent requests with different keys cannot interfere
 - `asl/nodes.py` — **reference only**: original LangChain/LangGraph implementation (Grammar Agent, Translation Agent, conditional edge). Not imported in the production path; preserved for reference.
 - `asl/graph.py` — thin shim that re-exports `build_asl_graph` from `pipeline.py`
 - `asl/cli.py` — interactive CLI for local testing (`python -m python_code.asl.cli`)
@@ -147,8 +148,9 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 **Custom API Keys:**
 - Users can provide their own Google Gemini API key
 - Sent via `X-Custom-API-Key` header from frontend
-- Temporarily swapped into `os.environ["GOOGLE_API_KEY"]` during request
-- Original key restored after request completes
+- Passed directly to `ASLPipeline.invoke(state, api_key=...)` — no `os.environ` mutation
+- `_make_client(api_key)` uses the provided key; falls back to env var when `None`
+- `_can_use_grammar_cache(api_key)` compares the provided key against `self._init_api_key` directly, so context cache is correctly bypassed for custom keys without reading env
 
 ### Frontend Architecture (React/TypeScript)
 
@@ -161,9 +163,9 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 **Key Components:**
 - `src/components/SearchBar.tsx`: Main search input with URL query param support
-- `src/components/SignCard.tsx`: Displays individual ASL sign descriptions with compact/expanded toggle, embedded animations, and practice links. Skips loading letter animation files for single-letter non-fingerspelled words (prevents pronoun "I" from showing letter animation)
-- `src/components/SentenceAnimator.tsx`: Plays sign animations in sequence for multi-sign results. Word chips show progress, skips single-letter non-fingerspelled words
-- `src/components/DictionaryPage.tsx`: Main dictionary page with landing content (Sign of the Day, onboarding callout, quick-try chips, learn progress card, category cards) and post-search follow-up suggestions
+- `src/components/SignCard.tsx`: Text-only sign card — word name + "HOW TO DO IT" plain-English description always visible; expandable "More details" shows hand shape tiles, practice links, fingerspell guide, and external links. No per-card animation (animation handled by SentenceAnimator)
+- `src/components/SentenceAnimator.tsx`: Plays sign animations in sequence in a sticky right column alongside the sign cards. Always shown for any result (not just multi-sign). Word chips show progress, skips single-letter non-fingerspelled words
+- `src/components/DictionaryPage.tsx`: Main dictionary page. Landing state shows onboarding callout, quick-try chips, learn progress card, category cards. Results use a two-column grid: sign cards on the left, SentenceAnimator sticky on the right; grammar notes + follow-up suggestions + feedback widget are full-width below the grid. Results cache to `sessionStorage` keyed by lowercased query (`asl_result:<query>`) so refresh restores instantly without re-calling the API. `?q=` param synced to URL for shareable links
 - `src/components/FeedbackWidget.tsx`: Rating system (thumbs up/down)
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
@@ -271,7 +273,7 @@ The pipeline lives in `python_code/asl/pipeline.py` (active) and `nodes.py` (Lan
 3. **Post-processing in `sign_instructor_node`** — after the LLM responds, `_extract_fs_glosses()` scans the gloss sequence and force-sets `is_fingerspelled=True` and `fingerspell_letters` on matching signs in Python. This is deterministic and immune to LLM omission.
 
 **Fingerspelling frontend rendering** (`src/components/SignCard.tsx`):
-- When `is_fingerspelled` is true, a collapsible "Fingerspell" section appears below the sign details
+- When `is_fingerspelled` is true, a collapsible "Fingerspell" section appears in the expandable "More details" area
 - Letter chips display the full sequence at a glance (always visible)
 - "Show letter guide" expands a `<dl>` list with each letter and its hand shape description
 - Descriptions come from a static `LETTER_SHAPES` lookup table (A-Z) hardcoded in `SignCard.tsx` — no API call needed
@@ -427,10 +429,11 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/ErrorBoundary.tsx`: Global error handling
 
 **Learning Feature:**
-- `src/components/learn/LearnPage.tsx`: Main learning page
-- `src/components/learn/LevelCard.tsx`: Level card component
-- `src/components/learn/LevelSelector.tsx`: Level selection grid
+- `src/components/learn/LearnPage.tsx`: Main learning page. No header bar — bottom nav handles navigation. Level-detail view has an inline "← All levels" back button. Landing page hero has an inline "Browse all signs" link. Session complete screen shows a blue header + floating score card + two-column sign list/actions layout (stacks to single column below 720px)
+- `src/components/learn/LevelCard.tsx`: Level card component with FlowerShape badge, status indicators (Complete/Continue/Locked)
+- `src/components/learn/LevelSelector.tsx`: Level selection grid with a current-level hero card above the grid
 - `src/components/learn/CameraPracticeExercise.tsx`: Camera practice integration
+- `src/contexts/LearnContext.tsx`: Exercise generation — sign-to-word and word-to-sign are mixed from the first session (50/50 random); recall only appears when mastery ≥ 70% and timesStudied ≥ 3
 - `src/constants/levels.ts`: Level definitions
 
 **Camera Feature:**
@@ -444,7 +447,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/camera/CameraTutorial.tsx`: Onboarding tutorial
 - `src/hooks/useCamera.ts`: Camera stream management
 - `src/hooks/useHandDetection.ts`: MediaPipe Hands integration
-- `src/hooks/useASLClassifier.ts`: TensorFlow.js inference
+- `src/hooks/useASLClassifier.ts`: TensorFlow.js inference — `predict()` is async (uses `await probabilities.data()` instead of `dataSync()` to avoid blocking the main thread)
 - `src/hooks/useSoundEffects.ts`: Web Audio API sounds
 - `src/utils/predictionBuffer.ts`: Rolling window smoothing
 - `src/utils/handLandmarks.ts`: Landmark normalization
@@ -846,6 +849,7 @@ const NUMBER_LABEL_MAP: Record<string, string> = {
 - **Lazy Loading**: Camera page is lazy-loaded (~400KB gzipped for TensorFlow.js)
 - **Model Caching**: TensorFlow.js caches model in browser storage
 - **Mounted Check**: `isMountedRef` prevents state updates after unmount
+- **Async Inference**: `predict()` uses `await probabilities.data()` (non-blocking) instead of `dataSync()` to keep the camera feed responsive during GPU computation
 
 ### LocalStorage Keys
 

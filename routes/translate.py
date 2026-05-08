@@ -74,7 +74,6 @@ async def translate_to_asl(
 
         asl_graph = request.app.state.asl_graph
         custom_api_key = request.headers.get("X-Custom-API-Key")
-        original_api_key = os.environ.get("GOOGLE_API_KEY")
         api_key_to_use = None
 
         if custom_api_key:
@@ -103,8 +102,8 @@ async def translate_to_asl(
             app_logger.info(
                 f"Using shared API key (remaining: {rate_limit_info['remaining']})"
             )
-        elif original_api_key:
-            api_key_to_use = original_api_key
+        elif os.environ.get("GOOGLE_API_KEY"):
+            api_key_to_use = os.environ.get("GOOGLE_API_KEY")
             app_logger.info("Using server's main API key")
         else:
             raise HTTPException(
@@ -112,19 +111,9 @@ async def translate_to_asl(
                 detail="Translation service unavailable. Please add your own API key.",
             )
 
-        if api_key_to_use != original_api_key:
-            os.environ["GOOGLE_API_KEY"] = api_key_to_use
-
-        try:
-            final_state = await asyncio.to_thread(
-                asl_graph.invoke, {"english_input": translate_req.text}
-            )
-        finally:
-            if api_key_to_use != original_api_key:
-                if original_api_key:
-                    os.environ["GOOGLE_API_KEY"] = original_api_key
-                else:
-                    os.environ.pop("GOOGLE_API_KEY", None)
+        final_state = await asyncio.to_thread(
+            asl_graph.invoke, {"english_input": translate_req.text}, api_key_to_use
+        )
 
         if final_state.get("error"):
             app_logger.error(f"Translation error: {final_state['error']}")

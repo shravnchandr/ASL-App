@@ -1,14 +1,12 @@
 /**
  * SignCard Component
- * Compact reference card with embedded animation when available
+ * Playful Springs redesign: hero strip + colored attribute tiles
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { SignAnimator } from './learn/SignAnimator';
-import { loadSignData } from '../utils/signDataLoader';
 import { LEVELS } from '../constants/levels';
-import type { ASLSign, SignData } from '../types';
+import type { ASLSign } from '../types';
 import './SignCard.css';
 
 const LETTER_SHAPES: Record<string, string> = {
@@ -45,7 +43,6 @@ interface SignCardProps {
     index: number;
 }
 
-// Check if a sign word exists in the Learn levels
 function findSignLevel(word: string): number | null {
     const key = word.toLowerCase().replace(/[\s-]+/g, '_');
     for (const level of LEVELS) {
@@ -56,90 +53,99 @@ function findSignLevel(word: string): number | null {
 
 export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
     const [guideOpen, setGuideOpen] = useState(false);
-    const [signData, setSignData] = useState<SignData | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [animLoaded, setAnimLoaded] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [detailsOpen, setDetailsOpen] = useState(false);
     const letters = sign.fingerspell_letters ?? [];
     const signLevel = findSignLevel(sign.word);
     const isSingleLetter = sign.word.length === 1 && /^[a-zA-Z]$/.test(sign.word);
 
-    // Try to load animation data for this sign.
-    // Skip single-letter words that aren't fingerspelled — the animation files
-    // are for alphabet letters, not for word signs like the pronoun "I".
-    useEffect(() => {
-        if (isSingleLetter && !sign.is_fingerspelled) return;
-        let cancelled = false;
-        const word = sign.word.toLowerCase().replace(/[\s-]+/g, '_');
-        loadSignData(word).then(data => {
-            if (!cancelled && data) {
-                setSignData(data);
-                setAnimLoaded(true);
-            }
-        });
-        return () => { cancelled = true; };
-    }, [sign.word, isSingleLetter, sign.is_fingerspelled]);
-
     return (
         <article className="sign-card" aria-labelledby={`sign-${index}-word`}>
-            {/* Header */}
-            <div className="sign-card__header">
+            {/* Hero strip */}
+            <div className="sign-card__hero">
+                <div className="sign-card__hero-badges">
+                    {sign.kb_verified && (
+                        <span className="sign-card__badge sign-card__badge--verified">Verified</span>
+                    )}
+                    {sign.is_fingerspelled && (
+                        <span className="sign-card__badge sign-card__badge--fs">Fingerspelled</span>
+                    )}
+                </div>
                 <h3 id={`sign-${index}-word`} className="sign-card__word">
                     {sign.word.toUpperCase()}
                 </h3>
-                {sign.kb_verified && (
-                    <span className="sign-card__badge" title="Verified against Lifeprint/ASLU knowledge base">
-                        Verified
-                    </span>
-                )}
             </div>
 
             <div className="sign-card__body">
-                {/* Animation (if available) — always visible */}
-                {animLoaded && signData && (
-                    <div className="sign-card__anim">
-                        <SignAnimator
-                            signData={signData}
-                            isPlaying={isPlaying}
-                            playbackSpeed={0.8}
-                            size="small"
-                            onAnimationEnd={() => setIsPlaying(false)}
-                        />
-                        <button
-                            className="sign-card__play-btn"
-                            onClick={() => setIsPlaying(p => !p)}
-                            aria-label={isPlaying ? 'Pause animation' : 'Play animation'}
-                        >
-                            {isPlaying ? (
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
-                            ) : (
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                            )}
-                            {isPlaying ? 'Pause' : 'Play'}
-                        </button>
+                {/* How to do it — always visible */}
+                {sign.simple_description && (
+                    <div className="sign-card__desc-block">
+                        <div className="sign-card__desc-label">HOW TO DO IT</div>
+                        <p className="sign-card__desc">{sign.simple_description}</p>
                     </div>
                 )}
 
-                {/* Simple description — always visible */}
-                {sign.simple_description && (
-                    <p className="sign-card__simple-desc">{sign.simple_description}</p>
-                )}
-
-                {/* Expand/collapse toggle */}
+                {/* More details toggle */}
                 <button
-                    className="sign-card__expand-btn"
-                    onClick={() => setIsExpanded(e => !e)}
-                    aria-expanded={isExpanded}
+                    className="sign-card__details-toggle"
+                    onClick={() => setDetailsOpen(o => !o)}
+                    aria-expanded={detailsOpen}
                 >
-                    {isExpanded ? 'Less' : 'More details'}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`sign-card__chevron ${isExpanded ? 'sign-card__chevron--open' : ''}`}>
+                    {detailsOpen ? 'Hide details' : 'More details'}
+                    <svg
+                        width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        className={`sign-card__chevron ${detailsOpen ? 'sign-card__chevron--open' : ''}`}
+                        aria-hidden="true"
+                    >
                         <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
 
-                {/* Expanded details */}
-                {isExpanded && (
+                {detailsOpen && (
                     <div className="sign-card__expanded">
+                        {/* Attribute tiles — 2×2 grid */}
+                        <div className="sign-card__tiles">
+                            <div className="sign-card__tile sign-card__tile--hand">
+                                <div className="sign-card__tile-label">Hand shape</div>
+                                <div className="sign-card__tile-value">{sign.hand_shape}</div>
+                            </div>
+                            <div className="sign-card__tile sign-card__tile--location">
+                                <div className="sign-card__tile-label">Location</div>
+                                <div className="sign-card__tile-value">{sign.location}</div>
+                            </div>
+                            <div className="sign-card__tile sign-card__tile--movement">
+                                <div className="sign-card__tile-label">Movement</div>
+                                <div className="sign-card__tile-value">{sign.movement}</div>
+                            </div>
+                            <div className="sign-card__tile sign-card__tile--expression">
+                                <div className="sign-card__tile-label">Expression</div>
+                                <div className="sign-card__tile-value">{sign.non_manual_markers}</div>
+                            </div>
+                        </div>
+
+                        {/* Practice links */}
+                        {(signLevel || isSingleLetter) && (
+                            <div className="sign-card__practice">
+                                {signLevel && (
+                                    <Link to="/learn" className="sign-card__practice-btn sign-card__practice-btn--learn">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M12 14L9 5L6 14M12 14H6M19 14L16 5L13 14M19 14H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M5 19H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                        </svg>
+                                        Practice this sign
+                                    </Link>
+                                )}
+                                {isSingleLetter && (
+                                    <Link to="/camera" className="sign-card__practice-btn sign-card__practice-btn--camera">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2" />
+                                        </svg>
+                                        Try with camera
+                                    </Link>
+                                )}
+                            </div>
+                        )}
+
                         {/* Fingerspelling */}
                         {sign.is_fingerspelled && letters.length > 0 && (
                             <div className="sign-card__fingerspell">
@@ -171,50 +177,11 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
                             </div>
                         )}
 
-                        {/* Sign details */}
-                        <dl className="sign-card__details">
-                            <div className="sign-card__detail">
-                                <dt>Hand shape</dt>
-                                <dd>{sign.hand_shape}</dd>
-                            </div>
-                            <div className="sign-card__detail">
-                                <dt>Location</dt>
-                                <dd>{sign.location}</dd>
-                            </div>
-                            <div className="sign-card__detail">
-                                <dt>Movement</dt>
-                                <dd>{sign.movement}</dd>
-                            </div>
-                            <div className="sign-card__detail">
-                                <dt>Expression</dt>
-                                <dd>{sign.non_manual_markers}</dd>
-                            </div>
-                        </dl>
-
-                        {/* Video resources */}
                         <div className="sign-card__links">
                             <a href={`https://www.lifeprint.com/asl101/pages-signs/${encodeURIComponent(sign.word.toLowerCase().charAt(0))}/${encodeURIComponent(sign.word.toLowerCase())}.htm`} target="_blank" rel="noopener noreferrer">Lifeprint</a>
                             <a href={`https://www.signingsavvy.com/search/${encodeURIComponent(sign.word)}`} target="_blank" rel="noopener noreferrer">Signing Savvy</a>
                             <a href={`https://www.youtube.com/results?search_query=how+to+sign+${encodeURIComponent(sign.word)}+in+asl`} target="_blank" rel="noopener noreferrer">YouTube</a>
                         </div>
-
-                        {/* Practice links (Feature 1: Connect modes) */}
-                        {(signLevel || isSingleLetter) && (
-                            <div className="sign-card__practice">
-                                {signLevel && (
-                                    <Link to="/learn" className="sign-card__practice-link sign-card__practice-link--learn">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 14L9 5L6 14M12 14H6M19 14L16 5L13 14M19 14H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M5 19H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-                                        Practice in Learn
-                                    </Link>
-                                )}
-                                {isSingleLetter && (
-                                    <Link to="/camera" className="sign-card__practice-link sign-card__practice-link--camera">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2" /></svg>
-                                        Try with Camera
-                                    </Link>
-                                )}
-                            </div>
-                        )}
                     </div>
                 )}
             </div>

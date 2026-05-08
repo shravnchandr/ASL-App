@@ -14,18 +14,15 @@ import { LoadingState } from './LoadingState';
 import { SearchHistory } from './features/SearchHistory';
 import { ActionButtons } from './features/ActionButtons';
 import { RateLimitBanner } from './features/RateLimitBanner';
-import { SignAnimator } from './learn/SignAnimator';
 import { SentenceAnimator } from './SentenceAnimator';
 import { translateToASL, submitFeedback, setCustomApiKey } from '../services/api';
 import { announceToScreenReader } from '../utils/accessibility';
 import { print } from '../utils/print';
 import { useApp } from '../contexts/AppContext';
 import { storage } from '../utils/storage';
-import { loadSignData } from '../utils/signDataLoader';
-import { getSignOfTheDay } from '../utils/signOfTheDay';
 import { formatSignName } from '../utils/format';
 import { LEVELS } from '../constants/levels';
-import type { TranslateResponse, SignData } from '../types';
+import type { TranslateResponse } from '../types';
 import './DictionaryPage.css';
 
 // ─── Follow-up phrase suggestions ────────────────────────────────
@@ -103,53 +100,7 @@ const GlossBar: React.FC<{ gloss: string }> = ({ gloss }) => {
     );
 };
 
-// ─── Sign of the Day ─────────────────────────────────────────────
-const SignOfTheDay: React.FC<{ onSearch: (q: string) => void }> = ({ onSearch }) => {
-    const [sign, setSign] = useState<string | null>(null);
-    const [data, setData] = useState<SignData | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
 
-    useEffect(() => {
-        let cancelled = false;
-        getSignOfTheDay().then(async s => {
-            if (cancelled || !s) return;
-            setSign(s);
-            const d = await loadSignData(s);
-            if (!cancelled) setData(d);
-        });
-        return () => { cancelled = true; };
-    }, []);
-
-    if (!sign) return null;
-
-    return (
-        <section className="sign-of-day" aria-label="Sign of the day">
-            <div className="sign-of-day__header">
-                <span className="sign-of-day__badge">Sign of the Day</span>
-            </div>
-            <div className="sign-of-day__content">
-                {data && (
-                    <div className="sign-of-day__anim">
-                        <SignAnimator signData={data} isPlaying={isPlaying} playbackSpeed={0.8} size="small" />
-                    </div>
-                )}
-                <div className="sign-of-day__info">
-                    <h3 className="sign-of-day__name">{formatSignName(sign)}</h3>
-                    <div className="sign-of-day__actions">
-                        {data && (
-                            <button className="sign-of-day__play" onClick={() => setIsPlaying(p => !p)}>
-                                {isPlaying ? 'Pause' : 'Play'}
-                            </button>
-                        )}
-                        <button className="sign-of-day__search" onClick={() => onSearch(formatSignName(sign))}>
-                            Translate
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-};
 
 // ─── Onboarding callout ──────────────────────────────────────────
 const OnboardingCallout: React.FC = () => {
@@ -243,6 +194,8 @@ export const DictionaryPage: React.FC = () => {
         try {
             const response = await translateToASL(query);
             setResult(response);
+            // Cache result so refresh doesn't re-call the API
+            try { sessionStorage.setItem(`asl_result:${query.toLowerCase().trim()}`, JSON.stringify(response)); } catch { /* ignore quota errors */ }
             announceToScreenReader(`Found ${response.signs.length} signs for ${query}`, 'polite');
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An error occurred';
@@ -253,11 +206,18 @@ export const DictionaryPage: React.FC = () => {
         }
     }, [addToHistory, setSearchParams]);
 
-    // Auto-search when the page loads with a ?q= param (e.g. from a shared link)
+    // On load with ?q=: restore from sessionStorage cache to avoid re-calling the API on refresh
     useEffect(() => {
-        if (initialQueryRef.current) {
-            handleSearch(initialQueryRef.current);
+        const q = initialQueryRef.current;
+        if (!q) return;
+        const cached = sessionStorage.getItem(`asl_result:${q.toLowerCase().trim()}`);
+        if (cached) {
+            try {
+                setResult(JSON.parse(cached));
+                return;
+            } catch { /* fall through to API call */ }
         }
+        handleSearch(q);
     }, [handleSearch]);
 
     const handleFeedbackClick = (rating: 'up' | 'down') => {
@@ -298,10 +258,9 @@ export const DictionaryPage: React.FC = () => {
             <RateLimitBanner customApiKey={customApiKey} />
 
             <section className="dictionary-page__search" aria-label="Search for ASL translations">
-                <h1 className="dictionary-page__title">Text to Signs</h1>
-                <p className="dictionary-page__subtitle">
-                    Enter any English phrase to get ASL sign-by-sign instructions
-                </p>
+                <h1 className="dictionary-page__title">
+                    Let's sign<br/><span className="dictionary-page__title-accent">something today.</span>
+                </h1>
                 <SearchBar onSearch={handleSearch} isLoading={isLoading} />
                 <SearchHistory onSelectQuery={handleSearch} />
             </section>
@@ -310,8 +269,6 @@ export const DictionaryPage: React.FC = () => {
             {showLanding && (
                 <>
                     <OnboardingCallout />
-
-                    <SignOfTheDay onSearch={handleSearch} />
 
                     <section className="quick-tries" aria-label="Try these phrases">
                         <p className="quick-tries__label">Try these</p>
@@ -435,20 +392,26 @@ export const DictionaryPage: React.FC = () => {
 
                     <ActionButtons query={result.query} signsCount={result.signs.length} />
 
-                    {/* Sentence-level animation */}
-                    {result.signs.length > 1 && (
-                        <SentenceAnimator words={result.signs.map(s => ({
-                            word: s.word.toLowerCase().replace(/\s+/g, '_'),
-                            isFingerspelled: !!s.is_fingerspelled,
-                        }))} />
-                    )}
+                    {/* Two-column: sign cards left, animation right (sticky ends when grid ends) */}
+                    <div className="results-columns">
+                        <div className="results-left">
+                            <div className="signs-list">
+                                {result.signs.map((sign, index) => (
+                                    <SignCard key={`${sign.word}-${index}`} sign={sign} index={index} />
+                                ))}
+                            </div>
+                        </div>
 
-                    <div className="signs-list">
-                        {result.signs.map((sign, index) => (
-                            <SignCard key={`${sign.word}-${index}`} sign={sign} index={index} />
-                        ))}
+                        {/* Sticky animation — stops at grid boundary */}
+                        <div className="results-right">
+                            <SentenceAnimator words={result.signs.map(s => ({
+                                word: s.word.toLowerCase().replace(/\s+/g, '_'),
+                                isFingerspelled: !!s.is_fingerspelled,
+                            }))} />
+                        </div>
                     </div>
 
+                    {/* Full-width below grid: grammar notes, then try-next + feedback row */}
                     {result.note && (
                         <div className="grammar-note">
                             <h3 className="grammar-note__title">Grammar Notes</h3>
@@ -456,25 +419,25 @@ export const DictionaryPage: React.FC = () => {
                         </div>
                     )}
 
-                    <FeedbackWidget onFeedbackClick={handleFeedbackClick} />
-
-                    {/* Follow-up suggestions (Feature 4) */}
-                    {followUps.length > 0 && (
-                        <section className="follow-up" aria-label="Try next">
-                            <p className="follow-up__label">Try next</p>
-                            <div className="follow-up__chips">
-                                {followUps.map(phrase => (
-                                    <button
-                                        key={phrase}
-                                        className="quick-tries__chip"
-                                        onClick={() => handleSearch(phrase)}
-                                    >
-                                        {phrase}
-                                    </button>
-                                ))}
-                            </div>
-                        </section>
-                    )}
+                    <div className="results-footer">
+                        {followUps.length > 0 && (
+                            <section className="follow-up" aria-label="Try next">
+                                <p className="follow-up__label">Try next</p>
+                                <div className="follow-up__chips">
+                                    {followUps.map(phrase => (
+                                        <button
+                                            key={phrase}
+                                            className="quick-tries__chip"
+                                            onClick={() => handleSearch(phrase)}
+                                        >
+                                            {phrase}
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                        <FeedbackWidget onFeedbackClick={handleFeedbackClick} />
+                    </div>
                 </section>
             )}
 

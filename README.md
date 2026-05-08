@@ -17,12 +17,12 @@ A modern, production-ready web application that helps you learn American Sign La
 ## ✨ Features
 
 ### Core Functionality
-- 🔤 **ASL Sign Breakdowns** - Each sign card shows a plain-English summary upfront (e.g. "cup your fingers near your mouth, then slide up to your ear") so beginners can act on it immediately. Full technical detail (hand shape, location, movement, facial expression) is available under "More details"
+- 🔤 **ASL Sign Breakdowns** - Each sign card shows plain-English instructions ("HOW TO DO IT") always visible upfront. Technical details (hand shape, location, movement, facial expression) are under "More details". The SentenceAnimator plays all signs in sequence in a sticky right column alongside the sign cards
 - 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU. Exact matches are looked up directly; synonyms and near-matches (e.g. "glad" → happy) can be resolved via semantic similarity search using sentence-transformers (opt-in, requires `ENABLE_SEMANTIC_LOOKUP=true`)
 - 🧠 **Context-Aware Disambiguation** - Single-letter glosses (like "I" the pronoun) are correctly distinguished from alphabet letters via an alphabet guard in the KB lookup and context-aware Translation Agent prompt. Letters only match via `fs-` prefix (fingerspelling)
 - 🔡 **Fingerspelling Guide** - Proper nouns (names, cities, brands) are automatically identified via `fs-` gloss prefix and shown with a collapsible letter-by-letter breakdown directly on the sign card — each letter displays its ASL hand shape description. Detection is deterministic (Python post-processing), not dependent on LLM output
 - 🔤 **Advanced ASL Grammar Engine** - Grammar Agent applies 10 documented ASL grammar rules: TTC structure, topicalization, wh-question formation, negation placement, conditionals, verb directionality, aspect, and classifiers
-- 🎬 **Sentence Animations** - Multi-sign results include a SentenceAnimator that plays sign animations in sequence with word chip indicators, progress bar, and playback controls
+- 🎬 **Sentence Animations** - Results include a SentenceAnimator (always shown, sticky right column) that plays all sign animations in sequence with word chip indicators, progress bar, and playback controls
 - 🌟 **Sign of the Day** - Landing page features a daily sign with animation preview, deterministically selected via date hashing
 - 🎥 **Video Resource Links** - Direct links to Handspeak, ASL University, and YouTube for each sign to watch proper demonstrations
 - 📚 **Search History & Favorites** - Save and quickly access frequently used phrases with browser local storage
@@ -36,7 +36,7 @@ A modern, production-ready web application that helps you learn American Sign La
 - 🎓 **Level-Based Learning** - 10 progressive levels with unlock mechanics (80% mastery to advance)
 - 🤖 **100 Animated Signs** - MediaPipe landmark-based stick figure animations (26 letters, 10 numbers, 12 months, 52 common signs)
 - 📖 **Sign Library** - Browse all available signs with search, category filters, and lazy loading
-- 🎮 **Four Exercise Types** - Sign-to-Word (easiest), Word-to-Sign (medium), Recall (hardest), and Camera Practice
+- 🎮 **Four Exercise Types** - Sign-to-Word and Word-to-Sign appear from the first session for variety; Recall (type the answer) unlocks at 70% mastery; Camera Practice available for Alphabet and Numbers levels
 - 🧠 **SM-2 Spaced Repetition** - Signs are scheduled for review using the SM-2 algorithm (ease factor, interval, repetitions). `getSignsDueForReview()` returns signs due today
 - 📈 **Progress Tracking** - XP system, per-sign mastery, level completion, and day streaks
 - 🔊 **Sound Effects** - Optional audio feedback during exercises (success/error tones via Web Audio API)
@@ -62,13 +62,15 @@ A modern, production-ready web application that helps you learn American Sign La
 - 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile (single-column on small phones)
 - 👋 **Onboarding** - First-visit callout guides new users to key features (dismissible, persisted)
 - 💡 **Smart Suggestions** - Post-search follow-up phrase suggestions based on context and category
-- 📝 **Compact Sign Cards** - Collapsible sign cards with embedded animations, "Practice in Learn" and "Try with Camera" links
+- 🏠 **Dashboard Home Page** - Sign of the Day hero, "Pick up where you left off" lesson/review cards, quick-tool grid, recent searches, and your progress stats
+- 📝 **Two-Column Results Layout** - SentenceAnimator (sticky) on the right plays all signs in sequence; text-only sign cards on the left show plain-English instructions with expandable technical details and external links
+- 💾 **Result Caching** - Translation results are cached in `sessionStorage` so refreshing the page restores results instantly without re-calling the API
 - ⚡ **Fast & Optimized** - Lazy loading, code splitting, memoization, dual-layer caching (Redis + in-memory LRU fallback)
 - 📄 **PDF Export** - Download lightweight (~16KB), professionally formatted PDFs of translation results for offline reference
 - 🛡️ **Error Recovery** - React Error Boundary catches crashes with recovery UI
 
 ### Security & Privacy
-- 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally)
+- 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally, passed directly to the pipeline — never mutates shared process environment, safe under concurrent requests)
 - 🔒 **Security Headers** - Comprehensive security headers (CSP, HSTS, X-Frame-Options)
 - 🧹 **XSS Protection** - DOMPurify sanitization utilities for user content
 - 🚫 **No Data Collection** - All data stays in your browser or your own database

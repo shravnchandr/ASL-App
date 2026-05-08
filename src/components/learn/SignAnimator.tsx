@@ -180,7 +180,8 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
 
         const { scale, dataCenterX, dataCenterY } = transformRef.current;
         const canvasCenterX = config.width / 2;
-        const canvasCenterY = config.height / 2;
+        // Shift center down by 8% to give the estimated head room above the bounding box
+        const canvasCenterY = config.height / 2 + config.height * 0.08;
 
         // Center and scale, flip x for mirror view
         return [

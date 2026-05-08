@@ -12,6 +12,7 @@ import { RecallExercise } from './RecallExercise';
 import { CameraPracticeExercise } from './CameraPracticeExercise';
 import { SignBrowser } from './SignBrowser';
 import { LevelSelector } from './LevelSelector';
+import { FlowerShape } from '../FlowerShape';
 import { formatSignName } from '../../utils/format';
 import { getLevelById, MASTERY_THRESHOLD } from '../../constants/levels';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
@@ -43,12 +44,14 @@ const LearnPageContent: React.FC = () => {
     const [signData, setSignData] = useState<SignData | null>(null);
     const [optionSignData, setOptionSignData] = useState<Array<{ sign: string; data: SignData | null }>>([]);
     const [showSignBrowser, setShowSignBrowser] = useState(false);
+    const [exerciseResults, setExerciseResults] = useState<Array<{ sign: string; isCorrect: boolean }>>([]);
     const { isEnabled: soundEnabled, toggleSounds, playSuccess, playError: playSoundError } = useSoundEffects();
 
     // Refs for cleanup
     const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const unlockCelebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isMountedRef = useRef(true);
+    const sessionStartTimeRef = useRef<number>(Date.now());
 
     const currentExercise = getCurrentExercise();
     const selectedLevelInfo = state.selectedLevel ? getLevelById(state.selectedLevel) : null;
@@ -119,6 +122,11 @@ const LearnPageContent: React.FC = () => {
         const exerciseType = currentExercise?.type;
         const correctAnswer = currentExercise?.correctAnswer || '';
 
+        // Track result for session complete screen
+        if (correctAnswer) {
+            setExerciseResults(prev => [...prev, { sign: correctAnswer, isCorrect }]);
+        }
+
         answerExercise(answer, isCorrect);
 
         if (isCorrect) {
@@ -163,6 +171,8 @@ const LearnPageContent: React.FC = () => {
         const levelToStart = state.selectedLevel || state.currentLevel;
         if (levelToStart) {
             setFeedback(null);
+            setExerciseResults([]);
+            sessionStartTimeRef.current = Date.now();
             startLevelSession(levelToStart, 10);
         }
     }, [startLevelSession, state.selectedLevel, state.currentLevel]);
@@ -175,10 +185,6 @@ const LearnPageContent: React.FC = () => {
             startLevelSession(levelToStart, 10, true);
         }
     }, [startLevelSession, state.selectedLevel, state.currentLevel]);
-
-    const handleBackToHome = useCallback(() => {
-        window.location.href = '/';
-    }, []);
 
     const handleBackToLevels = useCallback(() => {
         endSession();
@@ -220,68 +226,117 @@ const LearnPageContent: React.FC = () => {
         const levelMastery = calculateLevelMastery(state.currentLevel);
         const nextLevelUnlocked = state.unlockedLevels.includes(state.currentLevel + 1);
         const currentLevelInfo = getLevelById(state.currentLevel);
+        const nextLevelInfo = getLevelById(state.currentLevel + 1);
+        const correctCount = exerciseResults.filter(r => r.isCorrect).length;
+        const totalCount = exerciseResults.length || state.exercises.length;
+        const scorePercent = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+        const elapsed = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000);
+        const elapsedStr = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
+        const missedSigns = exerciseResults.filter(r => !r.isCorrect).map(r => r.sign);
 
         return (
-            <div className="learn-page">
-                <header className="learn-page__header">
-                    <button className="learn-page__back-btn" onClick={handleBackToLevels}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor" />
-                        </svg>
-                        Back to Levels
-                    </button>
-                </header>
+            <div className="session-complete-page">
+                {/* Purple header */}
+                <div className="sc-header">
+                    <div className="sc-header__eyebrow">LESSON COMPLETE</div>
+                    <h1 className="sc-header__title">Beautifully done.</h1>
+                    <p className="sc-header__subtitle">
+                        You signed {correctCount} of {totalCount} correctly.
+                        {nextLevelUnlocked && nextLevelInfo && ` ${nextLevelInfo.name} is now unlocked.`}
+                    </p>
+                </div>
 
-                <main className="learn-page__content">
-                    <div className="session-complete">
-                        <div className="session-complete__icon">🎉</div>
-                        <h1 className="session-complete__title">Session Complete!</h1>
-
-                        <div className="session-complete__level-info">
-                            <span className="session-complete__level-icon">{currentLevelInfo?.icon}</span>
-                            <span className="session-complete__level-name">Level {state.currentLevel}: {currentLevelInfo?.name}</span>
+                {/* Score card — overlaps header/body */}
+                <div className="sc-score-card">
+                    <div className="sc-score-badge">
+                        <FlowerShape size={88} fill="var(--md-sys-color-secondary)" petals={8}>
+                            <div className="sc-score-badge__inner">
+                                <span className="sc-score-badge__pct">{scorePercent}%</span>
+                                <span className="sc-score-badge__label">SCORE</span>
+                            </div>
+                        </FlowerShape>
+                    </div>
+                    <div className="sc-score-info">
+                        <div className="sc-score-info__lesson">
+                            {currentLevelInfo?.name} · Lesson {state.currentLevel}
                         </div>
-
-                        <div className="session-complete__stats">
-                            <div className="stat">
-                                <span className="stat__value">{state.sessionScore}</span>
-                                <span className="stat__label">XP Earned</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value">{state.exercises.length}</span>
-                                <span className="stat__label">Exercises</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value">{levelMastery}%</span>
-                                <span className="stat__label">Level Mastery</span>
-                            </div>
+                        <div className="sc-score-info__chapter">
+                            Level {state.currentLevel} · {levelMastery}% mastery overall
                         </div>
-
-                        {!nextLevelUnlocked && state.currentLevel < levels.length && (
-                            <div className="session-complete__progress-hint">
-                                <p>
-                                    Reach {MASTERY_THRESHOLD}% mastery to unlock Level {state.currentLevel + 1}
-                                </p>
-                                <div className="session-complete__progress-bar">
-                                    <div
-                                        className="session-complete__progress-fill"
-                                        style={{ width: `${(levelMastery / MASTERY_THRESHOLD) * 100}%` }}
-                                    />
-                                </div>
+                        <div className="sc-score-chips">
+                            <div className="sc-chip sc-chip--blue">
+                                <span className="sc-chip__val">+{state.sessionScore}</span>
+                                <span className="sc-chip__lbl">XP</span>
                             </div>
-                        )}
-
-                        <div className="session-complete__actions">
-                            <button className="btn btn--primary" onClick={handleStartLevelSession}>
-                                Practice Again
-                            </button>
-                            <button className="btn btn--secondary" onClick={handleBackToLevels}>
-                                Choose Another Level
-                            </button>
+                            <div className="sc-chip sc-chip--green">
+                                <span className="sc-chip__val">{correctCount}/{totalCount}</span>
+                                <span className="sc-chip__lbl">Correct</span>
+                            </div>
+                            <div className="sc-chip sc-chip--peach">
+                                <span className="sc-chip__val">{elapsedStr}</span>
+                                <span className="sc-chip__lbl">Time</span>
+                            </div>
+                            <div className="sc-chip sc-chip--pink">
+                                <span className="sc-chip__val">+{state.streak}</span>
+                                <span className="sc-chip__lbl">Streak</span>
+                            </div>
                         </div>
                     </div>
-                </main>
+                </div>
 
+                {/* Body: sign-by-sign + actions */}
+                <div className="sc-body">
+                    {/* Sign by sign list */}
+                    <div className="sc-sign-list">
+                        <div className="sc-sign-list__title">Sign by sign</div>
+                        <ul>
+                            {exerciseResults.map((r, i) => (
+                                <li key={i} className={`sc-sign-row ${r.isCorrect ? 'sc-sign-row--correct' : 'sc-sign-row--incorrect'}`}>
+                                    <span className="sc-sign-row__icon">
+                                        {r.isCorrect
+                                            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+                                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+                                        }
+                                    </span>
+                                    <span className="sc-sign-row__name">{formatSignName(r.sign)}</span>
+                                    {!r.isCorrect && (
+                                        <button
+                                            className="sc-sign-row__retry"
+                                            onClick={handleStartLevelSession}
+                                        >
+                                            Retry
+                                        </button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="sc-actions">
+                        {nextLevelInfo && nextLevelUnlocked ? (
+                            <button className="sc-actions__primary" onClick={() => {
+                                setExerciseResults([]);
+                                sessionStartTimeRef.current = Date.now();
+                                startLevelSession(state.currentLevel + 1, 10);
+                            }}>
+                                → Continue to Lesson {state.currentLevel + 1}
+                            </button>
+                        ) : (
+                            <button className="sc-actions__primary" onClick={handleStartLevelSession}>
+                                → Practice again
+                            </button>
+                        )}
+                        {missedSigns.length > 0 && (
+                            <button className="sc-actions__secondary" onClick={handleStartLevelSession}>
+                                Practice missed signs
+                            </button>
+                        )}
+                        <button className="sc-actions__ghost" onClick={handleBackToLevels}>
+                            Back to Learn
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -385,24 +440,14 @@ const LearnPageContent: React.FC = () => {
 
         return (
             <div className="learn-page">
-                <header className="learn-page__header">
-                    <button className="learn-page__back-btn" onClick={handleBackToLevels}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor" />
-                        </svg>
-                        Back to Levels
-                    </button>
-                    <span className="learn-page__title">🤟 Learn Signs</span>
-                    <button className="learn-page__browse-btn" onClick={() => setShowSignBrowser(true)}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" fill="currentColor" />
-                        </svg>
-                        Browse Signs
-                    </button>
-                </header>
-
                 <main className="learn-page__content">
                     <div className="level-detail">
+                        <button className="level-detail__back-btn" onClick={handleBackToLevels}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor" />
+                            </svg>
+                            All levels
+                        </button>
                         <div className="level-detail__icon">{selectedLevelInfo.icon}</div>
                         <h1 className="level-detail__title">
                             Level {selectedLevelInfo.id}: {selectedLevelInfo.name}
@@ -501,35 +546,35 @@ const LearnPageContent: React.FC = () => {
     // Landing/Level selector screen
     return (
         <div className="learn-page">
-            <header className="learn-page__header">
-                <button className="learn-page__back-btn" onClick={handleBackToHome}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor" />
-                    </svg>
-                    Back to Home
-                </button>
-                <span className="learn-page__title">🤟 Learn Signs</span>
-                <button className="learn-page__browse-btn" onClick={() => setShowSignBrowser(true)}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" fill="currentColor" />
-                    </svg>
-                    Browse Signs
-                </button>
-            </header>
-
             <main className="learn-page__content">
-                <div className="learn-page__stats-bar">
-                    <div className="stats-bar__item">
-                        <span className="stats-bar__value">{state.totalXP}</span>
-                        <span className="stats-bar__label">Total XP</span>
+                <div className="learn-page__hero">
+                    <div className="learn-page__hero-text">
+                        <div className="learn-page__hero-label">YOUR PATH · 10 LEVELS</div>
+                        <h1 className="learn-page__hero-title">
+                            Sign by sign,<br/>step by step.
+                        </h1>
+                        <button className="learn-page__browse-btn--inline" onClick={() => setShowSignBrowser(true)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" fill="currentColor" />
+                            </svg>
+                            Browse all signs
+                        </button>
                     </div>
-                    <div className="stats-bar__item">
-                        <span className="stats-bar__value">{state.level}</span>
-                        <span className="stats-bar__label">Player Level</span>
-                    </div>
-                    <div className="stats-bar__item">
-                        <span className="stats-bar__value">{state.streak}</span>
-                        <span className="stats-bar__label">Day Streak</span>
+                    <div className="learn-page__hero-badges">
+                        {state.streak > 0 && (
+                            <div className="learn-stat-pill learn-stat-pill--streak">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--md-sys-color-secondary)" aria-hidden="true">
+                                    <path d="M13.5 0.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5 0.67z" />
+                                </svg>
+                                <span>{state.streak} days</span>
+                            </div>
+                        )}
+                        <div className="learn-stat-pill learn-stat-pill--xp">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--md-sys-color-accent-gold)" aria-hidden="true">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                            <span>{state.totalXP} XP</span>
+                        </div>
                     </div>
                 </div>
 

@@ -1,142 +1,279 @@
 /**
- * SignToWordExercise Component Styles
- * M3 Expressive with spring animations and status feedback
+ * SignToWordExercise — Playful Springs redesign
+ * Two-column layout: video card (left) + answer panel (right)
  */
 
 .sign-to-word {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-lg, 24px);
     width: 100%;
 }
 
-.sign-to-word__prompt {
-    font-size: var(--md-sys-typescale-title-large-size, 1.25rem);
-    font-weight: var(--md-sys-typescale-title-large-weight, 600);
-    color: var(--md-sys-color-on-surface);
-    text-align: center;
+/* ── Two-column layout ────────────────────── */
+.sign-to-word__columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+/* ── Video card (left) ────────────────────── */
+.sign-to-word__video-card {
+    background: var(--md-sys-color-primary-container);
+    border-radius: var(--md-sys-shape-corner-extra-large);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sign-to-word__video-eyebrow {
+    font-size: 0.625rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--md-sys-color-on-primary-container);
+    opacity: 0.8;
+}
+
+.sign-to-word__video-sub {
     margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--md-sys-color-on-primary-container);
 }
 
 .sign-to-word__animation {
     display: flex;
     justify-content: center;
+    background: var(--md-sys-color-surface);
+    border-radius: var(--md-sys-shape-corner-large);
+    overflow: hidden;
 }
 
-/* Options grid */
+.sign-to-word__playback-wrap {
+    background: var(--md-sys-color-surface);
+    border-radius: var(--md-sys-shape-corner-medium);
+    padding: 4px 8px;
+}
+
+.sign-to-word__replay-slow {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--md-sys-color-on-primary-container);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 150ms ease;
+    align-self: flex-start;
+}
+
+.sign-to-word__replay-slow:hover {
+    text-decoration-color: currentColor;
+}
+
+/* ── Answer panel (right) ─────────────────── */
+.sign-to-word__answer-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 4px;
+}
+
+.sign-to-word__answers-label {
+    font-size: 0.625rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ── Options ──────────────────────────────── */
 .sign-to-word__options {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md, 16px);
-    width: 100%;
-    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .sign-to-word__option {
-    padding: var(--spacing-md, 16px) var(--spacing-lg, 24px);
-    border: 2px solid var(--md-sys-color-outline);
-    border-radius: var(--md-sys-shape-corner-medium);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-large);
     background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
-    font-size: var(--md-sys-typescale-body-large-size, 1rem);
-    font-weight: var(--md-sys-typescale-label-large-weight, 500);
-    text-transform: capitalize;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-align: left;
     cursor: pointer;
-    transition:
-        border-color var(--duration-quick) ease,
-        background-color var(--duration-quick) ease,
-        transform var(--duration-quick) var(--spring-bounce),
-        box-shadow var(--duration-quick) ease;
-}
-
-[data-theme="dark"] .sign-to-word__option {
-    background: var(--md-sys-color-surface-container);
-    border-color: var(--md-sys-color-outline-variant);
+    transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 
 .sign-to-word__option:hover:not(:disabled) {
     border-color: var(--md-sys-color-primary);
     background: var(--md-sys-color-primary-container);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: var(--md-sys-elevation-1);
-}
-
-[data-theme="dark"] .sign-to-word__option:hover:not(:disabled) {
-    background: hsla(205, 90%, 70%, 0.15);
-}
-
-.sign-to-word__option:focus-visible {
-    outline: 2px solid var(--md-sys-color-primary);
-    outline-offset: 2px;
-}
-
-/* Correct answer state */
-.sign-to-word__option--correct {
-    border-color: var(--md-sys-color-success);
-    background: var(--md-sys-color-success-container);
-    color: var(--md-sys-color-on-success-container);
-    animation: correctPop var(--duration-smooth) var(--spring-energetic);
-}
-
-@keyframes correctPop {
-    0% { transform: scale(1); }
-    30% { transform: scale(1.08); }
-    60% { transform: scale(0.98); }
-    100% { transform: scale(1); }
-}
-
-/* Incorrect answer state */
-.sign-to-word__option--incorrect {
-    border-color: var(--md-sys-color-error);
-    background: var(--md-sys-color-error-container);
-    color: var(--md-sys-color-on-error-container);
-    animation: shake 0.4s var(--spring-bounce);
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-8px); }
-    40% { transform: translateX(8px); }
-    60% { transform: translateX(-4px); }
-    80% { transform: translateX(4px); }
-}
-
-/* Disabled state after answer */
-.sign-to-word__option--disabled {
-    opacity: 0.5;
-    cursor: default;
+    transform: translateX(2px);
 }
 
 .sign-to-word__option:disabled {
     cursor: default;
 }
 
-/* Responsive adjustments */
-@media (max-width: 480px) {
-    .sign-to-word__options {
-        grid-template-columns: 1fr;
-    }
+/* Letter badge */
+.sign-to-word__option-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: var(--md-sys-shape-corner-small);
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.75rem;
+    font-weight: 800;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    transition: background 150ms ease, color 150ms ease;
+}
 
-    .sign-to-word__option {
-        padding: var(--spacing-sm, 12px) var(--spacing-md, 16px);
+.sign-to-word__option-text {
+    flex: 1;
+    text-transform: capitalize;
+}
+
+/* Selected (pre-submit) */
+.sign-to-word__option--selected {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+}
+
+.sign-to-word__option--selected .sign-to-word__option-key {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: transparent;
+}
+
+/* Correct answer (post-submit) */
+.sign-to-word__option--correct {
+    border-color: var(--md-sys-color-success);
+    background: var(--md-sys-color-success-container);
+    color: var(--md-sys-color-on-success-container);
+    animation: correctPop 350ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.sign-to-word__option--correct .sign-to-word__option-key {
+    background: var(--md-sys-color-success);
+    color: var(--md-sys-color-on-success);
+    border-color: transparent;
+}
+
+@keyframes correctPop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.04); }
+    70% { transform: scale(0.98); }
+    100% { transform: scale(1); }
+}
+
+/* Incorrect answer */
+.sign-to-word__option--incorrect {
+    border-color: var(--md-sys-color-error);
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.sign-to-word__option--incorrect .sign-to-word__option-key {
+    background: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
+    border-color: transparent;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+/* Dimmed (other options after answer) */
+.sign-to-word__option--dimmed {
+    opacity: 0.45;
+}
+
+/* ── Check answer button ──────────────────── */
+.sign-to-word__check-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--md-sys-color-secondary);
+    color: var(--md-sys-color-on-secondary);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-pill);
+    font-size: 0.9375rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: var(--shadow-secondary);
+    transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+
+.sign-to-word__check-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--md-sys-elevation-3), var(--shadow-secondary);
+}
+
+.sign-to-word__check-btn:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.sign-to-word__check-btn--disabled,
+.sign-to-word__check-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* ── Secondary actions ────────────────────── */
+.sign-to-word__secondary-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.sign-to-word__secondary-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+.sign-to-word__secondary-btn:hover {
+    color: var(--md-sys-color-on-surface);
+    text-decoration-color: currentColor;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 640px) {
+    .sign-to-word__columns {
+        grid-template-columns: 1fr;
     }
 }
 
-/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
     .sign-to-word__option {
         transition: none;
     }
-
-    .sign-to-word__option:hover:not(:disabled) {
-        transform: none;
-    }
-
     .sign-to-word__option--correct {
         animation: none;
     }
-
     .sign-to-word__option--incorrect {
         animation: none;
     }

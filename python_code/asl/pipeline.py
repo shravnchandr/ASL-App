@@ -142,9 +142,9 @@ _GRAMMAR_SYSTEM_PROMPT = (
 )
 
 
-def _make_client() -> genai.Client:
-    """Create a Gemini client using the current GOOGLE_API_KEY env var."""
-    return genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+def _make_client(api_key: Optional[str] = None) -> genai.Client:
+    """Create a Gemini client using the provided key, or fall back to env."""
+    return genai.Client(api_key=api_key or os.environ.get("GOOGLE_API_KEY"))
 
 
 def _log_usage(agent: str, usage: Any) -> None:
@@ -165,7 +165,7 @@ def _log_usage(agent: str, usage: Any) -> None:
 
 
 def _run_instructor_agent(
-    input_text: str, original_input: str
+    input_text: str, original_input: str, api_key: Optional[str] = None
 ) -> tuple[SentenceDescriptionSchema, Any]:
     """Call the Translation Agent and return a SentenceDescriptionSchema."""
     print(
@@ -215,7 +215,7 @@ def _run_instructor_agent(
         f"ASL Gloss Order: '{input_text}'"
     )
 
-    client = _make_client()
+    client = _make_client(api_key)
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents="Generate detailed ASL sign descriptions for the gloss sequence.",
@@ -293,20 +293,21 @@ class ASLPipeline:
             )
             return None
 
-    def _can_use_grammar_cache(self) -> bool:
-        """True only when the server's own key is active (cache was built with it)."""
+    def _can_use_grammar_cache(self, api_key: Optional[str] = None) -> bool:
+        """True only when the server's own key is being used (cache was built with it)."""
+        effective_key = api_key or os.environ.get("GOOGLE_API_KEY")
         return (
             self._grammar_cache_name is not None
-            and os.environ.get("GOOGLE_API_KEY") == self._init_api_key
+            and effective_key == self._init_api_key
         )
 
     # ── Grammar Agent ──────────────────────────────────────────────────────────
 
-    def _run_grammar_agent(self, english_input: str) -> tuple[GrammarPlanSchema, Any]:
+    def _run_grammar_agent(self, english_input: str, api_key: Optional[str] = None) -> tuple[GrammarPlanSchema, Any]:
         """Call the Grammar Agent. Uses context cache when the server key is active."""
         print(f"{Fore.MAGENTA}🧠 Grammar Agent: Planning ASL structure...{Style.RESET_ALL}")
-        client = _make_client()
-        cache_name = self._grammar_cache_name if self._can_use_grammar_cache() else None
+        client = _make_client(api_key)
+        cache_name = self._grammar_cache_name if self._can_use_grammar_cache(api_key) else None
 
         def _make_config(with_cache: bool) -> types.GenerateContentConfig:
             if with_cache:
@@ -357,16 +358,17 @@ class ASLPipeline:
 
     # ── Pipeline orchestration ─────────────────────────────────────────────────
 
-    def invoke(self, state: dict) -> dict:
+    def invoke(self, state: dict, api_key: Optional[str] = None) -> dict:
         """
         Run the full ASL translation pipeline.
         Accepts and returns a dict in the same format as the old LangGraph state.
+        Pass api_key to use a specific key instead of the process environment variable.
         """
         english_input = state["english_input"]
 
         try:
             # Step 1: Grammar Agent
-            plan, grammar_usage = self._run_grammar_agent(english_input)
+            plan, grammar_usage = self._run_grammar_agent(english_input, api_key)
         except Exception as e:
             print(f"{Fore.RED}Grammar Agent Error: {e}{Style.RESET_ALL}")
             return {"english_input": english_input, "error": str(e)}
@@ -380,7 +382,7 @@ class ASLPipeline:
 
         try:
             # Step 3: Translation Agent
-            result, translation_usage = _run_instructor_agent(input_text, english_input)
+            result, translation_usage = _run_instructor_agent(input_text, english_input, api_key)
         except Exception as e:
             print(f"{Fore.RED}Instructor Agent Error: {e}{Style.RESET_ALL}")
             return {

@@ -132,8 +132,8 @@ export function CameraPracticeExercise({
   // Run prediction when landmarks change
   useEffect(() => {
     if (landmarks && !isLoading && status === 'ready') {
-      const result = predict(landmarks);
-      if (result) {
+      void predict(landmarks).then(result => {
+        if (!result) return;
         predictionBufferRef.current.add(result.label);
         const stablePrediction = predictionBufferRef.current.getStablePrediction();
         if (stablePrediction) {
@@ -157,7 +157,7 @@ export function CameraPracticeExercise({
             setMatchProgress(0);
           }
         }
-      }
+      });
     } else if (!isHandDetected) {
       predictionBufferRef.current.clear();
       setPrediction(null);
