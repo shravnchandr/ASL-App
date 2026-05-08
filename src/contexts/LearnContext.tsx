@@ -567,7 +567,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!level) return 0;
         const dueSet = new Set(storage.getSignsDueForReview());
         return level.signs.filter(s => dueSet.has(s)).length;
-    }, [state.signProgress]);
+    }, []);
 
     // Clear the just unlocked notification
     const clearJustUnlocked = useCallback(() => {

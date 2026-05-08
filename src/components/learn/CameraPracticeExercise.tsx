@@ -158,14 +158,21 @@ export function CameraPracticeExercise({
           }
         }
       });
-    } else if (!isHandDetected) {
-      predictionBufferRef.current.clear();
-      setPrediction(null);
-      setConfidence(0);
-      matchTimeRef.current = 0;
-      setMatchProgress(0);
     }
-  }, [landmarks, isHandDetected, isLoading, predict, isMatch, targetSign, onComplete, status]);
+  }, [landmarks, isLoading, predict, isMatch, targetSign, onComplete, status]);
+
+  // Clear prediction state when hand leaves the frame
+  useEffect(() => {
+    if (!isHandDetected) {
+      predictionBufferRef.current.clear();
+      matchTimeRef.current = 0;
+      queueMicrotask(() => {
+        setPrediction(null);
+        setConfidence(0);
+        setMatchProgress(0);
+      });
+    }
+  }, [isHandDetected]);
 
   // Cleanup on unmount
   useEffect(() => {

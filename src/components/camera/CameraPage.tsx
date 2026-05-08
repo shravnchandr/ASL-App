@@ -149,17 +149,23 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           setHoldProgress(0);
         }
       });
-    } else if (!isHandDetected) {
-      // Clear prediction when hand is not detected
+    }
+  }, [landmarks, isLoading, predict, playLetterAdded]);
+
+  // Clear prediction state when hand leaves the frame
+  useEffect(() => {
+    if (!isHandDetected) {
       predictionBufferRef.current.clear();
-      setPrediction(null);
-      setConfidence(0);
-      setHoldProgress(0);
       lastStablePredictionRef.current = null;
       letterHoldStartRef.current = null;
       lastAddedLetterRef.current = null;
+      queueMicrotask(() => {
+        setPrediction(null);
+        setConfidence(0);
+        setHoldProgress(0);
+      });
     }
-  }, [landmarks, isHandDetected, isLoading, predict, playLetterAdded]);
+  }, [isHandDetected]);
 
   // Cleanup on unmount
   useEffect(() => {

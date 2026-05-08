@@ -51,7 +51,8 @@ const LearnPageContent: React.FC = () => {
     const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const unlockCelebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isMountedRef = useRef(true);
-    const sessionStartTimeRef = useRef<number>(Date.now());
+    const sessionStartTimeRef = useRef<number>(0);
+    const [sessionElapsed, setSessionElapsed] = useState(0);
 
     const currentExercise = getCurrentExercise();
     const selectedLevelInfo = state.selectedLevel ? getLevelById(state.selectedLevel) : null;
@@ -59,9 +60,10 @@ const LearnPageContent: React.FC = () => {
     // Show unlock celebration when justUnlockedLevel is set in context
     const showUnlockCelebration = state.justUnlockedLevel !== null;
 
-    // Cleanup timers on unmount
+    // Cleanup timers on unmount; record session start time on mount
     useEffect(() => {
         isMountedRef.current = true;
+        sessionStartTimeRef.current = Date.now();
         return () => {
             isMountedRef.current = false;
             if (autoAdvanceTimerRef.current) {
@@ -72,6 +74,14 @@ const LearnPageContent: React.FC = () => {
             }
         };
     }, []);
+
+    // Capture elapsed time when session completes so render doesn't call Date.now()
+    const sessionIsComplete = state.isSessionActive && state.currentIndex >= state.exercises.length - 1 && !!feedback;
+    useEffect(() => {
+        if (sessionIsComplete) {
+            setSessionElapsed(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
+        }
+    }, [sessionIsComplete]);
 
     // Auto-dismiss unlock celebration after 3 seconds
     useEffect(() => {
@@ -230,7 +240,7 @@ const LearnPageContent: React.FC = () => {
         const correctCount = exerciseResults.filter(r => r.isCorrect).length;
         const totalCount = exerciseResults.length || state.exercises.length;
         const scorePercent = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
-        const elapsed = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000);
+        const elapsed = sessionElapsed;
         const elapsedStr = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
         const missedSigns = exerciseResults.filter(r => !r.isCorrect).map(r => r.sign);
 
