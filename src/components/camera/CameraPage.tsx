@@ -99,8 +99,9 @@ export default function CameraPage({ onBack }: CameraPageProps) {
   // Run prediction when landmarks change
   useEffect(() => {
     if (landmarks && !isLoading) {
+      let isCurrent = true;
       void predict(landmarks).then(result => {
-        if (!result) return;
+        if (!isCurrent || !result) return;
         predictionBufferRef.current.add(result.label);
         const stablePrediction = predictionBufferRef.current.getStablePrediction();
         if (stablePrediction) {
@@ -149,6 +150,7 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           setHoldProgress(0);
         }
       });
+      return () => { isCurrent = false; };
     }
   }, [landmarks, isLoading, predict, playLetterAdded]);
 

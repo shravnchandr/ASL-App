@@ -75,12 +75,15 @@ async def translate_to_asl(
         asl_graph = request.app.state.asl_graph
         custom_api_key = request.headers.get("X-Custom-API-Key")
         api_key_to_use = None
+        key_type = "server"
 
         if custom_api_key:
             api_key_to_use = custom_api_key
+            key_type = "custom"
             app_logger.info("Using custom API key from request header")
         elif settings.shared_api_key:
             using_shared_key = True
+            key_type = "shared"
             ip_hash = hash_ip(get_real_ip(request))
             rate_limit_info = await check_shared_key_rate_limit(
                 db, ip_hash, settings.shared_key_daily_limit
@@ -164,6 +167,7 @@ async def translate_to_asl(
                         ip_address=get_real_ip(request),
                         query=translate_req.text,
                         cache_hit=False,
+                        key_type=key_type,
                         user_agent=request.headers.get("user-agent"),
                         endpoint="/api/translate",
                         response_time_ms=response_time_ms,

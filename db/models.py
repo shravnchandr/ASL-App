@@ -42,6 +42,7 @@ class Analytics(Base):
         String(500), nullable=True, index=True
     )  # Translation query if applicable
     cache_hit = Column(Boolean, nullable=True)  # Whether response was from cache
+    key_type = Column(String(20), nullable=True)  # 'shared', 'custom', 'server', or None for cache hits
     user_agent = Column(String(500), nullable=True)
     endpoint = Column(String(100), nullable=True)
     response_time_ms = Column(Integer, nullable=True)

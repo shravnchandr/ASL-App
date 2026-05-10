@@ -17,6 +17,7 @@ async def create_analytics_event(
     ip_address: str,
     query: Optional[str] = None,
     cache_hit: Optional[bool] = None,
+    key_type: Optional[str] = None,
     user_agent: Optional[str] = None,
     endpoint: Optional[str] = None,
     response_time_ms: Optional[int] = None,
@@ -27,6 +28,7 @@ async def create_analytics_event(
         ip_hash=hash_ip(ip_address),
         query=query,
         cache_hit=cache_hit,
+        key_type=key_type,
         user_agent=user_agent,
         endpoint=endpoint,
         response_time_ms=response_time_ms,
@@ -157,13 +159,15 @@ async def get_hourly_usage_pattern(session: AsyncSession, days: int = 7) -> dict
 
 
 async def get_shared_key_usage_today(session: AsyncSession, ip_hash: str) -> int:
-    """Count translations made with the shared key today for a specific IP hash."""
+    """Count non-cached translations made with the shared key today for a specific IP."""
     from sqlalchemy import func, select
 
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     query = select(func.count(Analytics.id)).where(
         Analytics.ip_hash == ip_hash,
         Analytics.event_type == "translation",
+        Analytics.key_type == "shared",
+        Analytics.cache_hit.isnot(True),
         Analytics.timestamp >= today_start,
     )
     return (await session.execute(query)).scalar() or 0
