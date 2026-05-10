@@ -159,25 +159,77 @@ async def get_hourly_usage_pattern(session: AsyncSession, days: int = 7) -> dict
 
 
 async def get_shared_key_usage_today(session: AsyncSession, ip_hash: str) -> int:
-    """Count non-cached translations made with the shared key today for a specific IP."""
-    from sqlalchemy import func, select
+    """Read current daily usage count from the quota table for a specific IP."""
+    from sqlalchemy import text
 
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    query = select(func.count(Analytics.id)).where(
-        Analytics.ip_hash == ip_hash,
-        Analytics.event_type == "translation",
-        Analytics.key_type == "shared",
-        Analytics.cache_hit.isnot(True),
-        Analytics.timestamp >= today_start,
+    today = datetime.utcnow().date().isoformat()
+    result = await session.execute(
+        text("SELECT count FROM shared_key_usage WHERE ip_hash = :ip AND date = :date"),
+        {"ip": ip_hash, "date": today},
     )
-    return (await session.execute(query)).scalar() or 0
+    row = result.fetchone()
+    return row[0] if row else 0
+
+
+async def try_consume_shared_key_quota(
+    session: AsyncSession, ip_hash: str, daily_limit: int
+) -> dict:
+    """
+    Atomically consume one quota slot for the shared API key.
+
+    Uses INSERT OR IGNORE to ensure a row exists, then a conditional UPDATE that
+    only increments if count < limit. The UPDATE is serialized by SQLite's write
+    lock, making this race-safe under concurrent requests.
+
+    Returns dict with keys: allowed, used, limit, remaining.
+    - allowed=True means the slot was consumed and the request may proceed.
+    - allowed=False means the limit was already reached; count was NOT incremented.
+    """
+    from sqlalchemy import text
+
+    today = datetime.utcnow().date().isoformat()
+
+    await session.execute(
+        text(
+            "INSERT OR IGNORE INTO shared_key_usage (ip_hash, date, count)"
+            " VALUES (:ip, :date, 0)"
+        ),
+        {"ip": ip_hash, "date": today},
+    )
+
+    result = await session.execute(
+        text(
+            "UPDATE shared_key_usage SET count = count + 1"
+            " WHERE ip_hash = :ip AND date = :date AND count < :lim"
+            " RETURNING count"
+        ),
+        {"ip": ip_hash, "date": today, "lim": daily_limit},
+    )
+    row = result.fetchone()
+    await session.commit()
+
+    if row is None:
+        cur = await session.execute(
+            text("SELECT count FROM shared_key_usage WHERE ip_hash = :ip AND date = :date"),
+            {"ip": ip_hash, "date": today},
+        )
+        used = (cur.fetchone() or (daily_limit,))[0]
+        return {"allowed": False, "used": used, "limit": daily_limit, "remaining": 0}
+
+    used = row[0]
+    return {
+        "allowed": True,
+        "used": used,
+        "limit": daily_limit,
+        "remaining": max(0, daily_limit - used),
+    }
 
 
 async def check_shared_key_rate_limit(
     session: AsyncSession, ip_hash: str, daily_limit: int
 ) -> dict:
     """
-    Check whether an IP has exceeded the shared-key daily translation limit.
+    Read-only quota status check (used by GET /rate-limit endpoint).
     Returns dict with keys: allowed, used, limit, remaining.
     """
     used = await get_shared_key_usage_today(session, ip_hash)

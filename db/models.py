@@ -50,3 +50,13 @@ class Analytics(Base):
 
     def __repr__(self):
         return f"<Analytics(id={self.id}, event_type={self.event_type}, timestamp={self.timestamp})>"
+
+
+class SharedKeyUsage(Base):
+    """Atomic per-IP daily quota counter for the shared Gemini API key."""
+
+    __tablename__ = "shared_key_usage"
+
+    ip_hash = Column(String(64), primary_key=True)
+    date = Column(String(10), primary_key=True)  # ISO date YYYY-MM-DD (UTC)
+    count = Column(Integer, nullable=False, default=0)

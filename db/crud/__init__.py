@@ -13,6 +13,7 @@ from .analytics import (
     get_hourly_usage_pattern,
     get_shared_key_usage_today,
     check_shared_key_rate_limit,
+    try_consume_shared_key_quota,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "get_hourly_usage_pattern",
     "get_shared_key_usage_today",
     "check_shared_key_rate_limit",
+    "try_consume_shared_key_quota",
 ]

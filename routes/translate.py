@@ -20,6 +20,7 @@ from db import (
     create_analytics_event,
     hash_ip,
     check_shared_key_rate_limit,
+    try_consume_shared_key_quota,
 )
 from python_code.asl import SentenceDescriptionSchema
 from .models import TranslateRequest, TranslateResponse, SignResponse
@@ -85,7 +86,7 @@ async def translate_to_asl(
             using_shared_key = True
             key_type = "shared"
             ip_hash = hash_ip(get_real_ip(request))
-            rate_limit_info = await check_shared_key_rate_limit(
+            rate_limit_info = await try_consume_shared_key_quota(
                 db, ip_hash, settings.shared_key_daily_limit
             )
             if not rate_limit_info["allowed"]:
@@ -179,13 +180,11 @@ async def translate_to_asl(
         app_logger.info(f"Translation successful: {len(signs)} signs returned")
 
         if using_shared_key and rate_limit_info:
-            updated_used = rate_limit_info["used"] + 1
-            updated_remaining = max(0, settings.shared_key_daily_limit - updated_used)
             return JSONResponse(
                 content=response.model_dump(),
                 headers={
                     "X-RateLimit-Limit": str(settings.shared_key_daily_limit),
-                    "X-RateLimit-Remaining": str(updated_remaining),
+                    "X-RateLimit-Remaining": str(rate_limit_info["remaining"]),
                     "X-RateLimit-Reset": "midnight UTC",
                     "X-Using-Shared-Key": "true",
                 },

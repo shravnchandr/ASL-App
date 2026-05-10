@@ -8,7 +8,7 @@ Modules:
 """
 
 from .engine import Base, engine, AsyncSessionLocal, init_db, get_db, hash_ip
-from .models import Feedback, Analytics
+from .models import Feedback, Analytics, SharedKeyUsage
 from .crud import (
     create_feedback,
     get_feedback_stats,
@@ -22,6 +22,7 @@ from .crud import (
     get_hourly_usage_pattern,
     get_shared_key_usage_today,
     check_shared_key_rate_limit,
+    try_consume_shared_key_quota,
 )
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "hash_ip",
     "Feedback",
     "Analytics",
+    "SharedKeyUsage",
     "create_feedback",
     "get_feedback_stats",
     "get_recent_feedback",
@@ -45,4 +47,5 @@ __all__ = [
     "get_hourly_usage_pattern",
     "get_shared_key_usage_today",
     "check_shared_key_rate_limit",
+    "try_consume_shared_key_quota",
 ]

@@ -51,6 +51,13 @@ async def init_db():
             await conn.execute(text("PRAGMA journal_mode=WAL"))
             await conn.execute(text("PRAGMA synchronous=NORMAL"))
         await conn.run_sync(Base.metadata.create_all)
+        # Migration: add key_type column to analytics for existing deployments.
+        # create_all creates missing tables but does not add columns to existing ones.
+        try:
+            await conn.execute(text("ALTER TABLE analytics ADD COLUMN key_type VARCHAR(20)"))
+            app_logger.info("Migration: added key_type column to analytics")
+        except Exception:
+            pass  # Column already exists
     app_logger.info("Database initialized successfully")
 
 
