@@ -191,8 +191,9 @@ async def try_consume_shared_key_quota(
 
     await session.execute(
         text(
-            "INSERT OR IGNORE INTO shared_key_usage (ip_hash, date, count)"
+            "INSERT INTO shared_key_usage (ip_hash, date, count)"
             " VALUES (:ip, :date, 0)"
+            " ON CONFLICT (ip_hash, date) DO NOTHING"
         ),
         {"ip": ip_hash, "date": today},
     )
