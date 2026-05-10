@@ -177,9 +177,10 @@ async def try_consume_shared_key_quota(
     """
     Atomically consume one quota slot for the shared API key.
 
-    Uses INSERT OR IGNORE to ensure a row exists, then a conditional UPDATE that
-    only increments if count < limit. The UPDATE is serialized by SQLite's write
-    lock, making this race-safe under concurrent requests.
+    Uses INSERT ... ON CONFLICT DO NOTHING to ensure a row exists, then a
+    conditional UPDATE that only increments if count < limit. The UPDATE is
+    serialized by the database write lock, making this race-safe under concurrent
+    requests (works on both SQLite and PostgreSQL).
 
     Returns dict with keys: allowed, used, limit, remaining.
     - allowed=True means the slot was consumed and the request may proceed.
