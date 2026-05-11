@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { SearchBar } from './SearchBar';
 import { SignCard } from './SignCard';
 import { FeedbackWidget } from './FeedbackWidget';
@@ -60,7 +60,7 @@ function getFollowUpSuggestions(query: string, resultWords: string[]): string[] 
 }
 
 // ─── Gloss bar ───────────────────────────────────────────────────
-const GlossBar: React.FC<{ gloss: string }> = ({ gloss }) => {
+const GlossBar: React.FC<{ gloss: string; query: string }> = ({ gloss, query }) => {
     const [copied, setCopied] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,25 +77,31 @@ const GlossBar: React.FC<{ gloss: string }> = ({ gloss }) => {
     const tokens = gloss.split(' ');
 
     return (
-        <div className="gloss-bar" aria-label="ASL gloss order">
-            <span className="gloss-bar__label">Gloss</span>
-            <span className="gloss-bar__sequence">
-                {tokens.map((token, i) => (
-                    <span
-                        key={i}
-                        className={`gloss-token ${token.toLowerCase().startsWith('fs-') ? 'gloss-token--fs' : ''}`}
-                    >
-                        {token}
-                    </span>
-                ))}
-            </span>
-            <button
-                className="gloss-bar__copy"
-                onClick={handleCopy}
-                aria-label="Copy ASL gloss sequence"
-            >
-                {copied ? 'Copied' : 'Copy'}
-            </button>
+        <div className="gloss-bar" aria-label="ASL grammar transformation">
+            <div className="gloss-bar__row">
+                <span className="gloss-bar__lang-label">English</span>
+                <span className="gloss-bar__english">{query}</span>
+            </div>
+            <div className="gloss-bar__row">
+                <span className="gloss-bar__lang-label">ASL order</span>
+                <span className="gloss-bar__sequence">
+                    {tokens.map((token, i) => (
+                        <span
+                            key={i}
+                            className={`gloss-token ${token.toLowerCase().startsWith('fs-') ? 'gloss-token--fs' : ''}`}
+                        >
+                            {token}
+                        </span>
+                    ))}
+                </span>
+                <button
+                    className="gloss-bar__copy"
+                    onClick={handleCopy}
+                    aria-label="Copy ASL gloss sequence"
+                >
+                    {copied ? 'Copied' : 'Copy'}
+                </button>
+            </div>
         </div>
     );
 };
@@ -160,6 +166,7 @@ const QUICK_TRIES = ['Hello', 'Thank you', 'I love you', 'How are you', 'My name
 // ─── Main component ─────────────────────────────────────────────
 export const DictionaryPage: React.FC = () => {
     const { customApiKey, addToHistory } = useApp();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<TranslateResponse | null>(null);
@@ -381,13 +388,16 @@ export const DictionaryPage: React.FC = () => {
                         <h2 className="results-header__title">
                             ASL Signs for &ldquo;{result.query}&rdquo;
                         </h2>
-                        <p className="results-header__count" aria-live="polite">
+                            <p className="results-header__count" aria-live="polite">
                             {result.signs.length} {result.signs.length === 1 ? 'sign' : 'signs'}
+                        </p>
+                        <p className="results-header__disclaimer">
+                            AI generated · verify with a native signer or <a href="https://www.lifeprint.com" target="_blank" rel="noopener noreferrer">ASL resource</a>
                         </p>
                     </div>
 
                     {result.asl_gloss_order && (
-                        <GlossBar gloss={result.asl_gloss_order} />
+                        <GlossBar gloss={result.asl_gloss_order} query={result.query} />
                     )}
 
                     <ActionButtons query={result.query} signsCount={result.signs.length} />
@@ -436,6 +446,22 @@ export const DictionaryPage: React.FC = () => {
                                 </div>
                             </section>
                         )}
+                        <button
+                            className="practice-cta"
+                            onClick={() => {
+                                const words = result.signs.map(s =>
+                                    s.word.toLowerCase().replace(/[\s-]+/g, '_')
+                                );
+                                try { sessionStorage.setItem('asl_practice_words', JSON.stringify(words)); } catch { /* ignore */ }
+                                navigate('/learn?practice=1');
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M12 14L9 5L6 14M12 14H6M19 14L16 5L13 14M19 14H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M5 19H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                            Practice these signs
+                        </button>
                         <FeedbackWidget onFeedbackClick={handleFeedbackClick} />
                     </div>
                 </section>

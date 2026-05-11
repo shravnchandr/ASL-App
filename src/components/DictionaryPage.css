@@ -91,24 +91,53 @@
     margin: 0;
 }
 
-/* Gloss bar */
+.results-header__disclaimer {
+    width: 100%;
+    font-size: 0.75rem;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.7;
+    margin: 0;
+}
+
+.results-header__disclaimer a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Gloss bar — English → ASL transformation */
 .gloss-bar {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding: 12px 16px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
     background: var(--md-sys-color-primary-container);
     border-radius: var(--md-sys-shape-corner-large);
 }
 
-.gloss-bar__label {
-    font-size: 0.6875rem;
+.gloss-bar__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.gloss-bar__lang-label {
+    font-size: 0.625rem;
     font-weight: 700;
     color: var(--md-sys-color-on-primary-container);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     flex-shrink: 0;
+    width: 5.5rem;
+    opacity: 0.7;
+}
+
+.gloss-bar__english {
+    font-size: 0.875rem;
+    color: var(--md-sys-color-on-primary-container);
+    font-style: italic;
+    flex: 1;
 }
 
 .gloss-bar__sequence {
@@ -183,13 +212,36 @@
 /* Footer row: try-next left, feedback right */
 .results-footer {
     display: flex;
+    flex-direction: column;
     gap: 16px;
     align-items: flex-start;
     padding-bottom: 88px; /* clear bottom nav bar */
 }
 
 .results-footer .follow-up {
-    flex: 1;
+    width: 100%;
+}
+
+/* Practice CTA button */
+.practice-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-pill);
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--duration-quick) ease;
+}
+
+.practice-cta:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-primary);
 }
 
 @media (max-width: 768px) {

@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { LearnProvider, useLearn } from '../../contexts/LearnContext';
 import { ExerciseCard } from './ExerciseCard';
 import { SignToWordExercise } from './SignToWordExercise';
@@ -24,6 +25,7 @@ const LearnPageContent: React.FC = () => {
     const {
         state,
         startLevelSession,
+        startPracticeSession,
         endSession,
         answerExercise,
         skipExercise,
@@ -37,6 +39,7 @@ const LearnPageContent: React.FC = () => {
         clearJustUnlocked,
         levels,
     } = useLearn();
+    const [searchParams] = useSearchParams();
 
     const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null);
     const [showXp, setShowXp] = useState(false);
@@ -64,6 +67,19 @@ const LearnPageContent: React.FC = () => {
     useEffect(() => {
         isMountedRef.current = true;
         sessionStartTimeRef.current = Date.now();
+
+        // If navigated from dictionary with ?practice=1, auto-start a practice session
+        if (searchParams.get('practice') === '1') {
+            try {
+                const raw = sessionStorage.getItem('asl_practice_words');
+                if (raw) {
+                    const words: string[] = JSON.parse(raw);
+                    sessionStorage.removeItem('asl_practice_words');
+                    void startPracticeSession(words);
+                }
+            } catch { /* ignore parse errors */ }
+        }
+
         return () => {
             isMountedRef.current = false;
             if (autoAdvanceTimerRef.current) {
@@ -73,6 +89,8 @@ const LearnPageContent: React.FC = () => {
                 clearTimeout(unlockCelebrationTimerRef.current);
             }
         };
+    // startPracticeSession is stable (useCallback); searchParams value captured once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Capture elapsed time when session completes so render doesn't call Date.now()

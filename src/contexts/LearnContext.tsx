@@ -207,6 +207,7 @@ interface LearnContextType {
     state: LearnState;
     startSession: (exerciseCount?: number) => Promise<void>;
     startLevelSession: (levelId: number, exerciseCount?: number, cameraPractice?: boolean) => Promise<void>;
+    startPracticeSession: (signWords: string[]) => Promise<void>;
     endSession: () => void;
     answerExercise: (answer: string, isCorrect: boolean) => void;
     skipExercise: () => void;
@@ -355,6 +356,72 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             dispatch({ type: 'SET_LOADING', payload: false });
         }
     }, [generateExercises, loadSign]);
+
+    // Start a practice session from a custom list of sign words (e.g. from a dictionary translation)
+    const startPracticeSession = useCallback(async (signWords: string[]) => {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        dispatch({ type: 'SET_ERROR', payload: null });
+
+        try {
+            const metadata = await loadMetadata();
+            const available = new Set(Object.keys(metadata.signs));
+
+            const validSigns = signWords
+                .map(w => w.toLowerCase().replace(/[\s-]+/g, '_'))
+                .filter((s, i, arr) => available.has(s) && arr.indexOf(s) === i); // dedupe
+
+            if (validSigns.length === 0) {
+                throw new Error('None of these signs are in the practice library yet');
+            }
+
+            const exercises: Exercise[] = [];
+            for (let i = 0; i < validSigns.length; i++) {
+                const sign = validSigns[i];
+                const progress = state.signProgress[sign];
+                let type: Exercise['type'] = 'sign-to-word';
+
+                if (progress && progress.mastery >= 70 && progress.timesStudied >= 3) {
+                    type = 'recall';
+                } else {
+                    type = Math.random() > 0.5 ? 'sign-to-word' : 'word-to-sign';
+                }
+
+                let options: string[] | undefined;
+                if (type !== 'recall') {
+                    const others = validSigns.filter(s => s !== sign);
+                    const distractors = others.sort(() => Math.random() - 0.5).slice(0, 3);
+                    if (distractors.length < 3) {
+                        const more = await getDistractors(sign, 3 - distractors.length);
+                        distractors.push(...more);
+                    }
+                    options = [sign, ...distractors.slice(0, 3)].sort(() => Math.random() - 0.5);
+                }
+
+                exercises.push({
+                    id: `practice-${sign}-${i}-${Date.now()}`,
+                    type,
+                    sign,
+                    options,
+                    correctAnswer: sign,
+                });
+            }
+
+            const signsToLoad = [...new Set(exercises.map(e => e.sign))];
+            await preloadSigns(signsToLoad);
+            for (const sign of signsToLoad) {
+                await loadSign(sign);
+            }
+
+            dispatch({ type: 'START_SESSION', payload: exercises });
+        } catch (error) {
+            dispatch({
+                type: 'SET_ERROR',
+                payload: error instanceof Error ? error.message : 'Failed to start practice session',
+            });
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: false });
+        }
+    }, [state.signProgress, loadSign]);
 
     // End the current session
     const endSession = useCallback(() => {
@@ -618,6 +685,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         state,
         startSession,
         startLevelSession,
+        startPracticeSession,
         endSession,
         answerExercise: answerExerciseWithLevelCheck,
         skipExercise,

@@ -63,9 +63,10 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index }) => {
             {/* Hero strip */}
             <div className="sign-card__hero">
                 <div className="sign-card__hero-badges">
-                    {sign.kb_verified && (
-                        <span className="sign-card__badge sign-card__badge--verified">Verified</span>
-                    )}
+                    {sign.kb_verified
+                        ? <span className="sign-card__badge sign-card__badge--verified">Verified</span>
+                        : !sign.is_fingerspelled && <span className="sign-card__badge sign-card__badge--ai">AI generated</span>
+                    }
                     {sign.is_fingerspelled && (
                         <span className="sign-card__badge sign-card__badge--fs">Fingerspelled</span>
                     )}
