@@ -2,7 +2,7 @@
  * App Component - Router setup for ASL Guide
  */
 
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { DictionaryPage } from './components/DictionaryPage';
@@ -16,7 +16,11 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin" element={
+                    <Suspense fallback={null}>
+                        <Admin />
+                    </Suspense>
+                } />
                 <Route element={<Layout />}>
                     <Route index element={<HomePage />} />
                     <Route path="dictionary" element={<DictionaryPage />} />

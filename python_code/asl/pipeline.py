@@ -14,6 +14,7 @@ Public API (identical to the old LangGraph compiled graph):
 """
 
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -22,6 +23,14 @@ from google.genai import types
 from colorama import Fore, Style
 
 from .schemas import GrammarPlanSchema, SentenceDescriptionSchema
+
+
+def _strip_json_fences(text: str) -> str:
+    """Remove markdown code fences that LLMs occasionally wrap around JSON output."""
+    stripped = text.strip()
+    # Match ```json ... ``` or ``` ... ```
+    match = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", stripped)
+    return match.group(1) if match else stripped
 from .knowledge_base import (
     _build_knowledge_context,
     _extract_fs_glosses,
@@ -228,7 +237,7 @@ def _run_instructor_agent(
     )
     usage = response.usage_metadata
     _log_usage("translation", usage)
-    result = SentenceDescriptionSchema.model_validate_json(response.text)
+    result = SentenceDescriptionSchema.model_validate_json(_strip_json_fences(response.text))
 
     # Post-process: deterministically set is_fingerspelled for fs- glosses
     # and kb_verified for KB-matched signs.
@@ -352,7 +361,7 @@ class ASLPipeline:
 
         usage = response.usage_metadata
         _log_usage("grammar", usage)
-        plan = GrammarPlanSchema.model_validate_json(response.text)
+        plan = GrammarPlanSchema.model_validate_json(_strip_json_fences(response.text))
         print(f"{Fore.GREEN}   -> Reorder needed: {plan.should_reorder}{Style.RESET_ALL}")
         return plan, usage
 

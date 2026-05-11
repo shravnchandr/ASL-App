@@ -3,10 +3,9 @@ Translation routes: POST /translate and GET /rate-limit.
 """
 
 import os
-import asyncio
 import time
 
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from deps import get_real_ip
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +33,7 @@ router = APIRouter()
 async def translate_to_asl(
     request: Request,
     translate_req: TranslateRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -69,7 +69,7 @@ async def translate_to_asl(
                 except Exception as e:
                     app_logger.error(f"Failed to log cache hit analytics: {e}")
 
-            asyncio.create_task(_log_cache_hit())
+            background_tasks.add_task(_log_cache_hit)
             app_logger.info(f"Returning cached translation for: '{translate_req.text}'")
             return TranslateResponse(**cached_result)
 
@@ -176,7 +176,7 @@ async def translate_to_asl(
             except Exception as e:
                 app_logger.error(f"Failed to log translation analytics: {e}")
 
-        asyncio.create_task(_log_translation())
+        background_tasks.add_task(_log_translation)
         app_logger.info(f"Translation successful: {len(signs)} signs returned")
 
         if using_shared_key and rate_limit_info:

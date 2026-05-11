@@ -5,6 +5,16 @@
 
 import type { SignData, SignMetadata } from '../types';
 
+/** Fisher-Yates shuffle — returns a new array, does not mutate the input. */
+export function shuffle<T>(arr: readonly T[]): T[] {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 // Cache for loaded sign data — capped to prevent unbounded memory growth
 const SIGN_CACHE_MAX = 50;
 const signDataCache = new Map<string, SignData>();
@@ -101,7 +111,7 @@ export async function getRandomSigns(count: number, exclude: string[] = []): Pro
     const allSigns = Object.keys(metadata.signs).filter(s => !exclude.includes(s));
 
     // Shuffle and take first N
-    const shuffled = allSigns.sort(() => Math.random() - 0.5);
+    const shuffled = shuffle(allSigns);
     return shuffled.slice(0, count);
 }
 
@@ -116,7 +126,7 @@ export async function getDistractors(
     const allSigns = Object.keys(metadata.signs).filter(s => s !== correctSign);
 
     // Shuffle and take first N
-    const shuffled = allSigns.sort(() => Math.random() - 0.5);
+    const shuffled = shuffle(allSigns);
     return shuffled.slice(0, count);
 }
 

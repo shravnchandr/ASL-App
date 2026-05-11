@@ -12,6 +12,7 @@ import {
     loadMetadata,
     getDistractors,
     preloadSigns,
+    shuffle,
 } from '../utils/signDataLoader';
 import { LEVELS, MASTERY_THRESHOLD, getLevelById, type LevelInfo } from '../constants/levels';
 
@@ -314,7 +315,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             let options: string[] | undefined;
             if (type !== 'recall') {
                 const distractors = await getDistractors(sign, 3);
-                options = [sign, ...distractors].sort(() => Math.random() - 0.5);
+                options = shuffle([sign, ...distractors]);
             }
 
             exercises.push({
@@ -389,12 +390,12 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 let options: string[] | undefined;
                 if (type !== 'recall') {
                     const others = validSigns.filter(s => s !== sign);
-                    const distractors = others.sort(() => Math.random() - 0.5).slice(0, 3);
+                    const distractors = shuffle(others).slice(0, 3);
                     if (distractors.length < 3) {
                         const more = await getDistractors(sign, 3 - distractors.length);
                         distractors.push(...more);
                     }
-                    options = [sign, ...distractors.slice(0, 3)].sort(() => Math.random() - 0.5);
+                    options = shuffle([sign, ...distractors.slice(0, 3)]);
                 }
 
                 exercises.push({
@@ -541,12 +542,8 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // 3. Signs studied but not yet due (randomised for variety)
         const dueSet = new Set(storage.getSignsDueForReview());
         const dueSigns = levelSigns.filter(s => dueSet.has(s));
-        const unseenSigns = levelSigns
-            .filter(s => !state.signProgress[s])
-            .sort(() => Math.random() - 0.5);
-        const knownSigns = levelSigns
-            .filter(s => state.signProgress[s] && !dueSet.has(s))
-            .sort(() => Math.random() - 0.5);
+        const unseenSigns = shuffle(levelSigns.filter(s => !state.signProgress[s]));
+        const knownSigns = shuffle(levelSigns.filter(s => state.signProgress[s] && !dueSet.has(s)));
 
         const orderedPool = [...dueSigns, ...unseenSigns, ...knownSigns];
         let poolIndex = 0;
@@ -572,12 +569,12 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             let options: string[] | undefined;
             if (type !== 'recall') {
                 const otherSigns = levelSigns.filter(s => s !== sign);
-                const distractors = otherSigns.sort(() => Math.random() - 0.5).slice(0, 3);
+                const distractors = shuffle(otherSigns).slice(0, 3);
                 if (distractors.length < 3) {
                     const moreDistractors = await getDistractors(sign, 3 - distractors.length);
                     distractors.push(...moreDistractors);
                 }
-                options = [sign, ...distractors.slice(0, 3)].sort(() => Math.random() - 0.5);
+                options = shuffle([sign, ...distractors.slice(0, 3)]);
             }
 
             exercises.push({

@@ -3,7 +3,11 @@ Admin routes: feedback management and analytics dashboard endpoints.
 All routes require X-Admin-Password header (verified via verify_admin_password dependency).
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -138,7 +142,7 @@ async def get_analytics_overview(
 ):
     """Get key analytics metrics for the last 30/7/1 days."""
     try:
-        now = datetime.utcnow()
+        now = _utcnow()
         thirty_days_ago = now - timedelta(days=30)
         seven_days_ago = now - timedelta(days=7)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -177,7 +181,7 @@ async def get_user_analytics(
 ):
     """Get daily active users and unique user counts for the last N days."""
     try:
-        start_date = datetime.utcnow() - timedelta(days=days)
+        start_date = _utcnow() - timedelta(days=days)
         return {
             "daily_active_users": await get_daily_active_users(db, days=days),
             "unique_users": await get_unique_users_count(db, start_date=start_date),
@@ -198,7 +202,7 @@ async def get_search_analytics(
 ):
     """Get the most popular search queries for the last N days."""
     try:
-        start_date = datetime.utcnow() - timedelta(days=days)
+        start_date = _utcnow() - timedelta(days=days)
         return await get_popular_searches(db, limit=limit, start_date=start_date)
     except HTTPException:
         raise

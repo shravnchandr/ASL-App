@@ -2,8 +2,12 @@
 SQLAlchemy ORM models for the ASL app.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from .engine import Base
 
@@ -18,7 +22,7 @@ class Feedback(Base):
     rating = Column(String(10), nullable=True)  # Nullable for general feedback
     feedback_text = Column(Text, nullable=True)
     ip_hash = Column(String(64), nullable=True)  # Hashed IP for privacy
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=_utcnow, nullable=False)
     feedback_type = Column(String(20), default="translation", nullable=False)
     category = Column(String(50), nullable=True)
     email = Column(String(255), nullable=True)
@@ -46,7 +50,7 @@ class Analytics(Base):
     user_agent = Column(String(500), nullable=True)
     endpoint = Column(String(100), nullable=True)
     response_time_ms = Column(Integer, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = Column(DateTime, default=_utcnow, nullable=False, index=True)
 
     def __repr__(self):
         return f"<Analytics(id={self.id}, event_type={self.event_type}, timestamp={self.timestamp})>"

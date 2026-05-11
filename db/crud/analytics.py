@@ -2,7 +2,11 @@
 CRUD operations for the Analytics model.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,8 +39,7 @@ async def create_analytics_event(
     )
     session.add(event)
     await session.commit()
-    await session.refresh(event)
-    app_logger.debug(f"Analytics event created: {event.event_type} - {event.id}")
+    app_logger.debug(f"Analytics event created: {event.event_type}")
     return event
 
 
@@ -120,7 +123,7 @@ async def get_daily_active_users(session: AsyncSession, days: int = 30) -> List[
     """Get distinct daily active users for the last N days."""
     from sqlalchemy import func, select
 
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = _utcnow() - timedelta(days=days)
     query = (
         select(
             func.date(Analytics.timestamp).label("date"),
@@ -138,7 +141,7 @@ async def get_hourly_usage_pattern(session: AsyncSession, days: int = 7) -> dict
     """Get request counts grouped by hour of day (0–23) for the last N days."""
     from sqlalchemy import func, select, extract
 
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = _utcnow() - timedelta(days=days)
     query = (
         select(
             extract("hour", Analytics.timestamp).label("hour"),
@@ -162,7 +165,7 @@ async def get_shared_key_usage_today(session: AsyncSession, ip_hash: str) -> int
     """Read current daily usage count from the quota table for a specific IP."""
     from sqlalchemy import text
 
-    today = datetime.utcnow().date().isoformat()
+    today = _utcnow().date().isoformat()
     result = await session.execute(
         text("SELECT count FROM shared_key_usage WHERE ip_hash = :ip AND date = :date"),
         {"ip": ip_hash, "date": today},
@@ -188,7 +191,7 @@ async def try_consume_shared_key_quota(
     """
     from sqlalchemy import text
 
-    today = datetime.utcnow().date().isoformat()
+    today = _utcnow().date().isoformat()
 
     await session.execute(
         text(
@@ -211,11 +214,13 @@ async def try_consume_shared_key_quota(
     await session.commit()
 
     if row is None:
+        # UPDATE matched no row because count >= limit. Re-read for accurate reporting.
         cur = await session.execute(
             text("SELECT count FROM shared_key_usage WHERE ip_hash = :ip AND date = :date"),
             {"ip": ip_hash, "date": today},
         )
-        used = (cur.fetchone() or (daily_limit,))[0]
+        cur_row = cur.fetchone()
+        used = cur_row[0] if cur_row is not None else daily_limit
         return {"allowed": False, "used": used, "limit": daily_limit, "remaining": 0}
 
     used = row[0]
