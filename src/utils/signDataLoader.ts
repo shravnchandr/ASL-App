@@ -81,9 +81,10 @@ export async function loadSignData(sign: string): Promise<SignData | null> {
 /**
  * Preload multiple signs for smoother experience
  */
-export async function preloadSigns(signs: string[]): Promise<void> {
-    const loadPromises = signs.map(sign => loadSignData(sign));
-    await Promise.allSettled(loadPromises);
+export async function preloadSigns(signs: string[], concurrency = 6): Promise<void> {
+    for (let i = 0; i < signs.length; i += concurrency) {
+        await Promise.allSettled(signs.slice(i, i + concurrency).map(loadSignData));
+    }
 }
 
 /**

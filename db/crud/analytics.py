@@ -65,31 +65,22 @@ async def get_translations_count(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
 ) -> dict:
-    """Get total translation counts broken down by cache hit/miss."""
-    from sqlalchemy import func, select
+    """Get total translation counts broken down by cache hit/miss (single query)."""
+    from sqlalchemy import case, func, select
 
-    total_q = select(func.count(Analytics.id)).where(
-        Analytics.event_type == "translation"
-    )
-    hits_q = select(func.count(Analytics.id)).where(
-        Analytics.event_type == "translation", Analytics.cache_hit
-    )
-    misses_q = select(func.count(Analytics.id)).where(
-        Analytics.event_type == "translation", ~Analytics.cache_hit
-    )
+    q = select(
+        func.count(Analytics.id).label("total"),
+        func.count(case((Analytics.cache_hit == True, Analytics.id))).label("cache_hits"),  # noqa: E712
+        func.count(case((Analytics.cache_hit == False, Analytics.id))).label("cache_misses"),  # noqa: E712
+    ).where(Analytics.event_type == "translation")
 
     if start_date:
-        total_q = total_q.where(Analytics.timestamp >= start_date)
-        hits_q = hits_q.where(Analytics.timestamp >= start_date)
-        misses_q = misses_q.where(Analytics.timestamp >= start_date)
+        q = q.where(Analytics.timestamp >= start_date)
     if end_date:
-        total_q = total_q.where(Analytics.timestamp <= end_date)
-        hits_q = hits_q.where(Analytics.timestamp <= end_date)
-        misses_q = misses_q.where(Analytics.timestamp <= end_date)
+        q = q.where(Analytics.timestamp <= end_date)
 
-    total = (await session.execute(total_q)).scalar() or 0
-    cache_hits = (await session.execute(hits_q)).scalar() or 0
-    cache_misses = (await session.execute(misses_q)).scalar() or 0
+    row = (await session.execute(q)).one()
+    total, cache_hits, cache_misses = row.total or 0, row.cache_hits or 0, row.cache_misses or 0
 
     return {
         "total": total,
