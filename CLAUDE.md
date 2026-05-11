@@ -163,9 +163,9 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 **Key Components:**
 - `src/components/SearchBar.tsx`: Main search input with URL query param support
-- `src/components/SignCard.tsx`: Text-only sign card — word name + "HOW TO DO IT" plain-English description always visible; expandable "More details" shows hand shape tiles, practice links, fingerspell guide, and external links. No per-card animation (animation handled by SentenceAnimator)
+- `src/components/SignCard.tsx`: Text-only sign card — word name + "HOW TO DO IT" plain-English description always visible; expandable "More details" shows hand shape tiles, practice links, fingerspell guide, and external links. No per-card animation (animation handled by SentenceAnimator). Hero strip shows a **"Verified"** badge (green, `sign-card__badge--verified`) when `kb_verified=true`, or an **"AI generated"** badge (muted outline, `sign-card__badge--ai`) when `kb_verified` is falsy and the sign is not fingerspelled; fingerspelled signs show neither
 - `src/components/SentenceAnimator.tsx`: Plays sign animations in sequence in a sticky right column alongside the sign cards. Always shown for any result (not just multi-sign). Word chips show progress, skips single-letter non-fingerspelled words
-- `src/components/DictionaryPage.tsx`: Main dictionary page. Landing state shows onboarding callout, quick-try chips, learn progress card, category cards. Results use a two-column grid: sign cards on the left, SentenceAnimator sticky on the right; grammar notes + follow-up suggestions + feedback widget are full-width below the grid. Results cache to `sessionStorage` keyed by lowercased query (`asl_result:<query>`) so refresh restores instantly without re-calling the API. `?q=` param synced to URL for shareable links
+- `src/components/DictionaryPage.tsx`: Main dictionary page. Landing state shows onboarding callout, quick-try chips, learn progress card, category cards. Results use a two-column grid: sign cards on the left, SentenceAnimator sticky on the right; grammar notes + follow-up suggestions + feedback widget are full-width below the grid. Results cache to `sessionStorage` keyed by lowercased query (`asl_result:<query>`) so refresh restores instantly without re-calling the API. `?q=` param synced to URL for shareable links. Results header includes an **AI disclaimer** ("AI generated · verify with a native signer or ASL resource"). The **GlossBar** (`GlossBar` component in `DictionaryPage.tsx`) shows two rows: "English: [original query]" and "ASL order: [gloss tokens]" — makes the grammar reordering immediately visible. The results footer includes a **"Practice these signs"** primary button that stores normalized sign words in `sessionStorage` key `asl_practice_words` and navigates to `/learn?practice=1`
 - `src/components/FeedbackWidget.tsx`: Rating system (thumbs up/down)
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
@@ -433,7 +433,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/learn/LevelCard.tsx`: Level card component with FlowerShape badge, status indicators (Complete/Continue/Locked)
 - `src/components/learn/LevelSelector.tsx`: Level selection grid with a current-level hero card above the grid
 - `src/components/learn/CameraPracticeExercise.tsx`: Camera practice integration
-- `src/contexts/LearnContext.tsx`: Exercise generation — sign-to-word and word-to-sign are mixed from the first session (50/50 random); recall only appears when mastery ≥ 70% and timesStudied ≥ 3
+- `src/contexts/LearnContext.tsx`: Exercise generation — sign-to-word and word-to-sign are mixed from the first session (50/50 random); recall only appears when mastery ≥ 70% and timesStudied ≥ 3. Exposes `startPracticeSession(signWords: string[])` which filters a caller-supplied word list to signs available in the animation library, deduplicates, and starts a mixed SM-2-aware session — used by the "Practice these signs" flow from the dictionary
 - `src/constants/levels.ts`: Level definitions
 
 **Camera Feature:**
@@ -644,6 +644,12 @@ ONBOARDING_DISMISSED: 'asl_onboarding_dismissed',  // First-visit callout
 // Camera feature keys
 SOUND_EFFECTS_KEY: 'asl_sound_effects_enabled',  // Sound toggle
 TUTORIAL_KEY: 'asl_camera_tutorial_seen',        // Tutorial completed
+
+// sessionStorage (tab-scoped, not persisted)
+asl_result:<query>         // Cached TranslateResponse for a specific query (restores on refresh)
+asl_practice_words         // JSON string[] of normalized sign words set by DictionaryPage
+                           // "Practice these signs" button; consumed and cleared by LearnPage on mount
+                           // when navigating to /learn?practice=1
 ```
 
 ### SM-2 Spaced Repetition
