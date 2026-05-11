@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import type { HandLandmark, ScalerParams } from '../utils/handLandmarks';
 import { processLandmarksForModel } from '../utils/handLandmarks';
@@ -18,84 +18,79 @@ const MODEL_PATH = '/models/asl-classifier/model.json';
 const SCALER_PATH = '/models/asl-classifier/scaler.json';
 const LABELS_PATH = '/models/asl-classifier/labels.json';
 
+// Module-level singleton — survives navigation, loads only once per session.
+const _singleton = {
+  model: null as tf.LayersModel | null,
+  scaler: null as ScalerParams | null,
+  labels: null as string[] | null,
+  loadPromise: null as Promise<void> | null,
+};
+
+function getOrLoadClassifier(): Promise<void> {
+  if (_singleton.model) return Promise.resolve();
+  if (_singleton.loadPromise) return _singleton.loadPromise;
+
+  _singleton.loadPromise = (async () => {
+    const [model, scalerRes, labelsRes] = await Promise.all([
+      tf.loadLayersModel(MODEL_PATH),
+      fetch(SCALER_PATH),
+      fetch(LABELS_PATH),
+    ]);
+
+    if (!scalerRes.ok) throw new Error(`Failed to load scaler: ${scalerRes.statusText}`);
+    if (!labelsRes.ok) throw new Error(`Failed to load labels: ${labelsRes.statusText}`);
+
+    _singleton.scaler = await scalerRes.json() as ScalerParams;
+    _singleton.labels = await labelsRes.json() as string[];
+    _singleton.model = model;
+
+    // Warm up so the first real prediction isn't slow
+    const dummy = tf.zeros([1, 63]);
+    (model.predict(dummy) as tf.Tensor).dispose();
+    dummy.dispose();
+  })().catch(err => {
+    _singleton.loadPromise = null; // allow retry on next mount
+    throw err;
+  });
+
+  return _singleton.loadPromise;
+}
+
 /**
  * Hook for ASL classification using TensorFlow.js.
+ * The model is loaded once per session and reused across mounts.
  */
 export function useASLClassifier(): UseASLClassifierResult {
-  const modelRef = useRef<tf.LayersModel | null>(null);
-  const scalerRef = useRef<ScalerParams | null>(null);
-  const labelsRef = useRef<string[] | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !_singleton.model);
   const [error, setError] = useState<string | null>(null);
 
-  // Load model, scaler, and labels
   useEffect(() => {
-    const loadAssets = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    if (_singleton.model) return; // already loaded, isLoading already false
 
-        // Load all assets in parallel
-        const [model, scalerResponse, labelsResponse] = await Promise.all([
-          tf.loadLayersModel(MODEL_PATH),
-          fetch(SCALER_PATH),
-          fetch(LABELS_PATH),
-        ]);
+    let isCurrent = true;
 
-        if (!scalerResponse.ok) {
-          throw new Error(`Failed to load scaler: ${scalerResponse.statusText}`);
+    getOrLoadClassifier()
+      .then(() => { if (isCurrent) setIsLoading(false); })
+      .catch(err => {
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : 'Failed to load ASL classifier');
+          setIsLoading(false);
         }
-        if (!labelsResponse.ok) {
-          throw new Error(`Failed to load labels: ${labelsResponse.statusText}`);
-        }
+      });
 
-        const scaler: ScalerParams = await scalerResponse.json();
-        const labels: string[] = await labelsResponse.json();
-
-        modelRef.current = model;
-        scalerRef.current = scaler;
-        labelsRef.current = labels;
-
-        // Warm up the model with a dummy prediction
-        const dummyInput = tf.zeros([1, 63]);
-        const warmupResult = model.predict(dummyInput) as tf.Tensor;
-        warmupResult.dispose();
-        dummyInput.dispose();
-
-        setIsLoading(false);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load ASL classifier';
-        setError(message);
-        setIsLoading(false);
-      }
-    };
-
-    loadAssets();
-
-    return () => {
-      if (modelRef.current) {
-        modelRef.current.dispose();
-        modelRef.current = null;
-      }
-    };
+    return () => { isCurrent = false; };
+    // No dispose — singleton persists for the session
   }, []);
 
   const predict = useCallback(async (landmarks: HandLandmark[]): Promise<PredictionResult | null> => {
-    const model = modelRef.current;
-    const scaler = scalerRef.current;
-    const labels = labelsRef.current;
-
-    if (!model || !scaler || !labels) {
-      return null;
-    }
+    const { model, scaler, labels } = _singleton;
+    if (!model || !scaler || !labels) return null;
 
     if (landmarks.length !== 21) {
       console.warn(`Expected 21 landmarks, got ${landmarks.length}`);
       return null;
     }
 
-    // Process landmarks and run inference
     const inputArray = processLandmarksForModel(landmarks, scaler);
     const inputTensor = tf.tensor2d([Array.from(inputArray)], [1, 63]);
 
@@ -104,7 +99,6 @@ export function useASLClassifier(): UseASLClassifierResult {
       const probabilities = tf.softmax(outputTensor);
       const probArray = await probabilities.data();
 
-      // Find argmax
       let maxIdx = 0;
       let maxProb = probArray[0];
       for (let i = 1; i < probArray.length; i++) {
@@ -114,15 +108,11 @@ export function useASLClassifier(): UseASLClassifierResult {
         }
       }
 
-      // Cleanup tensors
       inputTensor.dispose();
       outputTensor.dispose();
       probabilities.dispose();
 
-      return {
-        label: labels[maxIdx],
-        confidence: maxProb,
-      };
+      return { label: labels[maxIdx], confidence: maxProb };
     } catch (err) {
       console.error('Prediction error:', err);
       inputTensor.dispose();
@@ -130,9 +120,5 @@ export function useASLClassifier(): UseASLClassifierResult {
     }
   }, []);
 
-  return {
-    predict,
-    isLoading,
-    error,
-  };
+  return { predict, isLoading, error };
 }

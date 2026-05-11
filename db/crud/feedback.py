@@ -32,37 +32,30 @@ async def create_feedback(
     )
     session.add(feedback)
     await session.commit()
-    await session.refresh(feedback)
-    app_logger.info(f"Feedback created: {feedback.id} - Type: {feedback_type}")
+    app_logger.info(f"Feedback created: type={feedback_type}")
     return feedback
 
 
 async def get_feedback_stats(session: AsyncSession) -> dict:
-    """Get aggregate feedback statistics."""
-    from sqlalchemy import func, select
+    """Get aggregate feedback statistics (single query)."""
+    from sqlalchemy import case, func, select
 
-    total = (await session.execute(select(func.count(Feedback.id)))).scalar()
-    thumbs_up = (
+    row = (
         await session.execute(
-            select(func.count(Feedback.id)).where(Feedback.rating == "up")
+            select(
+                func.count(Feedback.id).label("total"),
+                func.count(case((Feedback.rating == "up", Feedback.id))).label("thumbs_up"),
+                func.count(case((Feedback.rating == "down", Feedback.id))).label("thumbs_down"),
+                func.count(case((Feedback.feedback_text.isnot(None), Feedback.id))).label("with_text"),
+            )
         )
-    ).scalar()
-    thumbs_down = (
-        await session.execute(
-            select(func.count(Feedback.id)).where(Feedback.rating == "down")
-        )
-    ).scalar()
-    with_text = (
-        await session.execute(
-            select(func.count(Feedback.id)).where(Feedback.feedback_text.isnot(None))
-        )
-    ).scalar()
+    ).one()
 
     return {
-        "total_feedback": total,
-        "thumbs_up": thumbs_up,
-        "thumbs_down": thumbs_down,
-        "with_text_feedback": with_text,
+        "total_feedback": row.total or 0,
+        "thumbs_up": row.thumbs_up or 0,
+        "thumbs_down": row.thumbs_down or 0,
+        "with_text_feedback": row.with_text or 0,
     }
 
 

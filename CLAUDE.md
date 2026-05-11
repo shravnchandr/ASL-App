@@ -446,8 +446,8 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/camera/SessionStats.tsx`: Session statistics
 - `src/components/camera/CameraTutorial.tsx`: Onboarding tutorial
 - `src/hooks/useCamera.ts`: Camera stream management
-- `src/hooks/useHandDetection.ts`: MediaPipe Hands integration
-- `src/hooks/useASLClassifier.ts`: TensorFlow.js inference — `predict()` is async (uses `await probabilities.data()` instead of `dataSync()` to avoid blocking the main thread)
+- `src/hooks/useHandDetection.ts`: MediaPipe Hands integration — module-level singleton (`_singleton.landmarker`); `getOrLoadHandLandmarker()` coalesces concurrent mounts onto one load promise, resets on failure for retryability; no `close()` on unmount so the landmarker persists for the session
+- `src/hooks/useASLClassifier.ts`: TensorFlow.js inference — module-level singleton (`_singleton.model/scaler/labels`); same coalescing pattern as useHandDetection; `predict()` is async (uses `await probabilities.data()` instead of `dataSync()` to avoid blocking the main thread); no `dispose()` on unmount
 - `src/hooks/useSoundEffects.ts`: Web Audio API sounds
 - `src/utils/predictionBuffer.ts`: Rolling window smoothing
 - `src/utils/handLandmarks.ts`: Landmark normalization
@@ -853,8 +853,8 @@ const NUMBER_LABEL_MAP: Record<string, string> = {
 - **Frame Rate Throttling**: 15 FPS (configurable via `TARGET_FPS`)
 - **requestAnimationFrame**: Smooth animation loop with cleanup
 - **Lazy Loading**: Camera page is lazy-loaded (~400KB gzipped for TensorFlow.js)
-- **Model Caching**: TensorFlow.js caches model in browser storage
-- **Mounted Check**: `isMountedRef` prevents state updates after unmount
+- **Session-Level Model Singleton**: Both `useHandDetection` and `useASLClassifier` use module-level singletons — models load once per browser session and survive React unmounts/remounts (e.g. navigating away and back). Concurrent hook mounts coalesce onto one `loadPromise`; failed loads reset the promise so the next mount can retry.
+- **Mounted Check**: `isCurrent` flag prevents state updates after unmount
 - **Async Inference**: `predict()` uses `await probabilities.data()` (non-blocking) instead of `dataSync()` to keep the camera feed responsive during GPU computation
 
 ### LocalStorage Keys

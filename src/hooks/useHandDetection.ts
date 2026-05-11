@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import type { HandLandmark } from '../utils/handLandmarks';
 
@@ -22,7 +22,6 @@ const MEDIAPIPE_VERSION = '0.10.14';
 const HAND_LANDMARKER_WASM_PATH = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
 const HAND_LANDMARKER_MODEL_PATH = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
-// Check if WebGL is available for GPU acceleration
 const isWebGLAvailable = (): boolean => {
   try {
     const canvas = document.createElement('canvas');
@@ -32,81 +31,78 @@ const isWebGLAvailable = (): boolean => {
   }
 };
 
+// Module-level singleton — survives navigation, loads only once per session.
+const _singleton = {
+  landmarker: null as HandLandmarker | null,
+  loadPromise: null as Promise<void> | null,
+};
+
+function getOrLoadHandLandmarker(): Promise<void> {
+  if (_singleton.landmarker) return Promise.resolve();
+  if (_singleton.loadPromise) return _singleton.loadPromise;
+
+  _singleton.loadPromise = (async () => {
+    const vision = await FilesetResolver.forVisionTasks(HAND_LANDMARKER_WASM_PATH);
+    const useGPU = isWebGLAvailable();
+    const landmarker = await HandLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: HAND_LANDMARKER_MODEL_PATH,
+        delegate: useGPU ? 'GPU' : 'CPU',
+      },
+      runningMode: 'VIDEO',
+      numHands: 1,
+      minHandDetectionConfidence: 0.7,
+      minHandPresenceConfidence: 0.7,
+      minTrackingConfidence: 0.5,
+    });
+
+    console.log(`Hand detection initialized with ${useGPU ? 'GPU' : 'CPU'} acceleration`);
+    _singleton.landmarker = landmarker;
+  })().catch(err => {
+    _singleton.loadPromise = null; // allow retry on next mount
+    throw err;
+  });
+
+  return _singleton.loadPromise;
+}
+
 /**
  * Hook for hand detection using MediaPipe Tasks Vision API.
+ * The landmarker is loaded once per session and reused across mounts.
  */
 export function useHandDetection(): UseHandDetectionResult {
-  const handLandmarkerRef = useRef<HandLandmarker | null>(null);
-
   const [landmarks, setLandmarks] = useState<HandLandmark[] | null>(null);
   const [normalizedLandmarks, setNormalizedLandmarks] = useState<NormalizedLandmark[] | null>(null);
   const [isHandDetected, setIsHandDetected] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !_singleton.landmarker);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize MediaPipe Hand Landmarker
   useEffect(() => {
-    let isMounted = true;
+    if (_singleton.landmarker) return; // already loaded, isLoading already false
 
-    const initHandLandmarker = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    let isCurrent = true;
 
-        // Load the vision tasks WASM
-        const vision = await FilesetResolver.forVisionTasks(HAND_LANDMARKER_WASM_PATH);
-
-        // Create the hand landmarker with GPU if available, fallback to CPU
-        const useGPU = isWebGLAvailable();
-        const handLandmarker = await HandLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: HAND_LANDMARKER_MODEL_PATH,
-            delegate: useGPU ? 'GPU' : 'CPU',
-          },
-          runningMode: 'VIDEO',
-          numHands: 1,
-          minHandDetectionConfidence: 0.7,
-          minHandPresenceConfidence: 0.7,
-          minTrackingConfidence: 0.5,
-        });
-
-        console.log(`Hand detection initialized with ${useGPU ? 'GPU' : 'CPU'} acceleration`);
-
-        if (isMounted) {
-          handLandmarkerRef.current = handLandmarker;
+    getOrLoadHandLandmarker()
+      .then(() => { if (isCurrent) setIsLoading(false); })
+      .catch(err => {
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : 'Failed to initialize hand detection');
           setIsLoading(false);
         }
-      } catch (err) {
-        if (isMounted) {
-          const message = err instanceof Error ? err.message : 'Failed to initialize hand detection';
-          setError(message);
-          setIsLoading(false);
-        }
-      }
-    };
+      });
 
-    initHandLandmarker();
-
-    return () => {
-      isMounted = false;
-      if (handLandmarkerRef.current) {
-        handLandmarkerRef.current.close();
-        handLandmarkerRef.current = null;
-      }
-    };
+    return () => { isCurrent = false; };
+    // No close() — singleton persists for the session
   }, []);
 
   const processFrame = useCallback((video: HTMLVideoElement) => {
-    if (!handLandmarkerRef.current) {
-      return;
-    }
+    if (!_singleton.landmarker) return;
 
     try {
       const startTimeMs = performance.now();
-      const results = handLandmarkerRef.current.detectForVideo(video, startTimeMs);
+      const results = _singleton.landmarker.detectForVideo(video, startTimeMs);
 
       if (results.worldLandmarks && results.worldLandmarks.length > 0) {
-        // Use world landmarks (3D coordinates in meters) for classification
         const worldLandmarks = results.worldLandmarks[0];
         const converted: HandLandmark[] = worldLandmarks.map((lm) => ({
           x: lm.x,
@@ -115,7 +111,6 @@ export function useHandDetection(): UseHandDetectionResult {
         }));
         setLandmarks(converted);
 
-        // Use normalized landmarks (0-1 range) for visualization
         if (results.landmarks && results.landmarks.length > 0) {
           const normalized: NormalizedLandmark[] = results.landmarks[0].map((lm) => ({
             x: lm.x,
@@ -132,7 +127,6 @@ export function useHandDetection(): UseHandDetectionResult {
         setIsHandDetected(false);
       }
     } catch (err) {
-      // Silently ignore processing errors (frame drops are acceptable)
       console.warn('Hand detection frame processing error:', err);
     }
   }, []);
