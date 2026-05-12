@@ -15,6 +15,7 @@ Public API (identical to the old LangGraph compiled graph):
 
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -64,6 +65,31 @@ def _usage_counts(usage: Any) -> dict[str, int]:
         "output":   getattr(usage, "candidates_token_count", 0) or 0,
         "total":    getattr(usage, "total_token_count", 0) or 0,
     }
+
+# ── Retry helper ──────────────────────────────────────────────────────────────
+
+_RETRYABLE_PHRASES = ("503", "unavailable", "resource exhausted", "429", "overloaded")
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY = 2.0  # seconds; doubles each attempt
+
+
+def _gemini_with_retry(fn, *args, **kwargs):
+    """Call fn(*args, **kwargs), retrying on transient Gemini 503/429 errors."""
+    for attempt in range(_MAX_RETRIES):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            msg = str(e).lower()
+            is_transient = any(p in msg for p in _RETRYABLE_PHRASES)
+            if not is_transient or attempt == _MAX_RETRIES - 1:
+                raise
+            delay = _RETRY_BASE_DELAY * (2 ** attempt)
+            print(
+                f"{Fore.YELLOW}  Gemini transient error (attempt {attempt + 1}/{_MAX_RETRIES}), "
+                f"retrying in {delay:.0f}s: {e}{Style.RESET_ALL}"
+            )
+            time.sleep(delay)
+
 
 # ── Grammar system prompt ──────────────────────────────────────────────────────
 # Kept here (not imported from nodes.py) so nodes.py's LangChain imports are
@@ -225,7 +251,8 @@ def _run_instructor_agent(
     )
 
     client = _make_client(api_key)
-    response = client.models.generate_content(
+    response = _gemini_with_retry(
+        client.models.generate_content,
         model=MODEL_NAME,
         contents="Generate detailed ASL sign descriptions for the gloss sequence.",
         config=types.GenerateContentConfig(
@@ -339,7 +366,8 @@ class ASLPipeline:
         )
 
         try:
-            response = client.models.generate_content(
+            response = _gemini_with_retry(
+                client.models.generate_content,
                 model=MODEL_NAME, contents=contents, config=_make_config(bool(cache_name))
             )
         except Exception as e:
@@ -351,7 +379,8 @@ class ASLPipeline:
                     f"{Fore.YELLOW}  Grammar cache stale, recreating...{Style.RESET_ALL}"
                 )
                 self._grammar_cache_name = self._try_create_grammar_cache()
-                response = client.models.generate_content(
+                response = _gemini_with_retry(
+                    client.models.generate_content,
                     model=MODEL_NAME,
                     contents=contents,
                     config=_make_config(bool(self._grammar_cache_name)),

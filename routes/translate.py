@@ -121,10 +121,15 @@ async def translate_to_asl(
         )
 
         if final_state.get("error"):
-            app_logger.error(f"Translation error: {final_state['error']}")
-            raise HTTPException(
-                status_code=500, detail=f"Translation failed: {final_state['error']}"
-            )
+            err = final_state["error"]
+            app_logger.error(f"Translation error: {err}")
+            err_lower = err.lower()
+            if any(p in err_lower for p in ("503", "unavailable", "resource exhausted", "429", "overloaded")):
+                raise HTTPException(
+                    status_code=503,
+                    detail="The AI service is experiencing high demand. Please try again in a few seconds.",
+                )
+            raise HTTPException(status_code=500, detail=f"Translation failed: {err}")
 
         final_output: SentenceDescriptionSchema = final_state.get("final_output")
         if not final_output:

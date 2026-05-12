@@ -13,12 +13,19 @@ export async function translateToASL(text: string): Promise<TranslateResponse> {
     } catch (error) {
         if (axios.isAxiosError(error)) {
             const axiosError = error as AxiosError<APIError>;
-            if (axiosError.response?.status === 429) {
-                throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+            const status = axiosError.response?.status;
+            if (status === 429) {
+                throw new Error('rate_limit: You have made too many requests. Please wait a moment and try again.');
             }
-            throw new Error(axiosError.response?.data?.detail || 'Failed to translate. Please try again.');
+            if (status === 503) {
+                throw new Error('ai_busy: The AI service is experiencing high demand. Please try again in a few seconds.');
+            }
+            if (!axiosError.response) {
+                throw new Error('network: Unable to connect. Please check your internet connection and try again.');
+            }
+            throw new Error(`server: ${axiosError.response?.data?.detail || 'Something went wrong. Please try again.'}`);
         }
-        throw new Error('An unexpected error occurred. Please try again.');
+        throw new Error('network: Unable to connect. Please check your internet connection and try again.');
     }
 }
 

@@ -15,7 +15,7 @@ import { SearchHistory } from './features/SearchHistory';
 import { ActionButtons } from './features/ActionButtons';
 import { RateLimitBanner } from './features/RateLimitBanner';
 import { SentenceAnimator } from './SentenceAnimator';
-import { translateToASL, submitFeedback, setCustomApiKey } from '../services/api';
+import { translateToASL, submitFeedback, submitGeneralFeedback, setCustomApiKey } from '../services/api';
 import { announceToScreenReader } from '../utils/accessibility';
 import { print } from '../utils/print';
 import { useApp } from '../contexts/AppContext';
@@ -171,6 +171,7 @@ export const DictionaryPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<TranslateResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [errorReported, setErrorReported] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [selectedRating, setSelectedRating] = useState<'up' | 'down' | null>(null);
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
@@ -207,6 +208,7 @@ export const DictionaryPage: React.FC = () => {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An error occurred';
             setError(errorMessage);
+            setErrorReported(false);
             announceToScreenReader(`Error: ${errorMessage}`, 'assertive');
         } finally {
             setIsLoading(false);
@@ -361,22 +363,55 @@ export const DictionaryPage: React.FC = () => {
                 </section>
             )}
 
-            {error && (
-                <section aria-label="Error message">
-                    <div className="error-card" role="alert">
-                        <p className="error-card__title">Something went wrong</p>
-                        <p className="error-card__text">{error}</p>
-                        {!customApiKey && (
-                            <p className="error-card__hint">
-                                You may need a Google Gemini API key. Click the key icon in the header to add one.
-                            </p>
-                        )}
-                        <button className="error-card__retry" onClick={() => setError(null)}>
-                            Try Again
-                        </button>
-                    </div>
-                </section>
-            )}
+            {error && (() => {
+                const isAiBusy = error.startsWith('ai_busy:');
+                const isRateLimit = error.startsWith('rate_limit:');
+                const isNetwork = error.startsWith('network:');
+                const displayMessage = error.includes(': ') ? error.slice(error.indexOf(': ') + 2) : error;
+                const title = isAiBusy ? 'AI service is busy'
+                    : isRateLimit ? 'Too many requests'
+                    : isNetwork ? 'Connection problem'
+                    : 'Something went wrong';
+
+                const handleReportError = async () => {
+                    try {
+                        const currentQuery = searchParams.get('q') || '';
+                        await submitGeneralFeedback({
+                            category: 'bug',
+                            feedback_text: `Error during translation${currentQuery ? ` for "${currentQuery}"` : ''}: ${displayMessage}`,
+                        });
+                        setErrorReported(true);
+                    } catch {
+                        // silently ignore — reporting errors shouldn't cause more errors
+                    }
+                };
+
+                return (
+                    <section aria-label="Error message">
+                        <div className="error-card" role="alert">
+                            <p className="error-card__title">{title}</p>
+                            <p className="error-card__text">{displayMessage}</p>
+                            {!customApiKey && !isAiBusy && !isRateLimit && !isNetwork && (
+                                <p className="error-card__hint">
+                                    You may need a Google Gemini API key. Click the key icon in the header to add one.
+                                </p>
+                            )}
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                                <button className="error-card__retry" onClick={() => setError(null)}>
+                                    Try Again
+                                </button>
+                                {!isAiBusy && !isRateLimit && !isNetwork && (
+                                    errorReported
+                                        ? <span className="error-card__hint" style={{ alignSelf: 'center' }}>Thanks for reporting!</span>
+                                        : <button className="error-card__retry" style={{ background: 'transparent', border: '1px solid currentColor', opacity: 0.7 }} onClick={handleReportError}>
+                                            Report this error
+                                          </button>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                );
+            })()}
 
             {result && !isLoading && (
                 <section
