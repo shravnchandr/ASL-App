@@ -2,6 +2,7 @@
 Translation routes: POST /translate and GET /rate-limit.
 """
 
+import asyncio
 import os
 import time
 
