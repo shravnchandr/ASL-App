@@ -91,7 +91,23 @@
     font-weight: 700;
     cursor: pointer;
     font-size: 0.875rem;
+    transition: opacity 0.15s;
 }
+.error-card__retry:hover { opacity: 0.85; }
+.error-card__retry:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error-card__secondary {
+    padding: 10px 24px;
+    background: var(--md-sys-color-on-error-container);
+    color: var(--md-sys-color-error-container);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-medium);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: opacity 0.15s;
+}
+.error-card__secondary:hover { opacity: 0.85; }
 
 /* Results header */
 .results-header {

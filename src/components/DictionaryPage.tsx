@@ -480,7 +480,7 @@ export const DictionaryPage: React.FC = () => {
                                 {!isAiBusy && !isRateLimit && !isNetwork && (
                                     errorReported
                                         ? <span className="error-card__hint" style={{ alignSelf: 'center' }}>Thanks for reporting!</span>
-                                        : <button className="error-card__retry" style={{ background: 'transparent', border: '1px solid currentColor', opacity: 0.7 }} onClick={handleReportError}>
+                                        : <button className="error-card__secondary" onClick={handleReportError}>
                                             Report this error
                                           </button>
                                 )}
