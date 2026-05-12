@@ -23,8 +23,8 @@ A modern, production-ready web application that helps you learn American Sign La
 - 🎓 **Practice These Signs** - After any translation, a "Practice these signs" button starts a targeted learn session with only the signs from that result, auto-filtered to signs available in the animation library
 - 📖 **Grounded Sign Descriptions** - All 100 signs (alphabet, numbers, months, common vocabulary) are backed by a verified knowledge base sourced from Lifeprint/ASLU. Exact matches are looked up directly; synonyms and near-matches (e.g. "glad" → happy) can be resolved via semantic similarity search using sentence-transformers (opt-in, requires `ENABLE_SEMANTIC_LOOKUP=true`)
 - 🧠 **Context-Aware Disambiguation** - Single-letter glosses (like "I" the pronoun) are correctly distinguished from alphabet letters via an alphabet guard in the KB lookup and context-aware Translation Agent prompt. Letters only match via `fs-` prefix (fingerspelling)
-- 🔡 **Fingerspelling Guide** - Proper nouns (names, cities, brands) are automatically identified via `fs-` gloss prefix and shown with a collapsible letter-by-letter breakdown directly on the sign card — each letter displays its ASL hand shape description. Detection is deterministic (Python post-processing), not dependent on LLM output
-- 🔤 **Advanced ASL Grammar Engine** - Grammar Agent applies 10 documented ASL grammar rules: TTC structure, topicalization, wh-question formation, negation placement, conditionals, verb directionality, aspect, and classifiers
+- 🔡 **Fingerspelling Guide** - Proper nouns (names, cities, brands) are automatically identified via `fs-` gloss prefix and shown with a collapsible letter-by-letter breakdown directly on the sign card — each letter displays its ASL hand shape description. Multi-word proper nouns (e.g. "New York City") are treated as a single fingerspelled token. Detection is deterministic (Python post-processing), not dependent on LLM output
+- 🔤 **Advanced ASL Grammar Engine** - Grammar Agent applies 11 documented ASL grammar rules: TTC structure, topicalization, wh-question formation, negation placement, conditionals, verb directionality, aspect, classifiers, and numbers (years split into 2-digit chunks, phone/zip codes fingerspelled digit-by-digit, quantities use number signs)
 - 🎬 **Sentence Animations** - Results include a SentenceAnimator (always shown, sticky right column) that plays all sign animations in sequence with word chip indicators, progress bar, and playback controls
 - 🌟 **Sign of the Day** - Landing page features a daily sign with animation preview, deterministically selected via date hashing
 - 🎥 **Video Resource Links** - Direct links to Handspeak, ASL University, and YouTube for each sign to watch proper demonstrations
@@ -67,10 +67,11 @@ A modern, production-ready web application that helps you learn American Sign La
 - 💡 **Smart Suggestions** - Post-search follow-up phrase suggestions based on context and category
 - 🏠 **Dashboard Home Page** - Sign of the Day hero, "Pick up where you left off" lesson/review cards, quick-tool grid, recent searches, and your progress stats
 - 📝 **Two-Column Results Layout** - SentenceAnimator (sticky) on the right plays all signs in sequence; text-only sign cards on the left show plain-English instructions with expandable technical details and external links
-- 💾 **Result Caching** - Translation results are cached in `sessionStorage` so refreshing the page restores results instantly without re-calling the API
+- 💾 **Result Caching** - Translation results are cached in `sessionStorage` so refreshing the page restores results instantly without re-calling the API; cache is also checked on every new search before hitting the backend
 - ⚡ **Fast & Optimized** - Lazy loading, code splitting, memoization, dual-layer caching (Redis + in-memory LRU fallback)
 - 📄 **PDF Export** - Download lightweight (~16KB), professionally formatted PDFs of translation results for offline reference
-- 🛡️ **Error Recovery** - React Error Boundary catches crashes with recovery UI
+- 🛡️ **Error Recovery** - React Error Boundary catches crashes with recovery UI; smart error cards show context-aware messages (AI busy, rate limit with live countdown, network, server), auto-retry for transient errors, cancel in-flight requests, and one-click error reporting
+- ⏳ **Retry & Resilience** - Gemini 503/429 errors are automatically retried up to 3 times with exponential backoff (2s → 4s → 8s); progressive loading hints ("The AI is busy — retrying…") appear after 4s so users don't re-submit
 
 ### Security & Privacy
 - 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally, passed directly to the pipeline — never mutates shared process environment, safe under concurrent requests)
