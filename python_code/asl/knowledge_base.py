@@ -126,13 +126,14 @@ def _get_kb_matched_words(gloss_sequence: str) -> set[str]:
 def _extract_fs_glosses(gloss_sequence: str) -> dict[str, list[str]]:
     """
     Find all fs-prefixed glosses in the sequence.
-    Returns {WORD_UPPER: [letters]}, e.g. {"SHRAVAN": ["S","H","R","A","V","A","N"]}.
+    Returns {WORD_UPPER: [letters]}, e.g. {"NEW-YORK-CITY": ["N","E","W","Y","O","R","K","C","I","T","Y"]}.
+    Hyphens joining multi-word proper nouns (fs-NEW-YORK-CITY) are stripped from the letters list.
     """
     fs_map: dict[str, list[str]] = {}
     for gloss in gloss_sequence.split():
         if gloss.lower().startswith("fs-"):
             word = gloss[3:].upper()
-            fs_map[word] = list(word)
+            fs_map[word] = [c for c in word if c.isalpha()]
     return fs_map
 
 

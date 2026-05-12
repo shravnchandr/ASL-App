@@ -159,7 +159,10 @@ _GRAMMAR_SYSTEM_PROMPT = (
     "- Use # for fingerspelled loan signs: #BACK, #JOB\n"
     "- Use fs- prefix for full fingerspelling when no ASL sign exists: fs-PIZZA\n"
     "- ALWAYS use fs- prefix for proper nouns — names of people, cities, organizations, brands: "
-    "fs-SHRAVAN, fs-BOSTON, fs-GOOGLE, fs-MARIA\n\n"
+    "fs-SHRAVAN, fs-BOSTON, fs-GOOGLE, fs-MARIA\n"
+    "- Multi-word proper nouns are joined with hyphens into a SINGLE fs- token — never split across multiple glosses: "
+    "fs-NEW-YORK-CITY (not fs-NEW YORK CITY), fs-LOS-ANGELES, fs-NEW-YORK, fs-SAN-FRANCISCO, "
+    "fs-COCA-COLA, fs-NEW-JERSEY\n\n"
     "## MORE EXAMPLES\n"
     "- 'I am going to school tomorrow' → 'TOMORROW I SCHOOL GO'\n"
     "- 'Did you finish your homework?' → 'YOUR HOMEWORK FINISH YOU' (raised brows)\n"
@@ -270,6 +273,8 @@ def _run_instructor_agent(
     # and kb_verified for KB-matched signs.
     fs_map = _extract_fs_glosses(input_text)
     kb_matched = _get_kb_matched_words(input_text)
+    # Normalized lookup: strip hyphens/spaces so "New York City" matches "NEW-YORK-CITY"
+    fs_map_norm = {"".join(k.split("-")): k for k in fs_map}
 
     for sign in result.signs:
         clean_word = sign.word.upper()
@@ -278,14 +283,25 @@ def _run_instructor_agent(
             sign.word = (
                 sign.word[3:] if sign.word.upper().startswith("FS-") else sign.word
             )
+        # Normalize for lookup: collapse hyphens and spaces so "New York City" matches "NEW-YORK-CITY"
+        norm_key = clean_word.replace("-", "").replace(" ", "")
         if clean_word in fs_map:
+            fs_key: str | None = clean_word
+        elif norm_key in fs_map_norm:
+            fs_key = fs_map_norm[norm_key]
+        else:
+            fs_key = None
+        if fs_key:
             sign.is_fingerspelled = True
-            sign.fingerspell_letters = fs_map[clean_word]
+            sign.fingerspell_letters = fs_map[fs_key]
+            # Use a readable display word: replace hyphens with spaces for multi-word proper nouns
+            if "-" in fs_key and sign.word == clean_word:
+                sign.word = fs_key.replace("-", " ").title()
             print(
-                f"{Fore.CYAN}   -> Fingerspell forced: {clean_word} → "
-                f"{fs_map[clean_word]}{Style.RESET_ALL}"
+                f"{Fore.CYAN}   -> Fingerspell forced: {fs_key} → "
+                f"{fs_map[fs_key]}{Style.RESET_ALL}"
             )
-        if clean_word in kb_matched:
+        if clean_word in kb_matched or norm_key in {k.replace("-", "").replace(" ", "") for k in kb_matched}:
             sign.kb_verified = True
 
     return result, usage
