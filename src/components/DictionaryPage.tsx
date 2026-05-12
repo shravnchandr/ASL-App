@@ -171,9 +171,12 @@ export const DictionaryPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [loadingHint, setLoadingHint] = useState<string | null>(null);
     const loadingTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const abortControllerRef = useRef<AbortController | null>(null);
     const [result, setResult] = useState<TranslateResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [errorReported, setErrorReported] = useState(false);
+    const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [selectedRating, setSelectedRating] = useState<'up' | 'down' | null>(null);
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
@@ -197,6 +200,23 @@ export const DictionaryPage: React.FC = () => {
     };
 
     const handleSearch = useCallback(async (query: string) => {
+        // Abort any in-flight request
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        // Optimistic cache check — skip the API call entirely if we already have this result
+        const cacheKey = `asl_result:${query.toLowerCase().trim()}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                setResult(JSON.parse(cached));
+                setError(null);
+                setSearchParams({ q: query }, { replace: true });
+                return;
+            } catch { /* corrupt cache entry — fall through to API */ }
+        }
+
         setIsLoading(true);
         setError(null);
         setResult(null);
@@ -214,15 +234,28 @@ export const DictionaryPage: React.FC = () => {
         addToHistory(query);
 
         try {
-            const response = await translateToASL(query);
+            const response = await translateToASL(query, controller.signal);
             setResult(response);
-            // Cache result so refresh doesn't re-call the API
-            try { sessionStorage.setItem(`asl_result:${query.toLowerCase().trim()}`, JSON.stringify(response)); } catch { /* ignore quota errors */ }
+            try { sessionStorage.setItem(cacheKey, JSON.stringify(response)); } catch { /* ignore quota errors */ }
             announceToScreenReader(`Found ${response.signs.length} signs for ${query}`, 'polite');
         } catch (err) {
+            if (err instanceof Error && err.message === 'cancelled') return;
             const errorMessage = err instanceof Error ? err.message : 'An error occurred';
             setError(errorMessage);
             setErrorReported(false);
+            // Start rate-limit countdown if seconds are encoded in the error
+            const rlMatch = errorMessage.match(/^rate_limit:(\d+):/);
+            if (rlMatch) {
+                const secs = parseInt(rlMatch[1], 10);
+                setRateLimitCountdown(secs);
+                if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+                countdownTimerRef.current = setInterval(() => {
+                    setRateLimitCountdown(prev => {
+                        if (prev <= 1) { clearInterval(countdownTimerRef.current!); return 0; }
+                        return prev - 1;
+                    });
+                }, 1000);
+            }
             announceToScreenReader(`Error: ${errorMessage}`, 'assertive');
         } finally {
             setIsLoading(false);
@@ -380,6 +413,14 @@ export const DictionaryPage: React.FC = () => {
                             {loadingHint}
                         </p>
                     )}
+                    <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+                        <button
+                            className="loading-cancel"
+                            onClick={() => { abortControllerRef.current?.abort(); setIsLoading(false); clearLoadingTimers(); }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </section>
             )}
 
@@ -387,15 +428,19 @@ export const DictionaryPage: React.FC = () => {
                 const isAiBusy = error.startsWith('ai_busy:');
                 const isRateLimit = error.startsWith('rate_limit:');
                 const isNetwork = error.startsWith('network:');
-                const displayMessage = error.includes(': ') ? error.slice(error.indexOf(': ') + 2) : error;
+                // Strip type prefix and optional seconds: "rate_limit:60: msg" or "ai_busy: msg"
+                const displayMessage = error.replace(/^[a-z_]+:\d*:\s*/, '').replace(/^[a-z_]+:\s*/, '');
                 const title = isAiBusy ? 'AI service is busy'
                     : isRateLimit ? 'Too many requests'
                     : isNetwork ? 'Connection problem'
                     : 'Something went wrong';
 
+                const currentQuery = searchParams.get('q') || '';
+                const canRetry = isAiBusy || isNetwork;
+                const retryDisabled = isRateLimit && rateLimitCountdown > 0;
+
                 const handleReportError = async () => {
                     try {
-                        const currentQuery = searchParams.get('q') || '';
                         await submitGeneralFeedback({
                             category: 'bug',
                             feedback_text: `Error during translation${currentQuery ? ` for "${currentQuery}"` : ''}: ${displayMessage}`,
@@ -411,14 +456,26 @@ export const DictionaryPage: React.FC = () => {
                         <div className="error-card" role="alert">
                             <p className="error-card__title">{title}</p>
                             <p className="error-card__text">{displayMessage}</p>
+                            {isRateLimit && rateLimitCountdown > 0 && (
+                                <p className="error-card__hint">
+                                    You can try again in <strong>{rateLimitCountdown}s</strong>.
+                                </p>
+                            )}
                             {!customApiKey && !isAiBusy && !isRateLimit && !isNetwork && (
                                 <p className="error-card__hint">
                                     You may need a Google Gemini API key. Click the key icon in the header to add one.
                                 </p>
                             )}
                             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                                <button className="error-card__retry" onClick={() => setError(null)}>
-                                    Try Again
+                                <button
+                                    className="error-card__retry"
+                                    disabled={retryDisabled}
+                                    onClick={() => {
+                                        setError(null);
+                                        if (canRetry && currentQuery) handleSearch(currentQuery);
+                                    }}
+                                >
+                                    {retryDisabled ? `Try again in ${rateLimitCountdown}s` : 'Try Again'}
                                 </button>
                                 {!isAiBusy && !isRateLimit && !isNetwork && (
                                     errorReported

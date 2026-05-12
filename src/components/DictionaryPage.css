@@ -29,6 +29,19 @@
     color: var(--md-sys-color-primary);
 }
 
+/* Cancel button shown during loading */
+.loading-cancel {
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface-variant);
+    border-radius: 20px;
+    padding: 6px 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.loading-cancel:hover { opacity: 0.7; }
+
 /* Loading hint (shown after delay when retries are happening) */
 .loading-hint {
     text-align: center;
