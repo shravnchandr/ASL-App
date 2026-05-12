@@ -169,6 +169,8 @@ export const DictionaryPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingHint, setLoadingHint] = useState<string | null>(null);
+    const loadingTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const [result, setResult] = useState<TranslateResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [errorReported, setErrorReported] = useState(false);
@@ -188,10 +190,22 @@ export const DictionaryPage: React.FC = () => {
         return cleanup;
     }, []);
 
+    const clearLoadingTimers = () => {
+        loadingTimersRef.current.forEach(clearTimeout);
+        loadingTimersRef.current = [];
+        setLoadingHint(null);
+    };
+
     const handleSearch = useCallback(async (query: string) => {
         setIsLoading(true);
         setError(null);
         setResult(null);
+        clearLoadingTimers();
+        loadingTimersRef.current = [
+            setTimeout(() => setLoadingHint('Taking a bit longer than usual…'), 4000),
+            setTimeout(() => setLoadingHint('The AI is busy — retrying in the background. Hang tight!'), 8000),
+            setTimeout(() => setLoadingHint('Still working on it. Thanks for your patience.'), 14000),
+        ];
 
         // Keep the query in the URL so results are shareable and indexable
         setSearchParams({ q: query }, { replace: true });
@@ -212,6 +226,7 @@ export const DictionaryPage: React.FC = () => {
             announceToScreenReader(`Error: ${errorMessage}`, 'assertive');
         } finally {
             setIsLoading(false);
+            clearLoadingTimers();
         }
     }, [addToHistory, setSearchParams]);
 
@@ -360,6 +375,11 @@ export const DictionaryPage: React.FC = () => {
             {isLoading && (
                 <section aria-label="Loading results">
                     <LoadingState />
+                    {loadingHint && (
+                        <p className="loading-hint" role="status" aria-live="polite">
+                            {loadingHint}
+                        </p>
+                    )}
                 </section>
             )}
 
