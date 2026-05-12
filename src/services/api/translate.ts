@@ -28,7 +28,9 @@ export async function translateToASL(text: string, signal?: AbortSignal): Promis
             if (!axiosError.response) {
                 throw new Error('network: Unable to connect. Please check your internet connection and try again.');
             }
-            throw new Error(`server: ${axiosError.response?.data?.detail || 'Something went wrong. Please try again.'}`);
+            const detail = axiosError.response?.data?.detail;
+            const message = typeof detail === 'string' ? detail : 'Something went wrong. Please try again.';
+            throw new Error(`server: ${message}`);
         }
         throw new Error('network: Unable to connect. Please check your internet connection and try again.');
     }
