@@ -36,7 +36,7 @@
 
 /* Completed — green tint */
 .level-card--completed {
-    border-color: #4F8B47;
+    border-color: var(--md-sys-color-tertiary);
     border-width: 1.5px;
 }
 
@@ -133,8 +133,8 @@
 }
 
 .level-card__status--complete {
-    color: #4F8B47;
-    background: #CFEFC9;
+    color: var(--md-sys-color-on-tertiary-container);
+    background: var(--md-sys-color-tertiary-container);
 }
 
 .level-card__status--continue {

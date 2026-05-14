@@ -657,7 +657,7 @@
 }
 
 .sign-of-day__play {
-    background: #fff;
+    background: var(--md-sys-color-on-primary);
     color: var(--md-sys-color-primary);
 }
 
@@ -665,7 +665,7 @@
 
 .sign-of-day__search {
     background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    color: var(--md-sys-color-on-primary);
 }
 
 .sign-of-day__search:hover { transform: translateY(-2px); }

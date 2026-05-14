@@ -97,7 +97,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({
                         <div className="level-card__bar">
                             <div
                                 className="level-card__bar-fill"
-                                style={{ width: `${mastery}%`, background: isCompleted ? '#4F8B47' : colors.fill }}
+                                style={{ width: `${mastery}%`, background: isCompleted ? 'var(--md-sys-color-tertiary)' : colors.fill }}
                             />
                         </div>
                     </div>

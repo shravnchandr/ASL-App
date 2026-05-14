@@ -10,28 +10,19 @@
 }
 
 .sign-animator__canvas {
-    border-radius: var(--radius-lg, 16px);
-    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
-    background: var(--surface-container, #f5f5f5);
-}
-
-[data-theme="dark"] .sign-animator__canvas {
-    background: var(--surface-container, #1a1a2e);
+    border-radius: var(--md-sys-shape-corner-medium);
+    box-shadow: var(--md-sys-elevation-2);
+    background: var(--md-sys-color-surface-container);
 }
 
 .sign-animator__placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--surface-container, #f5f5f5);
-    color: var(--on-surface-variant, #666);
-    border-radius: var(--radius-lg, 16px);
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface-variant);
+    border-radius: var(--md-sys-shape-corner-medium);
     font-size: 0.875rem;
-}
-
-[data-theme="dark"] .sign-animator__placeholder {
-    background: var(--surface-container, #1a1a2e);
-    color: var(--on-surface-variant, #aaa);
 }
 
 .sign-animator__main {
@@ -43,16 +34,11 @@
     position: absolute;
     bottom: 8px;
     right: 8px;
-    border-radius: var(--radius-md, 12px);
+    border-radius: var(--md-sys-shape-corner-small);
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    border: 2px solid var(--outline-variant, #ccc);
-    background: var(--surface-container, #f5f5f5);
-}
-
-[data-theme="dark"] .sign-animator__hand-zoom {
-    border-color: var(--outline-variant, #444);
-    background: var(--surface-container, #1a1a2e);
+    box-shadow: var(--md-sys-elevation-2);
+    border: 2px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container);
 }
 
 .sign-animator__hand-canvas {
@@ -68,7 +54,7 @@
 
 .sign-animator__frame {
     font-size: 0.75rem;
-    color: var(--on-surface-variant, #666);
+    color: var(--md-sys-color-on-surface-variant);
     font-variant-numeric: tabular-nums;
 }
 

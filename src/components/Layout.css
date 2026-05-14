@@ -111,7 +111,7 @@
 }
 
 [data-theme="dark"] .layout__nav {
-    background: #3A2410;
+    background: var(--md-sys-color-surface-container-highest);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -137,7 +137,7 @@
 .nav-item--active {
     flex: 1.6;
     background: var(--md-sys-color-secondary);
-    color: #FFFFFF;
+    color: var(--md-sys-color-on-secondary);
 }
 
 .nav-item:hover:not(.nav-item--active) {

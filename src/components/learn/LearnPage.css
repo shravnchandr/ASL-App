@@ -365,7 +365,7 @@
     width: 20px;
     height: 20px;
     border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
+    border-top-color: var(--md-sys-color-on-primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -528,7 +528,7 @@
 }
 
 .learn-stats-badge__num {
-    color: #fff;
+    color: var(--md-sys-color-on-primary);
     font-weight: 900;
     font-size: 14px;
     line-height: 1;
