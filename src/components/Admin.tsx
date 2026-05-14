@@ -67,9 +67,24 @@ function StatCard({ label, value, color, badge, sparkValues }: StatCardProps) {
 function DailyUsersChart({ data }: { data: Array<{ date: string; unique_users: number }> }) {
   if (!data.length) return <p className="chart-empty">No daily data yet</p>;
 
-  const max = Math.max(...data.map(d => d.unique_users), 1);
+  // Pad to 14 days so the chart always has enough bars to fill its width.
+  // Without this, a single-bar viewBox (18px wide) stretched to 100% width makes
+  // the bar fill the entire card.
+  const padded = (() => {
+    const byDate = new Map(data.map(d => [d.date.split('T')[0], d.unique_users]));
+    const days: Array<{ date: string; unique_users: number }> = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      days.push({ date: key, unique_users: byDate.get(key) ?? 0 });
+    }
+    return days;
+  })();
+
+  const max = Math.max(...padded.map(d => d.unique_users), 1);
   const BAR_W = 18, GAP = 6, CHART_H = 140, LABEL_H = 22;
-  const totalW = data.length * (BAR_W + GAP) - GAP;
+  const totalW = padded.length * (BAR_W + GAP) - GAP;
 
   return (
     <div className="bar-chart-scroll">
@@ -86,7 +101,7 @@ function DailyUsersChart({ data }: { data: Array<{ date: string; unique_users: n
             <stop offset="100%" stopColor="#B3ACEF" />
           </linearGradient>
         </defs>
-        {data.map((d, i) => {
+        {padded.map((d, i) => {
           const barH = Math.max((d.unique_users / max) * CHART_H, 2);
           const x = i * (BAR_W + GAP);
           const y = CHART_H - barH;
