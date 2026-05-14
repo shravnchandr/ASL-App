@@ -205,7 +205,7 @@ async def try_consume_shared_key_quota(
     await session.commit()
 
     if row is None:
-        # UPDATE matched no row because count >= limit. Re-read for accurate reporting.
+        # RETURNING was NULL: count already at limit. Re-read the current count for accurate reporting.
         cur = await session.execute(
             text("SELECT count FROM shared_key_usage WHERE ip_hash = :ip AND date = :date"),
             {"ip": ip_hash, "date": today},

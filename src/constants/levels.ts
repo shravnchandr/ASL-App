@@ -130,17 +130,3 @@ export const getLevelById = (id: number): LevelInfo | undefined => {
     return LEVELS.find(level => level.id === id);
 };
 
-/**
- * Get all signs for a given level
- */
-export const getSignsForLevel = (levelId: number): string[] => {
-    const level = getLevelById(levelId);
-    return level ? level.signs : [];
-};
-
-/**
- * Get total sign count across all levels
- */
-export const getTotalSignCount = (): number => {
-    return LEVELS.reduce((total, level) => total + level.signs.length, 0);
-};

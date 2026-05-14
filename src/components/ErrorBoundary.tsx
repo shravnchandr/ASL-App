@@ -1,8 +1,3 @@
-/**
- * Error Boundary Component
- * Catches React rendering errors and displays a fallback UI
- */
-
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import './ErrorBoundary.css';

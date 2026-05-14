@@ -1,8 +1,3 @@
-/**
- * CameraTutorial Component
- * Onboarding guide for first-time camera users
- */
-
 import { useState, useEffect, useCallback } from 'react';
 import './CameraTutorial.css';
 
@@ -49,10 +44,8 @@ function hasSeenTutorial(): boolean {
 
 export function CameraTutorial({ onComplete }: CameraTutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  // Initialize visibility based on localStorage (no effect needed)
   const [isVisible, setIsVisible] = useState(() => !hasSeenTutorial());
 
-  // Call onComplete if already seen (on mount only)
   useEffect(() => {
     if (!isVisible) {
       onComplete();

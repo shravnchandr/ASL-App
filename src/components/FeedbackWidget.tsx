@@ -1,8 +1,3 @@
-/**
- * FeedbackWidget Component
- * Thumbs up/down buttons with expressive animations
- */
-
 import React, { useState } from 'react';
 import './FeedbackWidget.css';
 

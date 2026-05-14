@@ -1,11 +1,3 @@
-/**
- * Accessibility Utilities
- * Helper functions for keyboard navigation, focus management, and screen reader support
- */
-
-/**
- * Announce message to screen readers
- */
 export function announceToScreenReader(message: string, priority: 'polite' | 'assertive' = 'polite'): void {
     const announcement = document.createElement('div');
     announcement.setAttribute('role', 'status');
@@ -16,15 +8,12 @@ export function announceToScreenReader(message: string, priority: 'polite' | 'as
 
     document.body.appendChild(announcement);
 
-    // Remove after announcement
     setTimeout(() => {
         document.body.removeChild(announcement);
     }, 1000);
 }
 
-/**
- * Trap focus within a container (for modals)
- */
+/** Trap focus within a container (for modals). Returns a cleanup function. */
 export function trapFocus(container: HTMLElement): () => void {
     const focusableElements = container.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -37,13 +26,11 @@ export function trapFocus(container: HTMLElement): () => void {
         if (e.key !== 'Tab') return;
 
         if (e.shiftKey) {
-            // Shift + Tab
             if (document.activeElement === firstElement) {
                 lastElement.focus();
                 e.preventDefault();
             }
         } else {
-            // Tab
             if (document.activeElement === lastElement) {
                 firstElement.focus();
                 e.preventDefault();
@@ -52,19 +39,13 @@ export function trapFocus(container: HTMLElement): () => void {
     };
 
     container.addEventListener('keydown', handleTabKey);
-
-    // Focus first element
     firstElement?.focus();
 
-    // Return cleanup function
     return () => {
         container.removeEventListener('keydown', handleTabKey);
     };
 }
 
-/**
- * Handle escape key to close modals
- */
 export function handleEscapeKey(callback: () => void): () => void {
     const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -79,9 +60,4 @@ export function handleEscapeKey(callback: () => void): () => void {
     };
 }
 
-/**
- * Check if user prefers reduced motion
- */
-export function prefersReducedMotion(): boolean {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
+

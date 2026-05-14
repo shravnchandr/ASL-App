@@ -76,7 +76,6 @@ A modern, production-ready web application that helps you learn American Sign La
 ### Security & Privacy
 - 🔑 **Custom API Key Support** - Use your own free Google Gemini API key (stored locally, passed directly to the pipeline — never mutates shared process environment, safe under concurrent requests)
 - 🔒 **Security Headers** - Comprehensive security headers (CSP, HSTS, X-Frame-Options)
-- 🧹 **XSS Protection** - DOMPurify sanitization utilities for user content
 - 🚫 **No Data Collection** - All data stays in your browser or your own database
 - 🛡️ **Rate Limiting** - Built-in API rate limiting to prevent abuse
 
@@ -255,19 +254,17 @@ This app is production-ready with:
 
 **Bundle Size (with code splitting):**
 ```
-dist/index.html                        1.09 kB │ gzip:   0.55 kB
 dist/assets/CameraPage.css            15.86 kB │ gzip:   3.19 kB  (lazy)
 dist/assets/Admin.css                 20.89 kB │ gzip:   3.40 kB  (lazy)
-dist/assets/LearnPage.css             60.63 kB │ gzip:   7.31 kB  (lazy)
-dist/assets/index.css                 90.74 kB │ gzip:  14.06 kB
-dist/assets/Admin.js                  12.25 kB │ gzip:   3.07 kB  (lazy)
-dist/assets/CameraPage.js             17.59 kB │ gzip:   5.24 kB  (lazy)
-dist/assets/purify.js                 22.58 kB │ gzip:   8.47 kB
+dist/assets/LearnPage.css             62.58 kB │ gzip:   8.15 kB  (lazy)
+dist/assets/index.css                 93.13 kB │ gzip:  14.33 kB
+dist/assets/Admin.js                  12.26 kB │ gzip:   3.07 kB  (lazy)
+dist/assets/CameraPage.js             16.14 kB │ gzip:   4.79 kB  (lazy)
 dist/assets/api.js                    35.79 kB │ gzip:  14.00 kB
-dist/assets/LearnPage.js              48.57 kB │ gzip:  13.46 kB  (lazy)
+dist/assets/LearnPage.js              45.87 kB │ gzip:  12.11 kB  (lazy)
 dist/assets/vendor.js                139.62 kB │ gzip:  45.02 kB
-dist/assets/index.js                 447.68 kB │ gzip: 140.72 kB
-dist/assets/predictionBuffer.js    1,004.27 kB │ gzip: 257.86 kB  (lazy, TF.js)
+dist/assets/index.js                 510.96 kB │ gzip: 160.58 kB
+dist/assets/useSoundEffects.js     1,006.30 kB │ gzip: 258.62 kB  (lazy, TF.js)
 Initial load (gzipped): ~222 kB (Admin, Learn & Camera lazy loaded)
 ```
 

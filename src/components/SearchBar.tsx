@@ -1,13 +1,7 @@
-/**
- * SearchBar Component
- * Search input with autocomplete from the 100-sign knowledge base
- */
-
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import './SearchBar.css';
 
-// Available signs for autocomplete — loaded once from metadata
-let cachedSigns: string[] | null = null;
+let cachedSigns: string[] | null = null; // module-level cache; loaded once on first mount
 
 async function getAvailableSigns(): Promise<string[]> {
     if (cachedSigns) return cachedSigns;
@@ -35,18 +29,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
     const [isFocused, setIsFocused] = useState(false);
     const [selectedIdx, setSelectedIdx] = useState(-1);
     const [allSigns, setAllSigns] = useState<string[]>([]);
-    // Tracks the query value when suggestions were dismissed.
-    // When query changes (user types), the dismissal no longer applies.
+    // dismissedForQuery tracks which query value triggered a dismiss — if the user types, it no longer applies
     const [dismissedForQuery, setDismissedForQuery] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
 
-    // Load sign names on mount
     useEffect(() => {
         getAvailableSigns().then(setAllSigns);
     }, []);
 
-    // Derive suggestions from query + allSigns (no effect needed)
     const suggestions = useMemo(() => {
         if (!query.trim() || allSigns.length === 0) return [];
         const q = query.toLowerCase().replace(/\s+/g, '_');
@@ -55,7 +46,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
             .slice(0, 6);
     }, [query, allSigns]);
 
-    // Suggestions are hidden only if dismissed for the current query value
     const suggestionsHidden = dismissedForQuery === query;
 
     const handleSubmit = useCallback((e?: React.FormEvent) => {
@@ -139,7 +129,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = fals
                     </div>
                 )}
 
-                {/* Autocomplete dropdown */}
                 {showSuggestions && (
                     <ul
                         id="search-suggestions"

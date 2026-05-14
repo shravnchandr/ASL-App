@@ -5,7 +5,7 @@ Tests for analytics tracking functionality
 import pytest
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import (
+from db import (
     create_analytics_event,
     get_unique_users_count,
     get_translations_count,

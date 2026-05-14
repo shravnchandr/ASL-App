@@ -3,7 +3,7 @@ import * as tf from '@tensorflow/tfjs';
 import type { HandLandmark, ScalerParams } from '../utils/handLandmarks';
 import { processLandmarksForModel } from '../utils/handLandmarks';
 
-export interface PredictionResult {
+interface PredictionResult {
   label: string;
   confidence: number;
 }

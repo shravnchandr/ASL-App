@@ -4,11 +4,11 @@ All routes require X-Admin-Password header (verified via verify_admin_password d
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import select, delete, func

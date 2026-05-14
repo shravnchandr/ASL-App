@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.pool import StaticPool
 
 # Import database models FIRST to ensure they're registered
-from database import Base, get_db
+from db import Base, get_db
 
 
 @pytest.fixture(scope="session")

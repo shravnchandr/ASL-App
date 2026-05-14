@@ -1,7 +1,4 @@
-"""
-Configuration management for ASL Dictionary API
-Handles environment-based settings for development and production
-"""
+"""Environment-based configuration for ASL Dictionary API."""
 
 from typing import List
 from pydantic import field_validator
@@ -10,42 +7,28 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    """Application settings with environment variable support"""
-
-    # Application
     app_name: str = "ASL Dictionary API"
     environment: str = "development"
     debug: bool = False
-
-    # API Configuration
     api_prefix: str = "/api"
     rate_limit: str = "10/minute"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Set debug based on environment after initialization
         if self.environment == "development":
             object.__setattr__(self, "debug", True)
-        # Extend CORS origins for production — must be done here, not at class body
-        # level, because class-body code runs at definition time before env vars are read
+        # Must extend CORS here — class-body runs before env vars are loaded
         if self.environment == "production":
             origins = list(self.cors_origins)
-            origins.extend(
-                [
-                    # Add your production domain here
-                    "https://asl-dictionary.onrender.com",
-                ]
-            )
+            origins.extend(["https://asl-dictionary.onrender.com"])
             object.__setattr__(self, "cors_origins", origins)
 
-    # CORS Settings
     cors_origins: List[str] = [
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative dev port
-        "http://localhost:8000",  # Same origin
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
     ]
 
-    # Database
     database_url: str = "sqlite+aiosqlite:///./asl_feedback.db"
 
     @field_validator("database_url")
@@ -58,26 +41,15 @@ class Settings(BaseSettings):
             return v.replace("postgresql://", "postgresql+asyncpg://", 1)
         return v
 
-    # Google Gemini API
     google_api_key: str = ""
     model_name: str = "gemini-2.5-flash"
-
-    # Shared API Key for new users (optional)
     shared_api_key: str = ""
-    shared_key_daily_limit: int = 10  # Translations per day per IP
-
-    # Admin Access
+    shared_key_daily_limit: int = 10  # translations per day per IP
     admin_password: str = ""
-
-    # Redis Cache (optional)
     redis_url: str = ""
-    cache_ttl: int = 3600  # 1 hour default
-
-    # Logging
+    cache_ttl: int = 3600  # seconds
     log_level: str = "INFO"
     log_format: str = "pretty"
-
-    # Server
     host: str = "0.0.0.0"
     port: int = 8000
 
@@ -88,5 +60,4 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance"""
     return Settings()

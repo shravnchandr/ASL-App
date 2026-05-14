@@ -1,28 +1,8 @@
-/**
- * SignBrowser Component
- * Displays all available signs in a grid with preview animations
- * Uses lazy loading to only render visible cards for performance
- */
-
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { SignAnimator } from './SignAnimator';
 import { formatSignName } from '../../utils/format';
-import type { SignData } from '../../types';
+import type { SignData, SignMetadata, SignMetadataEntry } from '../../types';
 import './SignBrowser.css';
-
-interface SignMetadata {
-    difficulty: string;
-    category: string;
-    frame_count: number;
-    fps: number;
-    source: string;
-}
-
-interface MetadataFile {
-    signs: Record<string, SignMetadata>;
-    total_signs: number;
-    categories?: string[];
-}
 
 type CategoryFilter = 'all' | 'alphabet' | 'numbers' | 'months' | 'common';
 
@@ -31,7 +11,6 @@ interface SignBrowserProps {
     onSelectSign?: (sign: string) => void;
 }
 
-// Memoized card component for performance
 const SignCard = memo<{
     sign: string;
     signData: SignData | null;
@@ -42,7 +21,6 @@ const SignCard = memo<{
     const cardRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
 
-    // Lazy load using IntersectionObserver
     useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => {
@@ -119,7 +97,7 @@ SignCard.displayName = 'SignCard';
 
 export const SignBrowser: React.FC<SignBrowserProps> = ({ onClose, onSelectSign }) => {
     const [signs, setSigns] = useState<string[]>([]);
-    const [signMetadata, setSignMetadata] = useState<Record<string, SignMetadata>>({});
+    const [signMetadata, setSignMetadata] = useState<Record<string, SignMetadataEntry>>({});
     const [signDataCache, setSignDataCache] = useState<Record<string, SignData | null>>({});
     const [playingSign, setPlayingSign] = useState<string | null>(null);
     const [filter, setFilter] = useState<CategoryFilter>('all');
@@ -127,10 +105,8 @@ export const SignBrowser: React.FC<SignBrowserProps> = ({ onClose, onSelectSign 
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
 
-    // Ref for AbortController
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    // Load metadata on mount with AbortController
     useEffect(() => {
         abortControllerRef.current = new AbortController();
         const { signal } = abortControllerRef.current;
@@ -139,7 +115,7 @@ export const SignBrowser: React.FC<SignBrowserProps> = ({ onClose, onSelectSign 
             try {
                 const response = await fetch('/sign-data/metadata.json', { signal });
                 if (!response.ok) throw new Error('Failed to load metadata');
-                const metadata: MetadataFile = await response.json();
+                const metadata: SignMetadata = await response.json();
                 setSigns(Object.keys(metadata.signs).sort());
                 setSignMetadata(metadata.signs);
             } catch (error) {
@@ -159,7 +135,6 @@ export const SignBrowser: React.FC<SignBrowserProps> = ({ onClose, onSelectSign 
         };
     }, []);
 
-    // Load sign data when a sign is clicked
     const loadSignData = useCallback(async (sign: string) => {
         if (signDataCache[sign]) return signDataCache[sign];
 
@@ -181,7 +156,6 @@ export const SignBrowser: React.FC<SignBrowserProps> = ({ onClose, onSelectSign 
             return;
         }
 
-        // Ensure data is loaded
         if (!signDataCache[sign]) {
             await loadSignData(sign);
         }
@@ -189,7 +163,6 @@ export const SignBrowser: React.FC<SignBrowserProps> = ({ onClose, onSelectSign 
     }, [playingSign, signDataCache, loadSignData]);
 
     const filteredSigns = signs.filter((sign) => {
-        // Apply search filter
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             const signName = formatSignName(sign).toLowerCase();
@@ -197,7 +170,6 @@ export const SignBrowser: React.FC<SignBrowserProps> = ({ onClose, onSelectSign 
                 return false;
             }
         }
-        // Apply category filter
         if (filter === 'all') return true;
         const meta = signMetadata[sign];
         return meta?.category === filter;

@@ -1,8 +1,3 @@
-/**
- * LevelCard Component — Playful Springs redesign
- * Hexagonal badge + progress bar, clean horizontal layout
- */
-
 import React from 'react';
 import type { LevelInfo } from '../../constants/levels';
 import { FlowerShape } from '../FlowerShape';

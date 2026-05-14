@@ -1,15 +1,14 @@
 """
-Direct google-genai pipeline for ASL translation.
+Google-genai pipeline for ASL translation.
 
-Drop-in replacement for the LangChain/LangGraph stack (nodes.py + graph.py).
-Uses google-genai directly to eliminate ~120MB of LangChain baseline memory,
-which is critical on Render Starter (512MB RAM).
+Uses google-genai directly (no LangChain/LangGraph) to keep memory footprint
+low on Render Starter (512MB RAM).
 
-The same two-agent logic is preserved:
-  1. Grammar Agent  — applies 10 ASL grammar rules, outputs gloss sequence
+Two-agent pipeline:
+  1. Grammar Agent  — applies 11 ASL grammar rules, outputs gloss sequence
   2. Translation Agent — generates detailed sign descriptions grounded by the KB
 
-Public API (identical to the old LangGraph compiled graph):
+Public API:
   build_asl_graph() → ASLPipeline with .invoke({"english_input": str}) → dict
 """
 
@@ -17,10 +16,11 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
 
 from google import genai
 from google.genai import types
+from google.genai.types import GenerateContentResponseUsageMetadata
 from colorama import Fore, Style
 
 from .schemas import GrammarPlanSchema, SentenceDescriptionSchema
@@ -29,7 +29,6 @@ from .schemas import GrammarPlanSchema, SentenceDescriptionSchema
 def _strip_json_fences(text: str) -> str:
     """Remove markdown code fences that LLMs occasionally wrap around JSON output."""
     stripped = text.strip()
-    # Match ```json ... ``` or ``` ... ```
     match = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", stripped)
     return match.group(1) if match else stripped
 from .knowledge_base import (
@@ -43,18 +42,18 @@ MODEL_NAME = "gemini-2.5-flash"
 
 @dataclass
 class _PipelineStats:
-    """Cumulative token and cache metrics for the lifetime of this ASLPipeline instance."""
+    """Cumulative token and cache metrics for the lifetime of this pipeline instance."""
 
     requests: int = 0
-    grammar_cache_hits: int = 0    # requests where grammar context cache was used
-    grammar_cache_misses: int = 0  # requests where inline prompt was used
-    total_prompt_tokens: int = 0   # all input tokens (includes cached subset)
-    total_cached_tokens: int = 0   # subset served from context cache (billed at 25%)
-    total_thinking_tokens: int = 0 # reasoning tokens (billed at output rate)
+    grammar_cache_hits: int = 0
+    grammar_cache_misses: int = 0
+    total_prompt_tokens: int = 0   # includes cached subset
+    total_cached_tokens: int = 0   # billed at 25%
+    total_thinking_tokens: int = 0 # billed at output rate
     total_output_tokens: int = 0
 
 
-def _usage_counts(usage: Any) -> dict[str, int]:
+def _usage_counts(usage: Optional[GenerateContentResponseUsageMetadata]) -> dict[str, int]:
     """Extract token counts from a Gemini response's usage_metadata."""
     if usage is None:
         return {"prompt": 0, "cached": 0, "thinking": 0, "output": 0, "total": 0}
@@ -66,11 +65,9 @@ def _usage_counts(usage: Any) -> dict[str, int]:
         "total":    getattr(usage, "total_token_count", 0) or 0,
     }
 
-# ── Retry helper ──────────────────────────────────────────────────────────────
-
 _RETRYABLE_PHRASES = ("503", "unavailable", "resource exhausted", "429", "overloaded")
 _MAX_RETRIES = 3
-_RETRY_BASE_DELAY = 2.0  # seconds; doubles each attempt
+_RETRY_BASE_DELAY = 2.0  # seconds; doubled each attempt
 
 
 def _gemini_with_retry(fn, *args, **kwargs):
@@ -90,10 +87,6 @@ def _gemini_with_retry(fn, *args, **kwargs):
             )
             time.sleep(delay)
 
-
-# ── Grammar system prompt ──────────────────────────────────────────────────────
-# Kept here (not imported from nodes.py) so nodes.py's LangChain imports are
-# never triggered in the production code path.
 
 _GRAMMAR_SYSTEM_PROMPT = (
     "You are an expert ASL linguist and grammarian trained in the grammar of American Sign Language "
@@ -204,7 +197,7 @@ def _make_client(api_key: Optional[str] = None) -> genai.Client:
     return genai.Client(api_key=api_key or os.environ.get("GOOGLE_API_KEY"))
 
 
-def _log_usage(agent: str, usage: Any) -> None:
+def _log_usage(agent: str, usage: Optional[GenerateContentResponseUsageMetadata]) -> None:
     """Print token usage from a Gemini response's usage_metadata."""
     c = _usage_counts(usage)
     if not any(c.values()):
@@ -218,12 +211,9 @@ def _log_usage(agent: str, usage: Any) -> None:
     print(f"{Fore.BLUE}   [{agent}] tokens — {'  '.join(parts)}{Style.RESET_ALL}")
 
 
-# _run_grammar_agent lives on ASLPipeline so it can access the context cache handle.
-
-
 def _run_instructor_agent(
     input_text: str, original_input: str, api_key: Optional[str] = None
-) -> tuple[SentenceDescriptionSchema, Any]:
+) -> tuple[SentenceDescriptionSchema, Optional[GenerateContentResponseUsageMetadata]]:
     """Call the Translation Agent and return a SentenceDescriptionSchema."""
     print(
         f"{Fore.MAGENTA}🤖 Instructor Agent: Generating signs for '{input_text}'...{Style.RESET_ALL}"
@@ -288,11 +278,9 @@ def _run_instructor_agent(
     _log_usage("translation", usage)
     result = SentenceDescriptionSchema.model_validate_json(_strip_json_fences(response.text))
 
-    # Post-process: deterministically set is_fingerspelled for fs- glosses
-    # and kb_verified for KB-matched signs.
     fs_map = _extract_fs_glosses(input_text)
     kb_matched = _get_kb_matched_words(input_text)
-    # Normalized lookup: strip hyphens/spaces so "New York City" matches "NEW-YORK-CITY"
+    # normalize: strip hyphens so "New York City" matches "NEW-YORK-CITY"
     fs_map_norm = {"".join(k.split("-")): k for k in fs_map}
 
     for sign in result.signs:
@@ -302,7 +290,6 @@ def _run_instructor_agent(
             sign.word = (
                 sign.word[3:] if sign.word.upper().startswith("FS-") else sign.word
             )
-        # Normalize for lookup: collapse hyphens and spaces so "New York City" matches "NEW-YORK-CITY"
         norm_key = clean_word.replace("-", "").replace(" ", "")
         if clean_word in fs_map:
             fs_key: str | None = clean_word
@@ -313,8 +300,7 @@ def _run_instructor_agent(
         if fs_key:
             sign.is_fingerspelled = True
             sign.fingerspell_letters = fs_map[fs_key]
-            # Use a readable display word: replace hyphens with spaces for multi-word proper nouns
-            if "-" in fs_key and sign.word == clean_word:
+            if "-" in fs_key and sign.word == clean_word:  # readable display: replace hyphens with spaces
                 sign.word = fs_key.replace("-", " ").title()
             print(
                 f"{Fore.CYAN}   -> Fingerspell forced: {fs_key} → "
@@ -328,20 +314,16 @@ def _run_instructor_agent(
 
 class ASLPipeline:
     """
-    Drop-in replacement for the compiled LangGraph.
-    Runs the two-agent pipeline directly without LangGraph or LangChain.
+    Two-agent ASL translation pipeline (Grammar Agent → Translation Agent).
     """
 
     def __init__(self) -> None:
-        # Remember the API key active at startup so we can detect key-swap requests
-        # (custom user keys) and skip the cache for those calls.
+        # Store the startup API key so cache is skipped for custom user keys (different key)
         self._init_api_key: Optional[str] = os.environ.get("GOOGLE_API_KEY")
         self._grammar_cache_name: Optional[str] = (
             self._try_create_grammar_cache() if self._init_api_key else None
         )
         self._stats = _PipelineStats()
-
-    # ── Context cache helpers ──────────────────────────────────────────────────
 
     def _try_create_grammar_cache(self) -> Optional[str]:
         """Upload _GRAMMAR_SYSTEM_PROMPT to Gemini's cache. Returns the cache name or None."""
@@ -372,9 +354,7 @@ class ASLPipeline:
             and effective_key == self._init_api_key
         )
 
-    # ── Grammar Agent ──────────────────────────────────────────────────────────
-
-    def _run_grammar_agent(self, english_input: str, api_key: Optional[str] = None) -> tuple[GrammarPlanSchema, Any]:
+    def _run_grammar_agent(self, english_input: str, api_key: Optional[str] = None) -> tuple[GrammarPlanSchema, Optional[GenerateContentResponseUsageMetadata]]:
         """Call the Grammar Agent. Uses context cache when the server key is active."""
         print(f"{Fore.MAGENTA}🧠 Grammar Agent: Planning ASL structure...{Style.RESET_ALL}")
         client = _make_client(api_key)
@@ -429,24 +409,16 @@ class ASLPipeline:
         print(f"{Fore.GREEN}   -> Reorder needed: {plan.should_reorder}{Style.RESET_ALL}")
         return plan, usage
 
-    # ── Pipeline orchestration ─────────────────────────────────────────────────
-
     def invoke(self, state: dict, api_key: Optional[str] = None) -> dict:
-        """
-        Run the full ASL translation pipeline.
-        Accepts and returns a dict in the same format as the old LangGraph state.
-        Pass api_key to use a specific key instead of the process environment variable.
-        """
+        """Run Grammar Agent → Translation Agent. Pass api_key to override the env-var key."""
         english_input = state["english_input"]
 
         try:
-            # Step 1: Grammar Agent
             plan, grammar_usage = self._run_grammar_agent(english_input, api_key)
         except Exception as e:
             print(f"{Fore.RED}Grammar Agent Error: {e}{Style.RESET_ALL}")
             return {"english_input": english_input, "error": str(e)}
 
-        # Step 2: Determine gloss input for Translation Agent
         input_text = plan.asl_gloss_order if plan.asl_gloss_order else english_input
         if plan.should_reorder:
             print(
@@ -454,7 +426,6 @@ class ASLPipeline:
             )
 
         try:
-            # Step 3: Translation Agent
             result, translation_usage = _run_instructor_agent(input_text, english_input, api_key)
         except Exception as e:
             print(f"{Fore.RED}Instructor Agent Error: {e}{Style.RESET_ALL}")
@@ -464,7 +435,6 @@ class ASLPipeline:
                 "error": str(e),
             }
 
-        # Accumulate lifetime stats and log per-request total
         gc = _usage_counts(grammar_usage)
         tc = _usage_counts(translation_usage)
         self._stats.requests += 1
@@ -496,8 +466,7 @@ class ASLPipeline:
         hit_rate = (
             s.grammar_cache_hits / s.requests * 100 if s.requests else 0.0
         )
-        # Full-rate tokens are prompt minus the cached subset (already discounted).
-        full_rate_prompt = s.total_prompt_tokens - s.total_cached_tokens
+        full_rate_prompt = s.total_prompt_tokens - s.total_cached_tokens  # cached subset is already discounted
         return {
             "requests": s.requests,
             "grammar_cache": {
@@ -515,8 +484,5 @@ class ASLPipeline:
 
 
 def build_asl_graph() -> ASLPipeline:
-    """
-    Return the ASL translation pipeline.
-    API-compatible with the old LangGraph build_asl_graph().
-    """
+    """Return a new ASLPipeline instance."""
     return ASLPipeline()

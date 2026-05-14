@@ -1,9 +1,4 @@
 /* eslint-disable react-refresh/only-export-components */
-/**
- * LearnContext
- * State management for the ASL learning feature
- */
-
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import type { SignData, Exercise, SignProgress } from '../types';
 import { storage } from '../utils/storage';
@@ -16,39 +11,26 @@ import {
 } from '../utils/signDataLoader';
 import { LEVELS, MASTERY_THRESHOLD, getLevelById, type LevelInfo } from '../constants/levels';
 
-// State types
 interface LearnState {
-    // Session state
     exercises: Exercise[];
     currentIndex: number;
     sessionScore: number;
     isSessionActive: boolean;
-
-    // Progress
     signProgress: Record<string, SignProgress>;
     totalXP: number;
     level: number;
     streak: number;
-
-    // Level progression
     unlockedLevels: number[];
     currentLevel: number;
     selectedLevel: number | null;
     justUnlockedLevel: number | null;
-
-    // Settings
     animationSpeed: number;
     difficulty: 'beginner' | 'intermediate' | 'all';
-
-    // UI state
     isLoading: boolean;
     error: string | null;
-
-    // Loaded sign data
     loadedSigns: Record<string, SignData>;
 }
 
-// Action types
 type LearnAction =
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_ERROR'; payload: string | null }
@@ -67,7 +49,6 @@ type LearnAction =
     | { type: 'UNLOCK_LEVEL'; payload: number }
     | { type: 'CLEAR_JUST_UNLOCKED' };
 
-// Initial state
 const initialState: LearnState = {
     exercises: [],
     currentIndex: 0,
@@ -88,7 +69,6 @@ const initialState: LearnState = {
     loadedSigns: {},
 };
 
-// Reducer
 function learnReducer(state: LearnState, action: LearnAction): LearnState {
     switch (action.type) {
         case 'SET_LOADING':
@@ -203,7 +183,6 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
     }
 }
 
-// Context type
 interface LearnContextType {
     state: LearnState;
     startSession: (exerciseCount?: number) => Promise<void>;
@@ -228,16 +207,13 @@ interface LearnContextType {
 
 const LearnContext = createContext<LearnContextType | null>(null);
 
-// XP rewards
 const XP_CORRECT = 10;
 const XP_CORRECT_STREAK = 15;
 const XP_RECALL_CORRECT = 20;
 
-// Provider component
 export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [state, dispatch] = useReducer(learnReducer, initialState);
 
-    // Restore state from localStorage on mount
     useEffect(() => {
         const progress = storage.getLearningProgress();
         const stats = storage.getLearningStats();
@@ -259,7 +235,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
     }, []);
 
-    // Load sign data
     const loadSign = useCallback(async (sign: string): Promise<SignData | null> => {
         if (state.loadedSigns[sign]) {
             return state.loadedSigns[sign];
@@ -272,7 +247,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return data;
     }, [state.loadedSigns]);
 
-    // Generate exercises for a session
     const generateExercises = useCallback(async (count: number): Promise<Exercise[]> => {
         const metadata = await loadMetadata();
         const availableSigns = Object.keys(metadata.signs);
@@ -281,14 +255,13 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             throw new Error('No signs available');
         }
 
-        // Filter by difficulty if needed
         let signsToUse = availableSigns;
         if (state.difficulty !== 'all') {
             signsToUse = availableSigns.filter(
                 sign => metadata.signs[sign].difficulty === state.difficulty
             );
             if (signsToUse.length === 0) {
-                signsToUse = availableSigns; // Fallback to all
+                signsToUse = availableSigns;
             }
         }
 
@@ -296,12 +269,10 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const usedSigns = new Set<string>();
 
         for (let i = 0; i < count && usedSigns.size < signsToUse.length; i++) {
-            // Pick a random sign not yet used
             const availableForPick = signsToUse.filter(s => !usedSigns.has(s));
             const sign = availableForPick[Math.floor(Math.random() * availableForPick.length)];
             usedSigns.add(sign);
 
-            // Determine exercise type based on mastery (show variety from the start)
             const progress = state.signProgress[sign];
             let type: Exercise['type'] = 'sign-to-word';
 
@@ -311,7 +282,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 type = Math.random() > 0.5 ? 'sign-to-word' : 'word-to-sign';
             }
 
-            // Generate options for multiple choice exercises
             let options: string[] | undefined;
             if (type !== 'recall') {
                 const distractors = await getDistractors(sign, 3);
@@ -330,19 +300,15 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return exercises;
     }, [state.difficulty, state.signProgress]);
 
-    // Start a new learning session
     const startSession = useCallback(async (exerciseCount: number = 10) => {
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'SET_ERROR', payload: null });
 
         try {
             const exercises = await generateExercises(exerciseCount);
-
-            // Preload sign data for all exercises
             const signsToLoad = [...new Set(exercises.map(e => e.sign))];
             await preloadSigns(signsToLoad);
 
-            // Load signs into state
             for (const sign of signsToLoad) {
                 await loadSign(sign);
             }
@@ -358,7 +324,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [generateExercises, loadSign]);
 
-    // Start a practice session from a custom list of sign words (e.g. from a dictionary translation)
     const startPracticeSession = useCallback(async (signWords: string[]) => {
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'SET_ERROR', payload: null });
@@ -369,7 +334,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             const validSigns = signWords
                 .map(w => w.toLowerCase().replace(/[\s-]+/g, '_'))
-                .filter((s, i, arr) => available.has(s) && arr.indexOf(s) === i); // dedupe
+                .filter((s, i, arr) => available.has(s) && arr.indexOf(s) === i);
 
             if (validSigns.length === 0) {
                 throw new Error('None of these signs are in the practice library yet');
@@ -424,44 +389,36 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [state.signProgress, loadSign]);
 
-    // End the current session
     const endSession = useCallback(() => {
         dispatch({ type: 'END_SESSION' });
     }, []);
 
-    // Skip the current exercise
     const skipExercise = useCallback(() => {
         dispatch({ type: 'SKIP_EXERCISE' });
     }, []);
 
-    // Move to next exercise
     const nextExercise = useCallback(() => {
         dispatch({ type: 'NEXT_EXERCISE' });
     }, []);
 
-    // Set animation speed
     const setAnimationSpeed = useCallback((speed: number) => {
         dispatch({ type: 'SET_SETTING', payload: { animationSpeed: speed } });
         storage.setLearningSettings({ animationSpeed: speed });
     }, []);
 
-    // Set difficulty
     const setDifficulty = useCallback((difficulty: 'beginner' | 'intermediate' | 'all') => {
         dispatch({ type: 'SET_SETTING', payload: { difficulty } });
         storage.setLearningSettings({ difficulty });
     }, []);
 
-    // Get current exercise
     const getCurrentExercise = useCallback((): Exercise | null => {
         return state.exercises[state.currentIndex] || null;
     }, [state.exercises, state.currentIndex]);
 
-    // Check if on last exercise
     const isLastExercise = useCallback((): boolean => {
         return state.currentIndex >= state.exercises.length - 1;
     }, [state.currentIndex, state.exercises.length]);
 
-    // Calculate mastery for a specific level
     const calculateLevelMastery = useCallback((levelId: number): number => {
         const level = getLevelById(levelId);
         if (!level) return 0;
@@ -475,17 +432,13 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return Math.round(masteries.reduce((a, b) => a + b, 0) / masteries.length);
     }, [state.signProgress]);
 
-    // Check if a level can be unlocked
     const canUnlockLevel = useCallback((levelId: number): boolean => {
-        if (levelId === 1) return true; // Level 1 is always unlocked
+        if (levelId === 1) return true;
         if (state.unlockedLevels.includes(levelId)) return true;
-
-        // Check if previous level has 80% mastery
         const previousLevelMastery = calculateLevelMastery(levelId - 1);
         return previousLevelMastery >= MASTERY_THRESHOLD;
     }, [state.unlockedLevels, calculateLevelMastery]);
 
-    // Check for level unlocks after answering
     const checkLevelUnlock = useCallback(() => {
         const currentLevelMastery = calculateLevelMastery(state.currentLevel);
         const nextLevel = state.currentLevel + 1;
@@ -500,7 +453,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [state.currentLevel, state.unlockedLevels, calculateLevelMastery]);
 
-    // Generate exercises for a specific level
     const generateLevelExercises = useCallback(async (levelId: number, count: number, cameraPractice: boolean = false): Promise<Exercise[]> => {
         const level = getLevelById(levelId);
         if (!level) {
@@ -514,7 +466,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         const exercises: Exercise[] = [];
 
-        // Camera practice: simple cycling order, no SM-2 priority needed
         if (cameraPractice) {
             const usedSigns = new Set<string>();
             for (let i = 0; i < count; i++) {
@@ -536,10 +487,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             return exercises;
         }
 
-        // SM-2 priority ordering within the level:
-        // 1. Signs due for review today (most overdue first — order preserved from getSignsDueForReview)
-        // 2. Signs never studied (new material, randomised)
-        // 3. Signs studied but not yet due (randomised for variety)
         const dueSet = new Set(storage.getSignsDueForReview());
         const dueSigns = levelSigns.filter(s => dueSet.has(s));
         const unseenSigns = shuffle(levelSigns.filter(s => !state.signProgress[s]));
@@ -549,23 +496,19 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         let poolIndex = 0;
 
         for (let i = 0; i < count; i++) {
-            // Work through the prioritised pool; repeat randomly once exhausted
             const sign = poolIndex < orderedPool.length
                 ? orderedPool[poolIndex++]
                 : levelSigns[Math.floor(Math.random() * levelSigns.length)];
 
-            // Determine exercise type based on mastery (show variety from the start)
             const progress = state.signProgress[sign];
             let type: Exercise['type'] = 'sign-to-word';
 
             if (progress && progress.mastery >= 70 && progress.timesStudied >= 3) {
                 type = 'recall';
             } else {
-                // Always mix sign-to-word and word-to-sign regardless of mastery
                 type = Math.random() > 0.5 ? 'sign-to-word' : 'word-to-sign';
             }
 
-            // Generate options for multiple choice exercises (use level signs as distractors)
             let options: string[] | undefined;
             if (type !== 'recall') {
                 const otherSigns = levelSigns.filter(s => s !== sign);
@@ -589,7 +532,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return exercises;
     }, [state.signProgress]);
 
-    // Start a level-specific session
     const startLevelSession = useCallback(async (levelId: number, exerciseCount: number = 10, cameraPractice: boolean = false) => {
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'SET_ERROR', payload: null });
@@ -599,12 +541,9 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         try {
             const exercises = await generateLevelExercises(levelId, exerciseCount, cameraPractice);
-
-            // Preload sign data for all exercises
             const signsToLoad = [...new Set(exercises.map(e => e.sign))];
             await preloadSigns(signsToLoad);
 
-            // Load signs into state
             for (const sign of signsToLoad) {
                 await loadSign(sign);
             }
@@ -620,12 +559,10 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [generateLevelExercises, loadSign]);
 
-    // Select a level (for viewing details before starting)
     const selectLevel = useCallback((levelId: number | null) => {
         dispatch({ type: 'SELECT_LEVEL', payload: levelId });
     }, []);
 
-    // Count how many signs in a level are due for SM-2 review today
     const getReviewDueCountForLevel = useCallback((levelId: number): number => {
         const level = getLevelById(levelId);
         if (!level) return 0;
@@ -633,17 +570,14 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return level.signs.filter(s => dueSet.has(s)).length;
     }, []);
 
-    // Clear the just unlocked notification
     const clearJustUnlocked = useCallback(() => {
         dispatch({ type: 'CLEAR_JUST_UNLOCKED' });
     }, []);
 
-    // Modified answerExercise to check for level unlocks
     const answerExerciseWithLevelCheck = useCallback((_answer: string, isCorrect: boolean) => {
         const currentExercise = state.exercises[state.currentIndex];
         if (!currentExercise) return;
 
-        // Calculate XP
         let xp = 0;
         if (isCorrect) {
             if (currentExercise.type === 'recall') {
@@ -653,7 +587,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
         }
 
-        // Update progress in storage and state
         storage.updateSignProgress(currentExercise.sign, isCorrect);
         const updatedProgress = storage.getSignProgress(currentExercise.sign);
         if (updatedProgress) {
@@ -663,7 +596,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             });
         }
 
-        // Add XP
         if (xp > 0) {
             const stats = storage.addXP(xp);
             dispatch({
@@ -673,9 +605,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         dispatch({ type: 'ANSWER_EXERCISE', payload: { isCorrect, xp } });
-
-        // Check for level unlock after updating progress
-        setTimeout(() => checkLevelUnlock(), 100);
+        setTimeout(() => checkLevelUnlock(), 100); // let progress state flush before unlock check
     }, [state.exercises, state.currentIndex, state.sessionScore, checkLevelUnlock]);
 
     const value: LearnContextType = {
@@ -707,7 +637,6 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
 };
 
-// Hook to use the context
 export const useLearn = (): LearnContextType => {
     const context = useContext(LearnContext);
     if (!context) {

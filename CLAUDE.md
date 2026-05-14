@@ -94,7 +94,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - Database URL, API keys, logging config
 - Cached with `@lru_cache()` for performance
 
-**Database:** `db/` package (`database.py` is a backwards-compat shim that re-exports everything)
+**Database:** `db/` package
 - `db/engine.py` — async engine, `AsyncSessionLocal`, `Base`, `init_db`, `get_db`, `hash_ip`
 - `db/models.py` — `Feedback` and `Analytics` ORM models
 - `db/crud/feedback.py` — `create_feedback`, `get_feedback_stats`, `get_paginated_feedback`, `get_recent_feedback`
@@ -105,7 +105,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - All queries use `func.date()` and SQLite-compatible syntax — no code changes needed to switch back
 - To re-enable PostgreSQL: set `DATABASE_URL=postgresql+asyncpg://...` in `render.yaml` and uncomment the `databases:` block
 
-**AI Workflow:** `python_code/asl/` package (`python_code/asl_dict_langgraph.py` is a backwards-compat shim)
+**AI Workflow:** `python_code/asl/` package
 - `asl/schemas.py` — Pydantic models (`DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`) and `ASLState` TypedDict
 - `asl/knowledge_base.py` — KB loading, exact lookup, optional semantic lookup (`_build_knowledge_context`, `_extract_fs_glosses`, `_get_kb_matched_words`)
 - `asl/pipeline.py` — **active implementation**: `ASLPipeline` class with `.invoke()`, `build_asl_graph()` factory. Uses `google-genai` SDK directly (no LangChain/LangGraph) for ~120MB RAM savings on Render Starter. Two-agent logic: Grammar Agent → Translation Agent. Key internals:
@@ -114,8 +114,6 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
   - **Token tracking**: `_usage_counts()` extracts prompt/cached/thinking/output counts from every response; `_PipelineStats` dataclass accumulates lifetime totals; `get_stats()` returns cache hit rate and token breakdown; `_log_usage()` prints per-agent counts to stdout
   - **`_run_grammar_agent`** is an instance method (not module-level) so it can access the cache handle on `self`
   - **Thread-safe key passing**: `invoke(state, api_key=None)` accepts the key directly; `_make_client(api_key)` uses it per-call. No `os.environ` mutation — concurrent requests with different keys cannot interfere
-- `asl/nodes.py` — **reference only**: original LangChain/LangGraph implementation (Grammar Agent, Translation Agent, conditional edge). Not imported in the production path; preserved for reference.
-- `asl/graph.py` — thin shim that re-exports `build_asl_graph` from `pipeline.py`
 - `asl/cli.py` — interactive CLI for local testing (`python -m python_code.asl.cli`)
 - Two-agent pipeline (in `pipeline.py`):
   1. **Grammar Agent**: Applies 11 ASL grammar rules — TTC structure, function-word omission, negation placement, topicalization, wh-question formation, yes/no questions, conditionals, verb directionality, aspect, classifiers, and **numbers** (years split as 2-digit chunks e.g. `2030 → 20 30`; phone/zip/serial numbers fingerspelled digit-by-digit; quantities and ages use number signs; money uses number + DOLLAR/CENT; never `fs-` on years or plain quantities)
@@ -123,7 +121,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - Uses Google Gemini 2.5 Flash model via `google-genai` SDK
 - `ASLPipeline` instance built at startup and stored in `app.state.asl_graph`; `__init__` also creates the Gemini context cache for `_GRAMMAR_SYSTEM_PROMPT`
 - Invoked via `await asyncio.to_thread(asl_graph.invoke, {"english_input": text})` — runs in a thread pool to avoid blocking the async event loop
-- **Modifying prompts**: edit `_GRAMMAR_SYSTEM_PROMPT` and `_run_instructor_agent()` in `asl/pipeline.py` (not `nodes.py`). **Note**: changing `_GRAMMAR_SYSTEM_PROMPT` requires restarting the app to recreate the context cache with the new content
+- **Modifying prompts**: edit `_GRAMMAR_SYSTEM_PROMPT` and `_run_instructor_agent()` in `asl/pipeline.py`. **Note**: changing `_GRAMMAR_SYSTEM_PROMPT` requires restarting the app to recreate the context cache with the new content
 
 **Sign Knowledge Base:** `python_code/sign_knowledge_base.json`
 - Verified hand shape, location, movement, and non-manual marker descriptions for all 100 signs (A-Z, 0-9, 12 months, 52 common signs)
@@ -170,12 +168,12 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `src/components/FeedbackWidget.tsx`: Rating system (thumbs up/down)
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
-**API Layer:** `src/services/api/` package (`src/services/api.ts` is a re-export shim — existing imports unchanged)
+**API Layer:** `src/services/api/` package
 - `api/client.ts` — shared axios instance (30s timeout), `setCustomApiKey()`
-- `api/translate.ts` — `translateToASL(text, signal?)`, `getRateLimitStatus`, `checkHealth`. Errors are thrown with a type prefix: `ai_busy:`, `rate_limit:N:` (N = Retry-After seconds), `network:`, `server:`. Non-string FastAPI `detail` values (e.g. 422 validation arrays) are coerced to a generic message rather than `[object Object]`.
-- `api/feedback.ts` — `submitFeedback`, `submitGeneralFeedback`, `getFeedbackStats`
+- `api/translate.ts` — `translateToASL(text, signal?)`, `getRateLimitStatus`. Errors are thrown with a type prefix: `ai_busy:`, `rate_limit:N:` (N = Retry-After seconds), `network:`, `server:`. Non-string FastAPI `detail` values (e.g. 422 validation arrays) are coerced to a generic message rather than `[object Object]`.
+- `api/feedback.ts` — `submitFeedback`, `submitGeneralFeedback`
 - `api/admin.ts` — `getAdminFeedback`, `deleteAdminFeedback`, `getAdminStats`, `getAnalyticsOverview`
-- `api/index.ts` — barrel re-export (all consumers import from `'../services/api'` as before)
+- `api/index.ts` — barrel re-export
 - All API calls go to `/api/*` prefix; dev mode proxied to localhost:8000 via Vite config
 
 **Utilities:**
@@ -253,7 +251,7 @@ VITE_API_URL=                         # Empty for same-origin (production)
 
 ### Modifying AI Translation Logic
 
-The pipeline lives in `python_code/asl/pipeline.py` (active) and `nodes.py` (LangChain reference, not used):
+The pipeline lives in `python_code/asl/pipeline.py`:
 - Two-agent system: Grammar Agent → Translation Agent
 - Uses Pydantic structured output via `google-genai` SDK (`response_mime_type="application/json"`, `response_schema=Schema`)
 - State flows as a plain `dict` with keys: `english_input`, `grammar_plan`, `translated_input`, `final_output`
@@ -407,26 +405,21 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `db/models.py`: `Feedback` and `Analytics` ORM models
 - `db/crud/feedback.py`: Feedback CRUD operations
 - `db/crud/analytics.py`: Analytics CRUD and aggregation queries
-- `database.py`: Backwards-compat shim — re-exports everything from `db/`
 
 **Backend — AI (`python_code/asl/`):**
 - `asl/schemas.py`: `DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`, `ASLState`
 - `asl/knowledge_base.py`: KB loading, semantic lookup, `_build_knowledge_context`
-- `asl/pipeline.py`: **active** — `_GRAMMAR_SYSTEM_PROMPT` (11 rules), `_gemini_with_retry()` (exponential backoff helper), `_run_instructor_agent()` (module-level), `ASLPipeline` (with `__init__`, `_run_grammar_agent()` method, `_try_create_grammar_cache()`, `_can_use_grammar_cache()`, `get_stats()`), `build_asl_graph()`. Edit this file to change prompts or pipeline logic. Token helpers: `_PipelineStats` dataclass, `_usage_counts()`, `_log_usage()`.
-- `asl/nodes.py`: **reference only** — original LangChain/LangGraph implementation; not imported in production
-- `asl/graph.py`: Thin shim re-exporting `build_asl_graph` from `pipeline.py`
+- `asl/pipeline.py`: `_GRAMMAR_SYSTEM_PROMPT` (11 rules), `_gemini_with_retry()` (exponential backoff helper), `_run_instructor_agent()` (module-level), `ASLPipeline` (with `__init__`, `_run_grammar_agent()` method, `_try_create_grammar_cache()`, `_can_use_grammar_cache()`, `get_stats()`), `build_asl_graph()`. Edit this file to change prompts or pipeline logic. Token helpers: `_PipelineStats` dataclass, `_usage_counts()`, `_log_usage()`.
 - `asl/cli.py`: Interactive CLI for local testing
 - `python_code/sign_knowledge_base.json`: Verified sign descriptions for all 100 signs (grounding source)
-- `python_code/asl_dict_langgraph.py`: Backwards-compat shim — re-exports from `asl/`
 
 **Frontend Core:**
 - `src/App.tsx`: Main React component with lazy loading
 - `src/main.tsx`: Entry point with ErrorBoundary
 - `src/services/api/client.ts`: Axios instance, `setCustomApiKey`, `API_PREFIX`
-- `src/services/api/translate.ts`: `translateToASL`, `getRateLimitStatus`, `checkHealth`
-- `src/services/api/feedback.ts`: `submitFeedback`, `submitGeneralFeedback`, `getFeedbackStats`
+- `src/services/api/translate.ts`: `translateToASL`, `getRateLimitStatus`
+- `src/services/api/feedback.ts`: `submitFeedback`, `submitGeneralFeedback`
 - `src/services/api/admin.ts`: `getAdminFeedback`, `deleteAdminFeedback`, `getAdminStats`, `getAnalyticsOverview`
-- `src/services/api.ts`: Backwards-compat shim — re-exports from `api/index.ts`
 - `src/components/ErrorBoundary.tsx`: Global error handling
 
 **Learning Feature:**
@@ -455,7 +448,6 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `public/models/asl-classifier/`: TensorFlow.js model files
 
 **Utilities:**
-- `src/utils/sanitize.ts`: XSS protection with DOMPurify
 - `src/utils/storage.ts`: LocalStorage with level persistence and SM-2 spaced repetition
 - `src/utils/signOfTheDay.ts`: Deterministic daily sign picker
 - `src/utils/format.ts`: `formatSignName()` display helper
@@ -1017,29 +1009,6 @@ const SignCard = memo(({ sign }) => {
   }, []);
 });
 ```
-
----
-
-## Security Utilities
-
-### XSS Protection with DOMPurify
-
-The app includes sanitization utilities in `src/utils/sanitize.ts`:
-
-```typescript
-import { sanitizeHtml, sanitizeText, sanitizeUrl } from './utils/sanitize';
-
-// Allow limited HTML tags
-sanitizeHtml(userContent);  // Allows b, i, em, strong, br, p, span
-
-// Strip all HTML
-sanitizeText(userContent);  // Returns plain text only
-
-// Block dangerous protocols
-sanitizeUrl(url);  // Blocks javascript:, data:, vbscript:
-```
-
-**Usage:** Apply sanitization to any user-generated or API-provided content before rendering.
 
 ---
 

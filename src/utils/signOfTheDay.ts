@@ -1,8 +1,3 @@
-/**
- * Sign of the Day — deterministic daily sign picker
- * Uses date string hash to select a consistent sign per day
- */
-
 let cachedSignList: string[] | null = null;
 
 async function getSignList(): Promise<string[]> {
@@ -10,9 +5,8 @@ async function getSignList(): Promise<string[]> {
     try {
         const res = await fetch('/sign-data/metadata.json');
         const data = await res.json();
-        // Filter to common/months/numbers (not single letters)
         cachedSignList = Object.keys(data.signs).filter(
-            (s: string) => s.length > 1
+            (s: string) => s.length > 1  // exclude single-letter alphabet entries
         );
         return cachedSignList;
     } catch {

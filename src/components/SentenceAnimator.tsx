@@ -1,8 +1,3 @@
-/**
- * SentenceAnimator Component
- * Plays multiple sign animations in sequence with word indicators and playback controls
- */
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { SignAnimator } from './learn/SignAnimator';
 import { loadSignData } from '../utils/signDataLoader';
@@ -16,17 +11,12 @@ interface WordEntry {
 }
 
 interface SentenceAnimatorProps {
-    /** List of sign words to animate in order */
     words: WordEntry[];
 }
 
 type PlayState = 'idle' | 'loading' | 'playing' | 'paused';
 
-/**
- * Returns true if a word key should have its animation loaded.
- * Single-letter words that aren't fingerspelled are word-signs (e.g. pronoun "I")
- * and don't have matching animation data (the files are for alphabet letters).
- */
+/** Skip single-letter non-fingerspelled words (e.g. pronoun "I") — no matching animation file. */
 function shouldLoadAnimation(entry: WordEntry): boolean {
     if (entry.word.length === 1 && /^[a-z]$/i.test(entry.word) && !entry.isFingerspelled) {
         return false;
@@ -41,10 +31,7 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
     const [isPlaying, setIsPlaying] = useState(false);
     const isMountedRef = useRef(true);
 
-    // Word keys for lookups
     const wordKeys = useMemo(() => words.map(w => w.word), [words]);
-
-    // Track which words have sign data available
     const availableWords = wordKeys.filter(w => signDataMap.has(w));
 
     useEffect(() => {
@@ -52,7 +39,6 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
         return () => { isMountedRef.current = false; };
     }, []);
 
-    // Load sign data — skip single-letter non-fingerspelled words
     useEffect(() => {
         let cancelled = false;
         async function loadAll() {
@@ -145,7 +131,6 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
 
     return (
         <div className="sentence-animator">
-            {/* Header */}
             <div className="sentence-animator__header">
                 <h4 className="sentence-animator__title">Sentence Animation</h4>
                 {playState !== 'idle' && (
@@ -155,7 +140,6 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
                 )}
             </div>
 
-            {/* Word chips */}
             <div className="sentence-animator__words">
                 {words.map((entry, idx) => {
                     const hasData = signDataMap.has(entry.word);
@@ -178,7 +162,6 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
                 })}
             </div>
 
-            {/* Canvas */}
             <div className="sentence-animator__canvas-area">
                 {totalAvailable === 0 ? (
                     <div className="sentence-animator__no-data">
@@ -195,7 +178,6 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
                 )}
             </div>
 
-            {/* Progress bar */}
             {playState !== 'idle' && totalAvailable > 1 && (
                 <div className="sentence-animator__progress">
                     <div className="sentence-animator__progress-bar">
@@ -207,7 +189,6 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
                 </div>
             )}
 
-            {/* Controls */}
             {totalAvailable > 0 && (
                 <div className="sentence-animator__controls">
                     {playState !== 'idle' && (

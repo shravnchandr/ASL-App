@@ -1,9 +1,3 @@
-/**
- * DictionaryPage Component
- * Search for ASL translations — the primary app feature
- * Landing page with Sign of the Day, progress summary, onboarding, and categories
- */
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { SearchBar } from './SearchBar';
@@ -15,7 +9,9 @@ import { SearchHistory } from './features/SearchHistory';
 import { ActionButtons } from './features/ActionButtons';
 import { RateLimitBanner } from './features/RateLimitBanner';
 import { SentenceAnimator } from './SentenceAnimator';
-import { translateToASL, submitFeedback, submitGeneralFeedback, setCustomApiKey } from '../services/api';
+import { setCustomApiKey } from '../services/api/client';
+import { translateToASL } from '../services/api/translate';
+import { submitFeedback, submitGeneralFeedback } from '../services/api/feedback';
 import { announceToScreenReader } from '../utils/accessibility';
 import { print } from '../utils/print';
 import { useApp } from '../contexts/AppContext';
@@ -25,7 +21,6 @@ import { LEVELS } from '../constants/levels';
 import type { TranslateResponse } from '../types';
 import './DictionaryPage.css';
 
-// ─── Follow-up phrase suggestions ────────────────────────────────
 const FOLLOW_UP_MAP: Record<string, string[]> = {
     'hello': ['How are you', 'My name is', 'Nice to meet you', 'Goodbye'],
     'how are you': ['I am fine', 'I am good', 'I am tired', 'Thank you'],
@@ -44,7 +39,6 @@ const FOLLOW_UP_MAP: Record<string, string[]> = {
 function getFollowUpSuggestions(query: string, resultWords: string[]): string[] {
     const q = query.toLowerCase().trim();
     if (FOLLOW_UP_MAP[q]) return FOLLOW_UP_MAP[q];
-    // Fallback: find category siblings from Levels
     for (const level of LEVELS) {
         const match = resultWords.find(w =>
             level.signs.includes(w.toLowerCase().replace(/[\s-]+/g, '_'))
@@ -59,7 +53,6 @@ function getFollowUpSuggestions(query: string, resultWords: string[]): string[] 
     return [];
 }
 
-// ─── Gloss bar ───────────────────────────────────────────────────
 const GlossBar: React.FC<{ gloss: string; query: string }> = ({ gloss, query }) => {
     const [copied, setCopied] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -108,7 +101,6 @@ const GlossBar: React.FC<{ gloss: string; query: string }> = ({ gloss, query }) 
 
 
 
-// ─── Onboarding callout ──────────────────────────────────────────
 const OnboardingCallout: React.FC = () => {
     const [visible, setVisible] = useState(() => !storage.isOnboardingDismissed());
     if (!visible) return null;
@@ -134,7 +126,6 @@ const OnboardingCallout: React.FC = () => {
     );
 };
 
-// ─── Learn progress summary ──────────────────────────────────────
 const LearnProgressCard: React.FC = () => {
     const [stats] = useState(() => storage.getLearningStats());
     if (stats.totalXP === 0) return null;
@@ -160,10 +151,8 @@ const LearnProgressCard: React.FC = () => {
     );
 };
 
-// ─── Quick-try chips ─────────────────────────────────────────────
 const QUICK_TRIES = ['Hello', 'Thank you', 'I love you', 'How are you', 'My name is'];
 
-// ─── Main component ─────────────────────────────────────────────
 export const DictionaryPage: React.FC = () => {
     const { customApiKey, addToHistory } = useApp();
     const navigate = useNavigate();
@@ -181,7 +170,7 @@ export const DictionaryPage: React.FC = () => {
     const [selectedRating, setSelectedRating] = useState<'up' | 'down' | null>(null);
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
-    // Capture initial ?q= before any renders so the effect dep stays stable
+    // Capture initial ?q= once so the effect dep array stays stable across re-renders
     const initialQueryRef = useRef(searchParams.get('q'));
 
     useEffect(() => {
@@ -200,12 +189,10 @@ export const DictionaryPage: React.FC = () => {
     };
 
     const handleSearch = useCallback(async (query: string) => {
-        // Abort any in-flight request
         abortControllerRef.current?.abort();
         const controller = new AbortController();
         abortControllerRef.current = controller;
 
-        // Optimistic cache check — skip the API call entirely if we already have this result
         const cacheKey = `asl_result:${query.toLowerCase().trim()}`;
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
@@ -227,7 +214,6 @@ export const DictionaryPage: React.FC = () => {
             setTimeout(() => setLoadingHint('Still working on it. Thanks for your patience.'), 14000),
         ];
 
-        // Keep the query in the URL so results are shareable and indexable
         setSearchParams({ q: query }, { replace: true });
 
         announceToScreenReader('Searching for ASL translation', 'polite');
@@ -236,14 +222,13 @@ export const DictionaryPage: React.FC = () => {
         try {
             const response = await translateToASL(query, controller.signal);
             setResult(response);
-            try { sessionStorage.setItem(cacheKey, JSON.stringify(response)); } catch { /* ignore quota errors */ }
+            try { sessionStorage.setItem(cacheKey, JSON.stringify(response)); } catch { /* ignore storage quota errors */ }
             announceToScreenReader(`Found ${response.signs.length} signs for ${query}`, 'polite');
         } catch (err) {
             if (err instanceof Error && err.message === 'cancelled') return;
             const errorMessage = err instanceof Error ? err.message : 'An error occurred';
             setError(errorMessage);
             setErrorReported(false);
-            // Start rate-limit countdown if seconds are encoded in the error
             const rlMatch = errorMessage.match(/^rate_limit:(\d+):/);
             if (rlMatch) {
                 const secs = parseInt(rlMatch[1], 10);
@@ -263,7 +248,6 @@ export const DictionaryPage: React.FC = () => {
         }
     }, [addToHistory, setSearchParams]);
 
-    // On load with ?q=: restore from sessionStorage cache to avoid re-calling the API on refresh
     useEffect(() => {
         const q = initialQueryRef.current;
         if (!q) return;
@@ -305,7 +289,6 @@ export const DictionaryPage: React.FC = () => {
 
     const showLanding = !result && !isLoading && !error;
 
-    // Follow-up suggestions
     const followUps = result
         ? getFollowUpSuggestions(result.query, result.signs.map(s => s.word))
         : [];
@@ -322,7 +305,6 @@ export const DictionaryPage: React.FC = () => {
                 <SearchHistory onSelectQuery={handleSearch} />
             </section>
 
-            {/* ─── Landing content ─── */}
             {showLanding && (
                 <>
                     <OnboardingCallout />
@@ -344,7 +326,6 @@ export const DictionaryPage: React.FC = () => {
 
                     <LearnProgressCard />
 
-                    {/* Feature cards (only if no learn progress — replaced by progress card above) */}
                     {storage.getLearningStats().totalXP === 0 && (
                         <section className="feature-cards" aria-label="Explore features">
                             <Link to="/learn" className="feature-card feature-card--learn">
@@ -428,7 +409,6 @@ export const DictionaryPage: React.FC = () => {
                 const isAiBusy = error.startsWith('ai_busy:');
                 const isRateLimit = error.startsWith('rate_limit:');
                 const isNetwork = error.startsWith('network:');
-                // Strip type prefix and optional seconds: "rate_limit:60: msg" or "ai_busy: msg"
                 const displayMessage = error.replace(/^[a-z_]+:\d*:\s*/, '').replace(/^[a-z_]+:\s*/, '');
                 const title = isAiBusy ? 'AI service is busy'
                     : isRateLimit ? 'Too many requests'
@@ -514,7 +494,6 @@ export const DictionaryPage: React.FC = () => {
 
                     <ActionButtons query={result.query} signsCount={result.signs.length} />
 
-                    {/* Two-column: sign cards left, animation right (sticky ends when grid ends) */}
                     <div className="results-columns">
                         <div className="results-left">
                             <div className="signs-list">
@@ -524,7 +503,6 @@ export const DictionaryPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Sticky animation — stops at grid boundary */}
                         <div className="results-right">
                             <SentenceAnimator words={result.signs.map(s => ({
                                 word: s.word.toLowerCase().replace(/\s+/g, '_'),
@@ -533,7 +511,6 @@ export const DictionaryPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Full-width below grid: grammar notes, then try-next + feedback row */}
                     {result.note && (
                         <div className="grammar-note">
                             <h3 className="grammar-note__title">Grammar Notes</h3>

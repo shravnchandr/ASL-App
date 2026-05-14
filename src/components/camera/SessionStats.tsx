@@ -1,8 +1,3 @@
-/**
- * SessionStats Component
- * Displays camera session statistics (signs recognized, time, accuracy)
- */
-
 import { useEffect, useState, useRef } from 'react';
 import './SessionStats.css';
 
@@ -15,9 +10,7 @@ export function SessionStats({ signsRecognized, accuracy }: SessionStatsProps) {
   const [sessionTime, setSessionTime] = useState(0);
   const startTimeRef = useRef<number | null>(null);
 
-  // Update session time every second
   useEffect(() => {
-    // Initialize start time on mount
     startTimeRef.current = Date.now();
 
     const interval = setInterval(() => {

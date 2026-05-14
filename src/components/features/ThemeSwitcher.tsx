@@ -1,8 +1,3 @@
-/**
- * Theme Switcher Component
- * Allows users to switch between auto, light, dark, and high-contrast themes
- */
-
 import { useTheme } from '../../contexts/ThemeContext';
 import './ThemeSwitcher.css';
 

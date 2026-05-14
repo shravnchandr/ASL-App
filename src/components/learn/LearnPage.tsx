@@ -1,8 +1,3 @@
-/**
- * LearnPage Component
- * Main page for the ASL learning feature with level-based progression
- */
-
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LearnProvider, useLearn } from '../../contexts/LearnContext';
@@ -20,7 +15,6 @@ import { useSoundEffects } from '../../hooks/useSoundEffects';
 import type { SignData } from '../../types';
 import './LearnPage.css';
 
-// Inner component that uses the context
 const LearnPageContent: React.FC = () => {
     const {
         state,
@@ -50,7 +44,6 @@ const LearnPageContent: React.FC = () => {
     const [exerciseResults, setExerciseResults] = useState<Array<{ sign: string; isCorrect: boolean }>>([]);
     const { isEnabled: soundEnabled, toggleSounds, playSuccess, playError: playSoundError } = useSoundEffects();
 
-    // Refs for cleanup
     const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const unlockCelebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isMountedRef = useRef(true);
@@ -60,15 +53,12 @@ const LearnPageContent: React.FC = () => {
     const currentExercise = getCurrentExercise();
     const selectedLevelInfo = state.selectedLevel ? getLevelById(state.selectedLevel) : null;
 
-    // Show unlock celebration when justUnlockedLevel is set in context
     const showUnlockCelebration = state.justUnlockedLevel !== null;
 
-    // Cleanup timers on unmount; record session start time on mount
     useEffect(() => {
         isMountedRef.current = true;
         sessionStartTimeRef.current = Date.now();
 
-        // If navigated from dictionary with ?practice=1, auto-start a practice session
         if (searchParams.get('practice') === '1') {
             try {
                 const raw = sessionStorage.getItem('asl_practice_words');
@@ -93,7 +83,7 @@ const LearnPageContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Capture elapsed time when session completes so render doesn't call Date.now()
+    // Capture elapsed time once on completion so the render doesn't call Date.now() on every tick
     const sessionIsComplete = state.isSessionActive && state.currentIndex >= state.exercises.length - 1 && !!feedback;
     useEffect(() => {
         if (sessionIsComplete) {
@@ -101,7 +91,6 @@ const LearnPageContent: React.FC = () => {
         }
     }, [sessionIsComplete]);
 
-    // Auto-dismiss unlock celebration after 3 seconds
     useEffect(() => {
         if (state.justUnlockedLevel !== null) {
             unlockCelebrationTimerRef.current = setTimeout(() => {
@@ -115,7 +104,6 @@ const LearnPageContent: React.FC = () => {
         }
     }, [state.justUnlockedLevel, clearJustUnlocked]);
 
-    // Load sign data when exercise changes
     useEffect(() => {
         const loadCurrentSignData = async () => {
             if (!currentExercise) return;
@@ -123,7 +111,6 @@ const LearnPageContent: React.FC = () => {
             const data = await loadSign(currentExercise.sign);
             setSignData(data);
 
-            // For word-to-sign, load all option sign data
             if (currentExercise.type === 'word-to-sign' && currentExercise.options) {
                 const optionData = await Promise.all(
                     currentExercise.options.map(async (sign) => ({
@@ -136,21 +123,16 @@ const LearnPageContent: React.FC = () => {
         };
 
         loadCurrentSignData();
-        // Feedback is cleared in handleAnswer and handleSkip event handlers
-        // to avoid synchronous setState in effect
     }, [currentExercise, loadSign]);
 
     const handleAnswer = useCallback((answer: string, isCorrect: boolean) => {
-        // Clear any existing auto-advance timer
         if (autoAdvanceTimerRef.current) {
             clearTimeout(autoAdvanceTimerRef.current);
         }
 
-        // Capture current exercise info before state changes
         const exerciseType = currentExercise?.type;
         const correctAnswer = currentExercise?.correctAnswer || '';
 
-        // Track result for session complete screen
         if (correctAnswer) {
             setExerciseResults(prev => [...prev, { sign: correctAnswer, isCorrect }]);
         }
@@ -171,13 +153,11 @@ const LearnPageContent: React.FC = () => {
             playSoundError();
         }
 
-        // Auto-advance after delay with cleanup support
         autoAdvanceTimerRef.current = setTimeout(() => {
-            // Check if component is still mounted before updating state
             if (!isMountedRef.current) return;
 
             if (isLastExercise()) {
-                // Session complete - show will be handled by state
+                // leave state as-is — session complete screen renders from state
             } else {
                 nextExercise();
                 setFeedback(null);
@@ -195,7 +175,6 @@ const LearnPageContent: React.FC = () => {
     }, [skipExercise, isLastExercise, nextExercise]);
 
     const handleStartLevelSession = useCallback(() => {
-        // Use currentLevel for "Practice Again" on completion screen, or selectedLevel for starting new
         const levelToStart = state.selectedLevel || state.currentLevel;
         if (levelToStart) {
             setFeedback(null);
@@ -209,7 +188,6 @@ const LearnPageContent: React.FC = () => {
         const levelToStart = state.selectedLevel || state.currentLevel;
         if (levelToStart) {
             setFeedback(null);
-            // Start a session with camera-practice type exercises
             startLevelSession(levelToStart, 10, true);
         }
     }, [startLevelSession, state.selectedLevel, state.currentLevel]);
@@ -227,7 +205,6 @@ const LearnPageContent: React.FC = () => {
     }, [endSession, selectLevel]);
 
 
-    // Unlock celebration overlay
     if (showUnlockCelebration && state.justUnlockedLevel) {
         const unlockedLevel = getLevelById(state.justUnlockedLevel);
         return (
@@ -249,7 +226,6 @@ const LearnPageContent: React.FC = () => {
         );
     }
 
-    // Session complete screen
     if (state.isSessionActive && state.currentIndex >= state.exercises.length - 1 && feedback) {
         const levelMastery = calculateLevelMastery(state.currentLevel);
         const nextLevelUnlocked = state.unlockedLevels.includes(state.currentLevel + 1);
@@ -369,7 +345,6 @@ const LearnPageContent: React.FC = () => {
         );
     }
 
-    // Active session
     if (state.isSessionActive && currentExercise) {
         return (
             <div className="learn-page">
@@ -456,12 +431,10 @@ const LearnPageContent: React.FC = () => {
         );
     }
 
-    // Show Sign Browser
     if (showSignBrowser) {
         return <SignBrowser onClose={() => setShowSignBrowser(false)} />;
     }
 
-    // Level detail view (after selecting a level)
     if (selectedLevelInfo && !state.isSessionActive) {
         const levelMastery = calculateLevelMastery(selectedLevelInfo.id);
         const dueCount = getReviewDueCountForLevel(selectedLevelInfo.id);
@@ -571,7 +544,6 @@ const LearnPageContent: React.FC = () => {
         );
     }
 
-    // Landing/Level selector screen
     return (
         <div className="learn-page">
             <main className="learn-page__content">
@@ -620,7 +592,6 @@ const LearnPageContent: React.FC = () => {
     );
 };
 
-// Wrapper component with provider
 export const LearnPage: React.FC = () => {
     return (
         <LearnProvider>

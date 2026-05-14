@@ -1,7 +1,3 @@
-/**
- * LevelSelector — level grid with current-level hero card
- */
-
 import React from 'react';
 import { LevelCard } from './LevelCard';
 import { FlowerShape } from '../FlowerShape';

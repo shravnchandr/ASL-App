@@ -27,10 +27,10 @@ export async function getAdminFeedback(
     limit: number = 50,
     feedbackType?: string,
 ): Promise<PaginatedFeedback> {
-    try {
-        const params: Record<string, string | number> = { page, limit };
-        if (feedbackType) params.feedback_type = feedbackType;
+    const params: Record<string, string | number> = { page, limit };
+    if (feedbackType) params.feedback_type = feedbackType;
 
+    try {
         const response = await apiClient.get<PaginatedFeedback>(`${API_PREFIX}/admin/feedback`, {
             headers: adminHeaders(adminPassword),
             params,

@@ -1,8 +1,3 @@
-/**
- * HandGuide Component
- * Visual guide to help users position their hand in the camera frame
- */
-
 import './HandGuide.css';
 
 interface HandGuideProps {

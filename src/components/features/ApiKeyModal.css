@@ -1,27 +1,10 @@
 /**
  * API Key Modal Styles
+ * Modal-specific styles; shared chrome, form elements, and button variants live in global.css.
  */
 
 .api-key-modal {
     max-width: 650px;
-}
-
-.form-input {
-    width: 100%;
-    padding: var(--spacing-md);
-    font-family: inherit;
-    font-size: var(--md-sys-typescale-body-medium-size);
-    color: var(--md-sys-color-on-surface);
-    background: var(--md-sys-color-surface-container-highest);
-    border: 2px solid var(--md-sys-color-outline-variant);
-    border-radius: var(--md-sys-shape-corner-medium);
-    transition: all var(--md-sys-motion-duration-short-4) var(--md-sys-motion-easing-standard);
-}
-
-.form-input:focus {
-    border-color: var(--md-sys-color-primary);
-    outline: none;
-    box-shadow: 0 0 0 3px hsla(205, 87%, 45%, 0.1);
 }
 
 .instructions-toggle {
@@ -48,10 +31,10 @@
     border-radius: var(--md-sys-shape-corner-medium);
     margin-top: var(--spacing-md);
     border-left: 4px solid var(--md-sys-color-primary);
-    animation: slideDown var(--md-sys-motion-duration-medium-2) var(--md-sys-motion-easing-emphasized);
+    animation: instructionsPanelIn var(--md-sys-motion-duration-medium-2) var(--md-sys-motion-easing-emphasized);
 }
 
-@keyframes slideDown {
+@keyframes instructionsPanelIn {
     from {
         opacity: 0;
         transform: translateY(-10px);
@@ -104,27 +87,6 @@
     border-radius: var(--md-sys-shape-corner-small);
     font-size: var(--md-sys-typescale-body-small-size);
     line-height: 1.5;
-}
-
-.button-danger {
-    padding: 14px 24px;
-    background: var(--md-sys-color-error);
-    color: var(--md-sys-color-on-error);
-    font-size: var(--md-sys-typescale-label-large-size);
-    font-weight: var(--md-sys-typescale-label-large-weight);
-    border-radius: var(--md-sys-shape-corner-large);
-    border: none;
-    cursor: pointer;
-    transition: all var(--md-sys-motion-duration-short-4) var(--md-sys-motion-easing-emphasized);
-}
-
-.button-danger:hover {
-    box-shadow: var(--md-sys-elevation-2);
-    transform: translateY(-2px);
-}
-
-.button-danger:active {
-    transform: translateY(0);
 }
 
 /* Reduced motion */

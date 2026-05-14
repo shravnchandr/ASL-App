@@ -1,7 +1,4 @@
-"""
-FastAPI application entry point.
-Wires together middleware, routers, static file serving, and the LangGraph workflow.
-"""
+"""FastAPI entry point — middleware, routers, static serving, and pipeline init."""
 
 import os
 import sys
@@ -22,7 +19,6 @@ from cache import init_redis, close_redis
 from middleware import add_security_headers, analytics_tracking_middleware
 from routes import translate_router, feedback_router, admin_router
 
-# Ensure python_code/ is on the path for the asl package
 sys.path.append(os.path.join(os.path.dirname(__file__), "python_code"))
 from asl import build_asl_graph  # noqa: E402
 
@@ -50,11 +46,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -63,12 +57,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Custom middleware (registered in reverse order — last registered runs first)
+# Registered in reverse order: add_security_headers runs first (outermost wrapper)
 app.middleware("http")(analytics_tracking_middleware)
 app.middleware("http")(add_security_headers)
 
 
-# Health check
 @app.get("/health")
 async def health_check():
     return {
@@ -78,13 +71,11 @@ async def health_check():
     }
 
 
-# API routers
 app.include_router(translate_router, prefix=settings.api_prefix)
 app.include_router(feedback_router, prefix=settings.api_prefix)
 app.include_router(admin_router, prefix=settings.api_prefix)
 
 
-# Serve frontend in production
 if settings.environment == "production":
     static_path = os.path.join(os.path.dirname(__file__), "dist")
     if os.path.exists(static_path):
@@ -98,7 +89,7 @@ if settings.environment == "production":
         async def serve_frontend():
             return FileResponse(os.path.join(static_path, "index.html"))
 
-        _api_prefix = settings.api_prefix.strip("/") + "/"  # e.g. "api/"
+        _api_prefix = settings.api_prefix.strip("/") + "/"
 
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str):
@@ -110,7 +101,6 @@ if settings.environment == "production":
             return FileResponse(os.path.join(static_path, "index.html"))
 
 
-# Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     app_logger.exception(f"Unhandled exception: {exc}")

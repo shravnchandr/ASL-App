@@ -1,8 +1,3 @@
-/**
- * Search History Component
- * Displays recent searches and favorites with quick access
- */
-
 import { useApp } from '../../contexts/AppContext';
 import './SearchHistory.css';
 

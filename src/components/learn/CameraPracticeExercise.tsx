@@ -1,8 +1,3 @@
-/**
- * CameraPracticeExercise Component
- * Practice signing alphabet letters and numbers using live camera recognition
- */
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useCamera } from '../../hooks/useCamera';
 import { useHandDetection } from '../../hooks/useHandDetection';
@@ -62,11 +57,8 @@ export function CameraPracticeExercise({
   const isMountedRef = useRef(true);
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Constants moved outside component to avoid dep-array warnings — see module scope
-
   const isLoading = handLoading || modelLoading;
 
-  // Derive status from other state values (no effect needed)
   const status: 'loading' | 'ready' | 'matched' | 'error' = (() => {
     if (isMatched) return 'matched';
     if (isLoading || cameraLoading) return 'loading';
@@ -75,17 +67,14 @@ export function CameraPracticeExercise({
     return 'loading';
   })();
 
-  // Normalize sign for comparison (handle digit to word mapping)
   const normalizeSign = useCallback((sign: string): string => {
     const lower = sign.toLowerCase();
-    // For level 2 (numbers), classifier returns '0'-'9', but targets are 'one'-'ten'
     if (levelId === 2 && DIGIT_TO_WORD[lower]) {
       return DIGIT_TO_WORD[lower];
     }
     return lower;
   }, [levelId]);
 
-  // Check if the prediction matches the target
   const isMatch = useCallback((pred: string | null): boolean => {
     if (!pred) return false;
     const normalizedPred = normalizeSign(pred);
@@ -93,14 +82,12 @@ export function CameraPracticeExercise({
     return normalizedPred === normalizedTarget;
   }, [normalizeSign, targetSign]);
 
-  // Start camera when models are loaded
   useEffect(() => {
     if (!isLoading && !cameraError) {
       startCamera();
     }
   }, [isLoading, cameraError, startCamera]);
 
-  // Processing loop
   useEffect(() => {
     if (!cameraReady || isLoading || status === 'matched' || disabled) return;
 
@@ -129,7 +116,6 @@ export function CameraPracticeExercise({
     };
   }, [cameraReady, isLoading, status, disabled, videoRef, processFrame]);
 
-  // Run prediction when landmarks change
   useEffect(() => {
     if (landmarks && !isLoading && status === 'ready') {
       void predict(landmarks).then(result => {
@@ -140,7 +126,6 @@ export function CameraPracticeExercise({
           setPrediction(stablePrediction);
           setConfidence(result.confidence);
 
-          // Check if prediction matches target
           if (isMatch(stablePrediction) && result.confidence > 0.75) {
             matchTimeRef.current += FRAME_INTERVAL;
             setMatchProgress(Math.min(matchTimeRef.current / MATCH_THRESHOLD, 1));
@@ -161,7 +146,6 @@ export function CameraPracticeExercise({
     }
   }, [landmarks, isLoading, predict, isMatch, targetSign, onComplete, status]);
 
-  // Clear prediction state when hand leaves the frame
   useEffect(() => {
     if (!isHandDetected) {
       predictionBufferRef.current.clear();
@@ -174,7 +158,6 @@ export function CameraPracticeExercise({
     }
   }, [isHandDetected]);
 
-  // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -184,7 +167,6 @@ export function CameraPracticeExercise({
     };
   }, [stopCamera]);
 
-  // Announce when ready
   useEffect(() => {
     if (status === 'ready') {
       announceToScreenReader(`Sign the letter ${formatSignName(targetSign)} to continue`);

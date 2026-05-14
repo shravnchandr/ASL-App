@@ -1,7 +1,4 @@
-/**
- * LocalStorage Utility
- * Handles all localStorage operations with error handling
- */
+import type { SignProgress } from '../types';
 
 const STORAGE_KEYS = {
     SEARCH_HISTORY: 'asl_search_history',
@@ -9,26 +6,12 @@ const STORAGE_KEYS = {
     THEME: 'asl_theme',
     API_KEY: 'asl_custom_api_key',
     LAST_ACTIVITY: 'asl_last_activity',
-    // Learning feature keys
     LEARNING_PROGRESS: 'asl_learn_progress',
     LEARNING_SETTINGS: 'asl_learn_settings',
     LEARNING_STATS: 'asl_learn_stats',
     LEVEL_PROGRESS: 'asl_level_progress',
     ONBOARDING_DISMISSED: 'asl_onboarding_dismissed',
 } as const;
-
-// Learning feature types (SM-2 spaced repetition)
-interface SignProgress {
-    timesStudied: number;
-    timesCorrect: number;
-    lastStudied: string;
-    mastery: number;
-    // SM-2 fields
-    easeFactor: number;   // starts at 2.5, minimum 1.3
-    interval: number;     // days until next review
-    repetitions: number;  // consecutive correct count
-    nextReview: string;   // ISO date of next scheduled review
-}
 
 interface LearningStats {
     totalXP: number;
@@ -48,7 +31,6 @@ interface LevelProgressData {
 }
 
 export const storage = {
-    // Search History
     getSearchHistory(): string[] {
         try {
             const history = localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY);
@@ -61,7 +43,7 @@ export const storage = {
     addToSearchHistory(query: string): void {
         try {
             const history = this.getSearchHistory();
-            const updated = [query, ...history.filter(q => q !== query)].slice(0, 10); // Keep last 10
+            const updated = [query, ...history.filter(q => q !== query)].slice(0, 10);
             localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(updated));
         } catch (error) {
             console.error('Failed to save search history:', error);
@@ -76,7 +58,6 @@ export const storage = {
         }
     },
 
-    // Favorites
     getFavorites(): Array<{ query: string; timestamp: number }> {
         try {
             const favorites = localStorage.getItem(STORAGE_KEYS.FAVORITES);
@@ -111,11 +92,9 @@ export const storage = {
         return this.getFavorites().some(f => f.query === query);
     },
 
-    // Theme
     getTheme(): 'auto' | 'light' | 'dark' | 'high-contrast' {
         try {
             const theme = localStorage.getItem(STORAGE_KEYS.THEME);
-            // Default to 'auto' for new users
             if (!theme) return 'auto';
             return theme as 'auto' | 'light' | 'dark' | 'high-contrast';
         } catch {
@@ -131,7 +110,6 @@ export const storage = {
         }
     },
 
-    // Custom API Key
     getCustomApiKey(): string | null {
         try {
             return localStorage.getItem(STORAGE_KEYS.API_KEY);
@@ -156,7 +134,6 @@ export const storage = {
         }
     },
 
-    // Session Activity
     updateLastActivity(): void {
         try {
             localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
@@ -174,7 +151,6 @@ export const storage = {
         }
     },
 
-    // Learning Progress
     getLearningProgress(): Record<string, SignProgress> {
         try {
             const progress = localStorage.getItem(STORAGE_KEYS.LEARNING_PROGRESS);
@@ -209,13 +185,10 @@ export const storage = {
             }
             existing.lastStudied = new Date().toISOString();
 
-            // SM-2 algorithm: map correct/incorrect to quality 0-5
-            // correct = quality 4 (correct with some effort)
-            // incorrect = quality 1 (remembered after seeing answer)
+            // SM-2: quality 4 = correct, quality 1 = incorrect
             const quality = isCorrect ? 4 : 1;
 
             if (quality >= 3) {
-                // Correct response
                 if (existing.repetitions === 0) {
                     existing.interval = 1;
                 } else if (existing.repetitions === 1) {
@@ -225,22 +198,19 @@ export const storage = {
                 }
                 existing.repetitions += 1;
             } else {
-                // Incorrect — reset interval but keep ease factor
                 existing.repetitions = 0;
                 existing.interval = 1;
             }
 
-            // Update ease factor: EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+            // EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
             existing.easeFactor = existing.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
             existing.easeFactor = Math.max(1.3, existing.easeFactor);
 
-            // Schedule next review
             const next = new Date();
             next.setDate(next.getDate() + existing.interval);
             existing.nextReview = next.toISOString().split('T')[0];
 
-            // Calculate mastery from SM-2 state
-            // Combines accuracy with spaced repetition confidence
+            // Mastery = 80% accuracy weight + 20% repetition confidence
             const accuracy = existing.timesStudied >= 3
                 ? existing.timesCorrect / existing.timesStudied
                 : (existing.timesCorrect / Math.max(existing.timesStudied, 1)) * 0.8;
@@ -267,7 +237,6 @@ export const storage = {
             .map(([sign]) => sign);
     },
 
-    // Learning Stats
     getLearningStats(): LearningStats {
         try {
             const stats = localStorage.getItem(STORAGE_KEYS.LEARNING_STATS);
@@ -291,11 +260,7 @@ export const storage = {
         try {
             const stats = this.getLearningStats();
             stats.totalXP += amount;
-
-            // Level up every 100 XP
             stats.level = Math.floor(stats.totalXP / 100) + 1;
-
-            // Update streak
             const today = new Date().toISOString().split('T')[0];
             const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
@@ -314,7 +279,6 @@ export const storage = {
         }
     },
 
-    // Learning Settings
     getLearningSettings(): LearningSettings {
         try {
             const settings = localStorage.getItem(STORAGE_KEYS.LEARNING_SETTINGS);
@@ -340,7 +304,6 @@ export const storage = {
         }
     },
 
-    // Clear all learning data
     clearLearningData(): void {
         try {
             localStorage.removeItem(STORAGE_KEYS.LEARNING_PROGRESS);
@@ -352,12 +315,11 @@ export const storage = {
         }
     },
 
-    // Level Progress
     getLevelProgress(): LevelProgressData {
         try {
             const data = localStorage.getItem(STORAGE_KEYS.LEVEL_PROGRESS);
             return data ? JSON.parse(data) : {
-                unlockedLevels: [1], // Level 1 is always unlocked
+                unlockedLevels: [1],
                 currentLevel: 1,
             };
         } catch {
@@ -398,7 +360,6 @@ export const storage = {
         return progress.unlockedLevels.includes(levelId);
     },
 
-    // Onboarding
     isOnboardingDismissed(): boolean {
         try {
             return localStorage.getItem(STORAGE_KEYS.ONBOARDING_DISMISSED) === 'true';

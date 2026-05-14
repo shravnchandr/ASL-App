@@ -1,8 +1,3 @@
-/**
- * SignCard Component
- * Playful Springs redesign: hero strip + colored attribute tiles
- */
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LEVELS } from '../constants/levels';

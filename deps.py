@@ -16,10 +16,8 @@ def get_real_ip(request: Request) -> str:
     """
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
-        # X-Forwarded-For can be a comma-separated chain; leftmost is the client
-        return forwarded_for.split(",")[0].strip()
+        return forwarded_for.split(",")[0].strip()  # leftmost entry is the real client
     return request.client.host or "unknown"
 
 
-# Single limiter instance imported by app.py (for registration) and all route modules
 limiter = Limiter(key_func=get_real_ip)

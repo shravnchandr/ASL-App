@@ -17,9 +17,6 @@ export class PredictionBuffer {
     this.threshold = threshold;
   }
 
-  /**
-   * Add a new prediction to the buffer.
-   */
   add(prediction: string): void {
     this.buffer.push(prediction);
     if (this.buffer.length > this.size) {
@@ -37,13 +34,11 @@ export class PredictionBuffer {
       return null;
     }
 
-    // Count occurrences
     const counts = new Map<string, number>();
     for (const p of this.buffer) {
       counts.set(p, (counts.get(p) || 0) + 1);
     }
 
-    // Find mode
     let mode = '';
     let maxCount = 0;
     for (const [prediction, count] of counts) {
@@ -53,28 +48,18 @@ export class PredictionBuffer {
       }
     }
 
-    // Return mode only if it meets threshold
     const requiredCount = Math.ceil(this.size * this.threshold);
     return maxCount >= requiredCount ? mode : null;
   }
 
-  /**
-   * Get the most recent prediction regardless of stability.
-   */
   getLatestPrediction(): string | null {
     return this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : null;
   }
 
-  /**
-   * Clear the buffer.
-   */
   clear(): void {
     this.buffer = [];
   }
 
-  /**
-   * Get current buffer size.
-   */
   get length(): number {
     return this.buffer.length;
   }

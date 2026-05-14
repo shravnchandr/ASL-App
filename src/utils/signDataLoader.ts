@@ -1,8 +1,3 @@
-/**
- * Sign Data Loader Utility
- * Loads and caches sign landmark data for the learning feature
- */
-
 import type { SignData, SignMetadata } from '../types';
 
 /** Fisher-Yates shuffle — returns a new array, does not mutate the input. */
@@ -15,41 +10,28 @@ export function shuffle<T>(arr: readonly T[]): T[] {
     return a;
 }
 
-// Cache for loaded sign data — capped to prevent unbounded memory growth
-const SIGN_CACHE_MAX = 50;
+const SIGN_CACHE_MAX = 50; // cap to prevent unbounded memory growth
 const signDataCache = new Map<string, SignData>();
 let metadataCache: SignMetadata | null = null;
 
 const BASE_PATH = '/sign-data';
 
-/**
- * Load metadata containing list of available signs
- */
 export async function loadMetadata(): Promise<SignMetadata> {
     if (metadataCache) {
         return metadataCache;
     }
 
-    try {
-        const response = await fetch(`${BASE_PATH}/metadata.json`);
-        if (!response.ok) {
-            throw new Error(`Failed to load metadata: ${response.status}`);
-        }
-        metadataCache = await response.json();
-        return metadataCache!;
-    } catch (error) {
-        console.error('Error loading sign metadata:', error);
-        throw error;
+    const response = await fetch(`${BASE_PATH}/metadata.json`);
+    if (!response.ok) {
+        throw new Error(`Failed to load metadata: ${response.status}`);
     }
+    metadataCache = await response.json();
+    return metadataCache!;
 }
 
-/**
- * Load sign data for a specific sign
- */
 export async function loadSignData(sign: string): Promise<SignData | null> {
     const signLower = sign.toLowerCase();
 
-    // Check cache first
     if (signDataCache.has(signLower)) {
         return signDataCache.get(signLower)!;
     }
@@ -66,8 +48,7 @@ export async function loadSignData(sign: string): Promise<SignData | null> {
 
         const data: SignData = await response.json();
         if (signDataCache.size >= SIGN_CACHE_MAX) {
-            // Evict oldest entry (Maps preserve insertion order)
-            const firstKey = signDataCache.keys().next().value;
+            const firstKey = signDataCache.keys().next().value; // Maps preserve insertion order
             if (firstKey !== undefined) signDataCache.delete(firstKey);
         }
         signDataCache.set(signLower, data);
@@ -78,78 +59,19 @@ export async function loadSignData(sign: string): Promise<SignData | null> {
     }
 }
 
-/**
- * Preload multiple signs for smoother experience
- */
 export async function preloadSigns(signs: string[], concurrency = 6): Promise<void> {
     for (let i = 0; i < signs.length; i += concurrency) {
         await Promise.allSettled(signs.slice(i, i + concurrency).map(loadSignData));
     }
 }
 
-/**
- * Get list of available signs by difficulty
- */
-export async function getSignsByDifficulty(
-    difficulty: 'beginner' | 'intermediate' | 'other' | 'all'
-): Promise<string[]> {
-    const metadata = await loadMetadata();
-
-    if (difficulty === 'all') {
-        return Object.keys(metadata.signs);
-    }
-
-    return Object.entries(metadata.signs)
-        .filter(([, info]) => info.difficulty === difficulty)
-        .map(([sign]) => sign);
-}
-
-/**
- * Get random signs for exercises
- */
-export async function getRandomSigns(count: number, exclude: string[] = []): Promise<string[]> {
-    const metadata = await loadMetadata();
-    const allSigns = Object.keys(metadata.signs).filter(s => !exclude.includes(s));
-
-    // Shuffle and take first N
-    const shuffled = shuffle(allSigns);
-    return shuffled.slice(0, count);
-}
-
-/**
- * Generate wrong options for exercises (similar signs or random)
- */
 export async function getDistractors(
     correctSign: string,
     count: number
 ): Promise<string[]> {
     const metadata = await loadMetadata();
     const allSigns = Object.keys(metadata.signs).filter(s => s !== correctSign);
-
-    // Shuffle and take first N
     const shuffled = shuffle(allSigns);
     return shuffled.slice(0, count);
 }
 
-/**
- * Clear the sign data cache (useful for memory management)
- */
-export function clearSignCache(): void {
-    signDataCache.clear();
-}
-
-/**
- * Check if a sign is available
- */
-export async function isSignAvailable(sign: string): Promise<boolean> {
-    const metadata = await loadMetadata();
-    return sign.toLowerCase() in metadata.signs;
-}
-
-/**
- * Get sign info from metadata
- */
-export async function getSignInfo(sign: string): Promise<SignMetadata['signs'][string] | null> {
-    const metadata = await loadMetadata();
-    return metadata.signs[sign.toLowerCase()] || null;
-}

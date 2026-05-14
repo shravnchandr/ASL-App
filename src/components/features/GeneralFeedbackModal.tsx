@@ -1,8 +1,3 @@
-/**
- * General Feedback Modal Component
- * Allows users to submit bug reports, feature requests, and general feedback
- */
-
 import { useState, useEffect, useRef } from 'react';
 import { trapFocus, handleEscapeKey } from '../../utils/accessibility';
 import './GeneralFeedbackModal.css';
@@ -29,6 +24,7 @@ export const GeneralFeedbackModal: React.FC<GeneralFeedbackModalProps> = ({
     const [feedbackText, setFeedbackText] = useState('');
     const [email, setEmail] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const modalRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,8 +39,6 @@ export const GeneralFeedbackModal: React.FC<GeneralFeedbackModalProps> = ({
         const cleanup = modalRef.current ? trapFocus(modalRef.current) : () => { };
         const cleanupEscape = handleEscapeKey(onClose);
         document.body.style.overflow = 'hidden';
-
-        // Focus textarea
         setTimeout(() => textareaRef.current?.focus(), 100);
 
         return () => {
@@ -59,15 +53,16 @@ export const GeneralFeedbackModal: React.FC<GeneralFeedbackModalProps> = ({
         if (!isValid || isSubmitting) return;
 
         setIsSubmitting(true);
+        setSubmitError(null);
         try {
             await onSubmit(category, feedbackText, email || undefined);
-            // Reset form
             setCategory('general');
             setFeedbackText('');
             setEmail('');
+            setSubmitError(null);
             onClose();
         } catch (error) {
-            console.error('Failed to submit feedback:', error);
+            setSubmitError(error instanceof Error ? error.message : 'Failed to submit feedback. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -155,6 +150,9 @@ export const GeneralFeedbackModal: React.FC<GeneralFeedbackModalProps> = ({
                         <p className="form-hint">We'll only use this to respond to your feedback</p>
                     </div>
 
+                    {submitError && (
+                        <p className="form-error" role="alert">{submitError}</p>
+                    )}
                     <div className="modal-actions">
                         <button type="button" className="button-secondary" onClick={onClose}>
                             Cancel

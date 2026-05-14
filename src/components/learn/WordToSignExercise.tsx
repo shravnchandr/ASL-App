@@ -1,9 +1,3 @@
-/**
- * WordToSignExercise Component
- * Shows a target word, user picks the correct animation from 4 options
- * Medium difficulty
- */
-
 import React, { useState, useCallback } from 'react';
 import { SignAnimator } from './SignAnimator';
 import { formatSignName } from '../../utils/format';
@@ -30,7 +24,6 @@ export const WordToSignExercise: React.FC<WordToSignExerciseProps> = ({
     onAnswer,
     disabled = false,
 }) => {
-    // State resets automatically when component remounts (via key prop in parent)
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [hasAnswered, setHasAnswered] = useState(false);
     const [playingIndex, setPlayingIndex] = useState<number | null>(null);

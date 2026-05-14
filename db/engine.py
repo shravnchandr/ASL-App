@@ -45,14 +45,12 @@ async def init_db():
 
     async with engine.begin() as conn:
         if _is_sqlite:
-            # WAL mode allows concurrent readers + one writer without readers blocking.
-            # synchronous=NORMAL is safe with WAL and much faster than FULL.
-            # Both settings persist in the DB file — only need to set them once per file.
+            # WAL: concurrent readers + one writer; NORMAL sync is safe with WAL and faster than FULL.
+            # Both settings persist in the DB file.
             await conn.execute(text("PRAGMA journal_mode=WAL"))
             await conn.execute(text("PRAGMA synchronous=NORMAL"))
         await conn.run_sync(Base.metadata.create_all)
-        # Migration: add key_type column to analytics for existing deployments.
-        # create_all creates missing tables but does not add columns to existing ones.
+        # Migration: create_all adds missing tables but not columns to existing tables.
         try:
             await conn.execute(text("ALTER TABLE analytics ADD COLUMN key_type VARCHAR(20)"))
             app_logger.info("Migration: added key_type column to analytics")

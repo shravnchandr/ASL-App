@@ -12,7 +12,6 @@ interface CameraViewProps {
   landmarks: NormalizedLandmark[] | null;
 }
 
-// Colors for hand visualization
 const LANDMARK_COLOR = '#00FF88';
 const CONNECTION_COLOR = 'rgba(0, 255, 136, 0.6)';
 const LANDMARK_RADIUS = 5;
@@ -21,7 +20,6 @@ const CONNECTION_WIDTH = 2;
 export function CameraView({ videoRef, isLoading, facingMode, landmarks }: CameraViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Draw hand landmarks on canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -30,7 +28,6 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Match canvas size to video
     const updateCanvasSize = () => {
       const rect = video.getBoundingClientRect();
       canvas.width = rect.width;
@@ -39,15 +36,13 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
 
     updateCanvasSize();
 
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!landmarks || landmarks.length === 0) return;
 
-    // Mirror coordinates if using front camera
     const mirror = facingMode === 'user';
 
-    // Draw connections first (so points are on top)
+    // draw connections first so landmark points render on top
     ctx.strokeStyle = CONNECTION_COLOR;
     ctx.lineWidth = CONNECTION_WIDTH;
     ctx.lineCap = 'round';
@@ -68,7 +63,6 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
       ctx.stroke();
     }
 
-    // Draw landmark points
     ctx.fillStyle = LANDMARK_COLOR;
     ctx.shadowColor = LANDMARK_COLOR;
     ctx.shadowBlur = 8;
@@ -82,7 +76,6 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
       ctx.fill();
     }
 
-    // Reset shadow
     ctx.shadowBlur = 0;
   }, [landmarks, facingMode, videoRef]);
 
@@ -96,7 +89,6 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
         muted
       />
 
-      {/* Canvas overlay for hand landmarks */}
       <canvas
         ref={canvasRef}
         className="camera-view__canvas"
@@ -108,7 +100,6 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
         </div>
       )}
 
-      {/* Viewfinder corners for visual guidance */}
       <div className="camera-view__viewfinder">
         <div className="camera-view__corner camera-view__corner--tl" />
         <div className="camera-view__corner camera-view__corner--tr" />

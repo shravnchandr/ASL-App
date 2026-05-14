@@ -1,14 +1,9 @@
-/**
- * Layout Component
- * Shared app shell with persistent navigation bar
- */
-
 import React, { Suspense, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ThemeSwitcher } from './features/ThemeSwitcher';
 import { ApiKeyModal } from './features/ApiKeyModal';
 import { GeneralFeedbackModal } from './features/GeneralFeedbackModal';
-import { submitGeneralFeedback } from '../services/api';
+import { submitGeneralFeedback } from '../services/api/feedback';
 import { useApp } from '../contexts/AppContext';
 import { announceToScreenReader } from '../utils/accessibility';
 import './Layout.css';
@@ -35,7 +30,6 @@ export const Layout: React.FC = () => {
         }
     };
 
-    // Listen for custom event to open API key modal
     React.useEffect(() => {
         const handleOpenModal = () => setShowApiKeyModal(true);
         window.addEventListener('openApiKeyModal', handleOpenModal);
@@ -48,7 +42,6 @@ export const Layout: React.FC = () => {
                 Skip to main content
             </a>
 
-            {/* Top bar with utility actions */}
             <header className="layout__topbar">
                 <div className="layout__topbar-left">
                     <NavLink to="/" className="layout__logo" aria-label="ASL Guide home">
@@ -81,14 +74,12 @@ export const Layout: React.FC = () => {
                 </div>
             </header>
 
-            {/* Main content */}
             <main id="main-content" className="layout__main">
                 <Suspense fallback={<PageLoader />}>
                     <Outlet />
                 </Suspense>
             </main>
 
-            {/* Bottom navigation */}
             <nav className="layout__nav" aria-label="Main navigation">
                 <NavLink
                     to="/"
@@ -136,7 +127,6 @@ export const Layout: React.FC = () => {
                 </NavLink>
             </nav>
 
-            {/* Modals */}
             {showApiKeyModal && (
                 <ApiKeyModal
                     isOpen={showApiKeyModal}

@@ -1,10 +1,5 @@
-/**
- * Admin Panel Component
- * Provides interface for viewing and managing feedback
- */
-
 import { useState, useEffect, useCallback } from 'react';
-import { getAdminFeedback, deleteAdminFeedback, getAdminStats, getAnalyticsOverview } from '../services/api';
+import { getAdminFeedback, deleteAdminFeedback, getAdminStats, getAnalyticsOverview } from '../services/api/admin';
 import type { PaginatedFeedback, AdminStats, FeedbackItem, AnalyticsOverview } from '../types';
 import './Admin.css';
 
@@ -15,15 +10,10 @@ export function Admin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Tab state
   const [activeTab, setActiveTab] = useState<'feedback' | 'analytics'>('feedback');
-
-  // Data states
   const [feedback, setFeedback] = useState<PaginatedFeedback | null>(null);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
-
-  // Filter & pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [feedbackType, setFeedbackType] = useState<string>('');
   const [limit] = useState(50);
@@ -46,7 +36,6 @@ export function Admin() {
       const message = err instanceof Error ? err.message : 'Failed to load data';
       setError(message);
 
-      // If unauthorized, log out
       if (message.includes('Invalid admin password')) {
         setIsAuthenticated(false);
         setAdminPassword('');
@@ -73,7 +62,6 @@ export function Admin() {
       const message = err instanceof Error ? err.message : 'Failed to load analytics';
       setError(message);
 
-      // If unauthorized, log out
       if (message.includes('Invalid admin password')) {
         setIsAuthenticated(false);
         setAdminPassword('');
@@ -87,7 +75,6 @@ export function Admin() {
     }
   }, [adminPassword]);
 
-  // Load data when authenticated or filters change
   useEffect(() => {
     if (isAuthenticated) {
       if (activeTab === 'feedback') {
@@ -104,12 +91,10 @@ export function Admin() {
     setLoading(true);
 
     try {
-      // Test the password by fetching stats
       await getAdminStats(password);
-
       setAdminPassword(password);
       setIsAuthenticated(true);
-      setPassword(''); // Clear password input
+      setPassword('');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Authentication failed';
       setError(message);
@@ -149,7 +134,6 @@ export function Admin() {
     return date.toLocaleString();
   };
 
-  // Login screen
   if (!isAuthenticated) {
     return (
       <div className="admin-container">
@@ -193,7 +177,6 @@ export function Admin() {
     );
   }
 
-  // Admin dashboard
   return (
     <div className="admin-container">
       <header className="admin-header">
@@ -205,7 +188,6 @@ export function Admin() {
         </div>
       </header>
 
-      {/* Tab Navigation */}
       <nav className="admin-tabs">
         <button
           className={`admin-tab ${activeTab === 'feedback' ? 'active' : ''}`}
@@ -228,10 +210,8 @@ export function Admin() {
           </div>
         )}
 
-        {/* Feedback Tab */}
         {activeTab === 'feedback' && (
           <>
-            {/* Statistics */}
             {stats && (
           <section className="admin-stats">
             <h2 className="section-title">Statistics</h2>
@@ -284,7 +264,6 @@ export function Admin() {
           </section>
         )}
 
-        {/* Feedback List */}
         <section className="admin-feedback">
           <div className="feedback-header">
             <h2 className="section-title">Feedback Entries</h2>
@@ -368,7 +347,6 @@ export function Admin() {
                 </table>
               </div>
 
-              {/* Pagination */}
               {feedback.pages > 1 && (
                 <div className="pagination">
                   <button
@@ -398,10 +376,8 @@ export function Admin() {
           </>
         )}
 
-        {/* Analytics Tab */}
         {activeTab === 'analytics' && analytics && (
           <>
-            {/* Unique Users Stats */}
             <section className="admin-stats">
               <h2 className="section-title">User Analytics</h2>
               <div className="stats-grid">
@@ -424,7 +400,6 @@ export function Admin() {
               </div>
             </section>
 
-            {/* Translation Stats */}
             <section className="admin-stats">
               <h2 className="section-title">Translation Performance</h2>
               <div className="stats-grid">
@@ -443,7 +418,6 @@ export function Admin() {
               </div>
             </section>
 
-            {/* Popular Searches */}
             {analytics.popular_searches.length > 0 && (
               <section className="admin-analytics-section">
                 <h2 className="section-title">Popular Searches (Last 30 Days)</h2>
@@ -470,7 +444,6 @@ export function Admin() {
               </section>
             )}
 
-            {/* Daily Active Users */}
             {analytics.daily_active_users.length > 0 && (
               <section className="admin-analytics-section">
                 <h2 className="section-title">Daily Active Users (Last 30 Days)</h2>
@@ -493,7 +466,6 @@ export function Admin() {
               </section>
             )}
 
-            {/* Hourly Usage Pattern */}
             <section className="admin-analytics-section">
               <h2 className="section-title">Hourly Usage Pattern (Last 7 Days)</h2>
               <div className="chart-container">

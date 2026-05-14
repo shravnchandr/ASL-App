@@ -1,8 +1,3 @@
-/**
- * Action Buttons Component
- * Share, Print, and Favorite buttons for translation results
- */
-
 import { useState } from 'react';
 import { share } from '../../utils/share';
 import { print } from '../../utils/print';

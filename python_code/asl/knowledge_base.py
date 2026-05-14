@@ -1,7 +1,4 @@
-"""
-Sign Knowledge Base
-Loads the verified sign descriptions from JSON and provides exact + semantic lookup.
-"""
+"""Sign Knowledge Base: loads verified sign descriptions, provides exact + semantic lookup."""
 
 import json
 import os
@@ -12,13 +9,11 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
-# --- Load Sign Knowledge Base ---
 _KB_PATH = Path(__file__).parent.parent / "sign_knowledge_base.json"
 try:
     with open(_KB_PATH, "r") as f:
         _raw_kb = json.load(f)
-    # Strip meta keys; keep only sign entries (dicts with hand_shape)
-    SIGN_KNOWLEDGE_BASE: dict = {
+    SIGN_KNOWLEDGE_BASE: dict = {  # strip _source/_schema meta keys; keep sign entries only
         k: v for k, v in _raw_kb.items() if isinstance(v, dict) and "hand_shape" in v
     }
     print(
@@ -36,9 +31,8 @@ _ALPHABET_KEYS: frozenset[str] = frozenset(
     k for k in SIGN_KNOWLEDGE_BASE if len(k) == 1 and k.isalpha()
 )
 
-# --- Semantic Similarity Index ---
-# Disabled by default — loading sentence-transformers + numpy exceeds Render Starter
-# RAM (512MB). Set ENABLE_SEMANTIC_LOOKUP=true to enable (requires ~200MB extra RAM).
+# Disabled by default — sentence-transformers + numpy exceeds Render Starter RAM (512MB).
+# Set ENABLE_SEMANTIC_LOOKUP=true to enable (requires ~200MB extra RAM).
 _EMBED_MODEL = None
 _KB_KEYS: list[str] = []
 _KB_EMBEDDINGS = None  # numpy array when enabled
@@ -53,7 +47,7 @@ if os.getenv("ENABLE_SEMANTIC_LOOKUP", "false").lower() == "true":
         _KB_KEYS = list(SIGN_KNOWLEDGE_BASE.keys())
         # Replace underscores with spaces so "thank_you" embeds as "thank you"
         _KB_EMBEDDINGS = _EMBED_MODEL.encode(
-            [k.replace("_", " ") for k in _KB_KEYS],
+            [k.replace("_", " ") for k in _KB_KEYS],  # "thank_you" → "thank you" for better embedding
             normalize_embeddings=True,
             show_progress_bar=False,
         )
@@ -166,9 +160,8 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
             key.replace("_", "")
         )
         if entry:
-            # Skip alphabet-letter entries for bare glosses — a sentence gloss
-            # like "I" means the pronoun, not the letter.  Letters only enter
-            # the pipeline via fs- prefix (handled above).
+            # Bare glosses like "I" are pronouns, not alphabet letters; skip single-letter KB entries.
+            # Letters only enter via fs- prefix (handled above).
             resolved_key = key if SIGN_KNOWLEDGE_BASE.get(key) else key.replace("_", "")
             if resolved_key in _ALPHABET_KEYS:
                 unmatched.append(gloss)
@@ -178,8 +171,7 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
             result = _semantic_lookup(gloss)
             if result:
                 matched_key, sem_entry, score = result
-                # Guard: don't let semantic search resolve to an alphabet letter
-                if matched_key in _ALPHABET_KEYS:
+                if matched_key in _ALPHABET_KEYS:  # guard: don't resolve to alphabet letter
                     unmatched.append(gloss)
                 else:
                     print(

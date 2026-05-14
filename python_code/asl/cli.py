@@ -11,7 +11,7 @@ from colorama import Fore, Style, init  # noqa: E402
 
 init(autoreset=True)
 
-from .graph import build_asl_graph  # noqa: E402
+from .pipeline import build_asl_graph  # noqa: E402
 from .schemas import SentenceDescriptionSchema  # noqa: E402
 
 

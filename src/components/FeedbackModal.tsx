@@ -1,8 +1,3 @@
-/**
- * FeedbackModal Component
- * Modal for collecting detailed feedback
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import { trapFocus, handleEscapeKey } from '../utils/accessibility';
 import './FeedbackModal.css';
@@ -31,16 +26,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     useEffect(() => {
         if (!isOpen) return;
 
-        // Trap focus
         const cleanup = modalRef.current ? trapFocus(modalRef.current) : () => { };
-
-        // Handle escape key
         const cleanupEscape = handleEscapeKey(onClose);
-
-        // Prevent body scroll
         document.body.style.overflow = 'hidden';
-
-        // Focus textarea
         setTimeout(() => textareaRef.current?.focus(), 100);
 
         return () => {

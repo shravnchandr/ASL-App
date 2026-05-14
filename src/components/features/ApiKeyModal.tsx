@@ -1,8 +1,3 @@
-/**
- * API Key Modal Component
- * Allows users to input their own Gemini API key with instructions
- */
-
 import { useState, useEffect, useRef } from 'react';
 import { trapFocus, handleEscapeKey } from '../../utils/accessibility';
 import { useApp } from '../../contexts/AppContext';

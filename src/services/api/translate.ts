@@ -1,7 +1,3 @@
-/**
- * Translation and rate-limit endpoints.
- */
-
 import axios, { AxiosError } from 'axios';
 import type { TranslateResponse, APIError, RateLimitStatus } from '../../types';
 import { apiClient, API_PREFIX } from './client';
@@ -43,14 +39,5 @@ export async function getRateLimitStatus(): Promise<RateLimitStatus> {
     } catch (error) {
         console.error('Failed to check rate limit:', error);
         return { shared_key_available: false, message: 'Unable to check rate limit status' };
-    }
-}
-
-export async function checkHealth(): Promise<{ status: string }> {
-    try {
-        const response = await apiClient.get('/health');
-        return response.data;
-    } catch {
-        throw new Error('API is not responding');
     }
 }

@@ -1,7 +1,3 @@
-/**
- * TypeScript type definitions for ASL Dictionary
- */
-
 export interface ASLSign {
     word: string;
     simple_description?: string;
@@ -67,18 +63,17 @@ export interface AdminStats extends FeedbackStats {
     by_category: Record<string, number>;
 }
 
-// Analytics types
-export interface PopularSearch {
+interface PopularSearch {
     query: string;
     count: number;
 }
 
-export interface DailyActiveUser {
+interface DailyActiveUser {
     date: string;
     unique_users: number;
 }
 
-export interface TranslationStats {
+interface TranslationStats {
     total: number;
     cache_hits: number;
     cache_misses: number;
@@ -95,7 +90,6 @@ export interface AnalyticsOverview {
     hourly_usage: Record<string, number>;
 }
 
-// Rate limit types
 export interface RateLimitStatus {
     shared_key_available: boolean;
     limit?: number;
@@ -105,7 +99,6 @@ export interface RateLimitStatus {
     message?: string;
 }
 
-// Learning feature types
 export type Coordinate = [number, number, number] | null;
 
 export interface SignFrame {
@@ -125,6 +118,7 @@ export interface SignData {
 
 export interface SignMetadataEntry {
     difficulty: 'beginner' | 'intermediate' | 'other';
+    category?: string;
     frame_count: number;
     fps: number;
     source: string;
@@ -146,6 +140,11 @@ export interface SignProgress {
     timesCorrect: number;
     lastStudied: string;
     mastery: number;
+    // SM-2 spaced repetition fields
+    easeFactor: number;   // starts at 2.5, minimum 1.3
+    interval: number;     // days until next review
+    repetitions: number;  // consecutive correct count
+    nextReview: string;   // ISO date of next scheduled review
 }
 
 export interface Exercise {
@@ -156,18 +155,3 @@ export interface Exercise {
     correctAnswer: string;
 }
 
-export interface LearnSession {
-    exercises: Exercise[];
-    currentIndex: number;
-    score: number;
-    startTime: string;
-}
-
-export interface LevelProgress {
-    levelId: number;
-    mastery: number;
-    signsLearned: number;
-    totalSigns: number;
-    unlocked: boolean;
-    completed: boolean;
-}

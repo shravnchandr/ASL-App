@@ -42,16 +42,14 @@ export default function CameraPage({ onBack }: CameraPageProps) {
   const lastAddedLetterRef = useRef<string | null>(null);
   const lastStablePredictionRef = useRef<string | null>(null);
   const letterHoldStartRef = useRef<number | null>(null);
-  const LETTER_HOLD_THRESHOLD = 1000; // 1 second hold to add letter
+  const LETTER_HOLD_THRESHOLD = 1000; // ms
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
-  // Determine overall loading state
   const isLoading = handLoading || modelLoading;
   const error = cameraError || handError || modelError;
 
-  // Derive state from other values (no useState/useEffect needed)
   const state: CameraState = (() => {
     if (isLoading) return 'loading';
     if (error) return 'error';
@@ -59,21 +57,18 @@ export default function CameraPage({ onBack }: CameraPageProps) {
     return 'active';
   })();
 
-  // Start camera when models are loaded
   useEffect(() => {
     if (!isLoading && !error) {
       startCamera();
     }
   }, [isLoading, error, startCamera]);
 
-  // Start processing loop when camera is ready (throttled to TARGET_FPS)
   useEffect(() => {
     if (!cameraReady || isLoading) return;
 
     const processLoop = (timestamp: number) => {
       if (!isMountedRef.current) return;
 
-      // Throttle frame rate
       const elapsed = timestamp - lastFrameTimeRef.current;
       if (elapsed >= FRAME_INTERVAL) {
         lastFrameTimeRef.current = timestamp;
@@ -96,7 +91,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
     };
   }, [cameraReady, isLoading, videoRef, processFrame]);
 
-  // Run prediction when landmarks change
   useEffect(() => {
     if (landmarks && !isLoading) {
       let isCurrent = true;
@@ -108,43 +102,34 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           setPrediction(stablePrediction);
           setConfidence(result.confidence);
 
-          // Track hold time for spelling mode using timestamps
           const now = Date.now();
 
           if (stablePrediction === lastAddedLetterRef.current) {
-            // Same letter we just added - don't add again, keep progress at 0
             setHoldProgress(0);
             letterHoldStartRef.current = null;
           } else if (stablePrediction === lastStablePredictionRef.current) {
-            // Still holding same prediction - check elapsed time
             if (letterHoldStartRef.current !== null && result.confidence > 0.8) {
               const elapsed = now - letterHoldStartRef.current;
               setHoldProgress(Math.min(elapsed / LETTER_HOLD_THRESHOLD, 1));
 
               if (elapsed >= LETTER_HOLD_THRESHOLD) {
-                // Letter held long enough with high confidence - add to spelling
                 setSpelledLetters(prev => [...prev, stablePrediction]);
                 setSignsRecognized(prev => prev + 1);
                 lastAddedLetterRef.current = stablePrediction;
                 letterHoldStartRef.current = null;
                 setHoldProgress(0);
-                // Announce to screen readers
                 announceToScreenReader(`Added ${stablePrediction.toUpperCase()} to spelling`);
-                // Play sound effect
                 playLetterAdded();
               }
             } else if (result.confidence <= 0.8) {
-              // Confidence dropped, reset progress
               setHoldProgress(0);
             }
           } else {
-            // Different prediction - start new timer
             lastStablePredictionRef.current = stablePrediction;
             letterHoldStartRef.current = result.confidence > 0.8 ? now : null;
             setHoldProgress(0);
           }
         } else {
-          // No stable prediction yet
           lastStablePredictionRef.current = null;
           letterHoldStartRef.current = null;
           setHoldProgress(0);
@@ -154,7 +139,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
     }
   }, [landmarks, isLoading, predict, playLetterAdded]);
 
-  // Clear prediction state when hand leaves the frame
   useEffect(() => {
     if (!isHandDetected) {
       predictionBufferRef.current.clear();
@@ -169,7 +153,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
     }
   }, [isHandDetected]);
 
-  // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -178,7 +161,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
     };
   }, [stopCamera]);
 
-  // Announce state changes for screen readers
   useEffect(() => {
     if (state === 'loading') {
       announceToScreenReader('Loading hand detection models, please wait');
@@ -275,7 +257,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           landmarks={normalizedLandmarks}
         />
 
-        {/* Only show hand guide when no hand detected and no letters spelled yet */}
         {!isHandDetected && spelledLetters.length === 0 && (
           <HandGuide
             isHandDetected={isHandDetected}
@@ -283,7 +264,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           />
         )}
 
-        {/* Only show stats when hand has been detected at least once */}
         {signsRecognized > 0 && (
           <SessionStats
             signsRecognized={signsRecognized}
@@ -291,7 +271,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           />
         )}
 
-        {/* Only show prediction when hand is detected or we have spelled letters */}
         {(isHandDetected || spelledLetters.length > 0) && (
           <PredictionDisplay
             prediction={prediction}
@@ -301,7 +280,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
           />
         )}
 
-        {/* Only show spelling display when we have letters or hand is detected */}
         {(spelledLetters.length > 0 || isHandDetected) && (
           <SpellingDisplay
             letters={spelledLetters}
@@ -319,7 +297,6 @@ export default function CameraPage({ onBack }: CameraPageProps) {
         />
       </div>
 
-      {/* First-time user tutorial */}
       {!tutorialComplete && (
         <CameraTutorial onComplete={() => setTutorialComplete(true)} />
       )}

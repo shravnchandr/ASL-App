@@ -41,10 +41,8 @@ export function useCamera(): UseCameraResult {
     setError(null);
 
     try {
-      // Stop any existing stream
       stopCamera();
 
-      // Request camera access
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode,
@@ -71,8 +69,7 @@ export function useCamera(): UseCameraResult {
             return;
           }
 
-          // Already has metadata (e.g. stream was previously attached)
-          if (video.readyState >= 1) {
+          if (video.readyState >= 1) {  // already has metadata (e.g. previously attached)
             resolve();
             return;
           }
@@ -119,7 +116,6 @@ export function useCamera(): UseCameraResult {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to access camera';
 
-      // Provide user-friendly error messages
       if (message.includes('Permission denied') || message.includes('NotAllowedError')) {
         setError('Camera permission denied. Please allow camera access in your browser settings.');
       } else if (message.includes('NotFoundError') || message.includes('DevicesNotFoundError')) {
@@ -140,16 +136,13 @@ export function useCamera(): UseCameraResult {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
   }, []);
 
-  // Restart camera when facing mode changes (if already running)
   useEffect(() => {
     if (isReady) {
       startCamera();
     }
-    // Only trigger on facingMode change, not on startCamera change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facingMode]);
+  }, [facingMode]); // only trigger on facingMode change, not startCamera
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopCamera();

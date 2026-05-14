@@ -1,9 +1,3 @@
-/**
- * RecallExercise Component
- * Shows animation, user types the word (no options)
- * Hardest exercise type - only for mastered signs
- */
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { SignAnimator } from './SignAnimator';
 import { PlaybackControls } from './PlaybackControls';
@@ -24,7 +18,6 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
     onAnswer,
     disabled = false,
 }) => {
-    // State resets automatically when component remounts (via key prop in parent)
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [currentFrame, setCurrentFrame] = useState(0);
@@ -33,7 +26,6 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
     const [isCorrect, setIsCorrect] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Focus input on mount
     useEffect(() => {
         if (inputRef.current && !disabled) {
             inputRef.current.focus();

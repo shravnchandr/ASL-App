@@ -1,8 +1,3 @@
-/**
- * FlowerShape — M3 Expressive badge/icon container
- * Generates a cookie/flower SVG path shape with centered content.
- */
-
 import React from 'react';
 
 interface FlowerShapeProps {

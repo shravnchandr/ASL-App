@@ -1,8 +1,3 @@
-/**
- * PlaybackControls Component
- * Controls for sign animation playback: play/pause, speed, replay
- */
-
 import React from 'react';
 import './PlaybackControls.css';
 

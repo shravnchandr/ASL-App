@@ -1,13 +1,7 @@
-/**
- * useSoundEffects Hook
- * Provides optional sound effects for camera recognition
- */
-
 import { useCallback, useRef, useState, useEffect } from 'react';
 
 const SOUND_EFFECTS_KEY = 'asl_sound_effects_enabled';
 
-// Simple Web Audio API based sounds
 interface SoundConfig {
   frequency: number;
   duration: number;
@@ -43,7 +37,7 @@ export function useSoundEffects() {
     return localStorage.getItem(SOUND_EFFECTS_KEY) === 'true';
   });
 
-  // Initialize AudioContext lazily (must be after user interaction)
+  // AudioContext must be created after a user interaction (browser autoplay policy)
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -51,7 +45,6 @@ export function useSoundEffects() {
     return audioContextRef.current;
   }, []);
 
-  // Play a sound effect
   const playSound = useCallback((soundName: keyof typeof SOUNDS) => {
     if (!isEnabled) return;
 
@@ -61,7 +54,6 @@ export function useSoundEffects() {
     try {
       const ctx = getAudioContext();
 
-      // Resume context if suspended (browser autoplay policy)
       if (ctx.state === 'suspended') {
         ctx.resume();
       }
@@ -85,7 +77,6 @@ export function useSoundEffects() {
     }
   }, [isEnabled, getAudioContext]);
 
-  // Play success sound (ascending notes)
   const playSuccess = useCallback(() => {
     if (!isEnabled) return;
 
@@ -119,7 +110,6 @@ export function useSoundEffects() {
     }
   }, [isEnabled, getAudioContext]);
 
-  // Toggle sound effects
   const toggleSounds = useCallback(() => {
     setIsEnabled(prev => {
       const newValue = !prev;
@@ -128,12 +118,9 @@ export function useSoundEffects() {
     });
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      audioContextRef.current?.close();
     };
   }, []);
 

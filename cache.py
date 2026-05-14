@@ -14,8 +14,6 @@ from logger import app_logger
 
 settings = get_settings()
 
-# ───────────────────────────── In-memory LRU cache ─────────────────────────────
-
 _MEMORY_CACHE_MAX = 256
 
 
@@ -64,9 +62,6 @@ class _MemoryCache:
 
 _memory_cache = _MemoryCache()
 
-# ───────────────────────────── Redis client ─────────────────────────────
-
-# Global Redis client
 _redis_client = None
 
 
@@ -88,7 +83,6 @@ async def init_redis():
             socket_connect_timeout=5,
         )
 
-        # Test connection
         await _redis_client.ping()
         app_logger.info(f"Redis connected successfully at {settings.redis_url}")
         return _redis_client
@@ -114,9 +108,6 @@ def get_redis():
     return _redis_client
 
 
-# ───────────────────────────── Cache operations ─────────────────────────────
-
-
 def generate_cache_key(text: str, prefix: str = "asl:translation") -> str:
     """
     Generate a cache key for a given text.
@@ -127,13 +118,9 @@ def generate_cache_key(text: str, prefix: str = "asl:translation") -> str:
 
 
 async def get_cached_translation(text: str) -> Optional[dict]:
-    """
-    Get cached translation result.
-    Tries Redis first, falls back to memory cache.
-    """
+    """Try Redis first, fall back to memory cache."""
     cache_key = generate_cache_key(text)
 
-    # Try Redis
     if _redis_client:
         try:
             cached_data = await _redis_client.get(cache_key)
@@ -143,7 +130,6 @@ async def get_cached_translation(text: str) -> Optional[dict]:
         except Exception as e:
             app_logger.warning(f"Redis read error: {e}")
 
-    # Try memory cache
     cached_data = _memory_cache.get(cache_key)
     if cached_data:
         app_logger.debug(f"Memory cache hit for key: {cache_key}")
@@ -154,18 +140,13 @@ async def get_cached_translation(text: str) -> Optional[dict]:
 
 
 async def cache_translation(text: str, translation_data: dict) -> bool:
-    """
-    Cache translation result.
-    Writes to both Redis (if available) and in-memory cache.
-    """
+    """Write to in-memory cache and Redis (when available)."""
     cache_key = generate_cache_key(text)
     cached_json = json.dumps(translation_data)
     ttl = settings.cache_ttl
 
-    # Always write to memory cache
     _memory_cache.set(cache_key, cached_json, ttl)
 
-    # Also write to Redis if available
     if _redis_client:
         try:
             await _redis_client.setex(cache_key, ttl, cached_json)

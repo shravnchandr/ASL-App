@@ -1,10 +1,5 @@
-/**
- * Rate Limit Banner Component
- * Shows when user is using shared API key with remaining translations
- */
-
 import { useEffect, useState } from 'react';
-import { getRateLimitStatus } from '../../services/api';
+import { getRateLimitStatus } from '../../services/api/translate';
 import type { RateLimitStatus } from '../../types';
 import './RateLimitBanner.css';
 
@@ -17,7 +12,6 @@ export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Only fetch rate limit if user is NOT using custom API key
         if (!customApiKey) {
             fetchRateLimit();
         } else {
@@ -37,11 +31,6 @@ export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
         }
     };
 
-    // Don't show banner if:
-    // - Still loading
-    // - User has custom API key
-    // - Shared key not available
-    // - No remaining translations
     if (isLoading || customApiKey || !rateLimitStatus?.shared_key_available) {
         return null;
     }
@@ -50,7 +39,6 @@ export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
     const limit = rateLimitStatus.limit ?? 0;
     const percentUsed = limit > 0 ? ((limit - remaining) / limit) * 100 : 0;
 
-    // Color based on usage
     let statusClass = 'status-good';
     if (percentUsed >= 80) {
         statusClass = 'status-critical';
@@ -76,10 +64,7 @@ export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
                 </div>
                 <button
                     className="banner-action"
-                    onClick={() => {
-                        // Trigger API key modal (this will be handled by parent)
-                        window.dispatchEvent(new CustomEvent('openApiKeyModal'));
-                    }}
+                    onClick={() => window.dispatchEvent(new CustomEvent('openApiKeyModal'))}
                     aria-label="Add your own API key for unlimited access"
                 >
                     Get unlimited access

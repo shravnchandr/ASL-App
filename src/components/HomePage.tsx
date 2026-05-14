@@ -1,8 +1,3 @@
-/**
- * HomePage Component
- * Playful Springs dashboard: Sign of the Day, resume lesson, quick tools, recent searches, progress
- */
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SignAnimator } from './learn/SignAnimator';
@@ -14,8 +9,6 @@ import { LEVELS } from '../constants/levels';
 import { useApp } from '../contexts/AppContext';
 import type { SignData } from '../types';
 import './HomePage.css';
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getLevelMastery(levelId: number): number {
     const level = LEVELS.find(l => l.id === levelId);
@@ -41,8 +34,6 @@ function getTotalSignsLearned(): number {
     const progress = storage.getLearningProgress();
     return Object.values(progress).filter(p => p.mastery > 0).length;
 }
-
-// ── Sign of the Day card ──────────────────────────────────────────────────────
 
 const SignOfDayHero: React.FC<{ onSearch: (q: string) => void }> = ({ onSearch }) => {
     const [sign, setSign] = useState<string | null>(null);
@@ -98,8 +89,6 @@ const SignOfDayHero: React.FC<{ onSearch: (q: string) => void }> = ({ onSearch }
     );
 };
 
-// ── Main component ────────────────────────────────────────────────────────────
-
 const HomePage: React.FC = () => {
     const navigate = useNavigate();
     const { searchHistory } = useApp();
@@ -118,18 +107,14 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="home-page">
-            {/* ── Top two-column area ── */}
             <div className="home-page__top">
-                {/* Sign of the Day */}
                 <SignOfDayHero onSearch={handleSearch} />
 
-                {/* Pick up where you left off */}
                 {hasProgress ? (
                     <aside className="home-resume">
                         <div className="home-resume__eyebrow">WELCOME BACK</div>
                         <h2 className="home-resume__title">Pick up where you left off.</h2>
 
-                        {/* Current lesson card */}
                         <Link to="/learn" className="home-resume__lesson-card">
                             <div
                                 className="home-resume__lesson-badge"
@@ -150,7 +135,6 @@ const HomePage: React.FC = () => {
                             </button>
                         </Link>
 
-                        {/* Review due card */}
                         {totalReviewDue > 0 && (
                             <Link to="/learn" className="home-resume__review-card">
                                 <div className="home-resume__review-icon">
@@ -185,7 +169,6 @@ const HomePage: React.FC = () => {
                 )}
             </div>
 
-            {/* ── Quick tools ── */}
             <section className="home-tools" aria-label="Quick tools">
                 <h2 className="home-tools__title">Quick tools</h2>
                 <div className="home-tools__grid">
@@ -236,9 +219,7 @@ const HomePage: React.FC = () => {
                 </div>
             </section>
 
-            {/* ── Bottom two-column area ── */}
             <div className="home-page__bottom">
-                {/* Recent searches */}
                 {recentSearches.length > 0 && (
                     <section className="home-recent" aria-label="Recent searches">
                         <div className="home-recent__header">
@@ -267,7 +248,6 @@ const HomePage: React.FC = () => {
                     </section>
                 )}
 
-                {/* Your progress */}
                 {hasProgress && (
                     <section className="home-progress" aria-label="Your progress">
                         <h2 className="home-progress__title">Your progress</h2>
@@ -295,7 +275,6 @@ const HomePage: React.FC = () => {
                     </section>
                 )}
 
-                {/* If no history or progress, show quick-try chips */}
                 {recentSearches.length === 0 && !hasProgress && (
                     <section className="home-quicktry" aria-label="Try a translation">
                         <h2 className="home-quicktry__title">Try translating</h2>

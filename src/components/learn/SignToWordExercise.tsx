@@ -1,8 +1,3 @@
-/**
- * SignToWordExercise Component
- * Playful Springs redesign: two-column layout with "Check answer" flow
- */
-
 import React, { useState, useCallback } from 'react';
 import { SignAnimator } from './SignAnimator';
 import { PlaybackControls } from './PlaybackControls';

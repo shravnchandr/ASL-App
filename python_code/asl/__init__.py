@@ -1,18 +1,18 @@
 """
 ASL Translation Package
 
-LangGraph-based two-agent workflow that converts English sentences into
-detailed ASL sign descriptions with grammar transformation and knowledge-base grounding.
+Two-agent pipeline (Grammar Agent → Translation Agent) that converts English
+sentences into detailed ASL sign descriptions with grammar transformation and
+knowledge-base grounding. Uses the Google Gemini API directly via google-genai.
 
 Modules:
-  schemas        — Pydantic models and LangGraph state
+  schemas        — Pydantic models and ASL state TypedDict
   knowledge_base — Verified sign KB loading + exact/semantic lookup
-  nodes          — Grammar Agent, Translation Agent, conditional edge
-  graph          — build_asl_graph() workflow builder
+  pipeline       — ASLPipeline class and build_asl_graph() factory
   cli            — Interactive CLI for local testing
 """
 
-from .graph import build_asl_graph
+from .pipeline import build_asl_graph
 from .schemas import (
     SentenceDescriptionSchema,
     DescriptionSchema,

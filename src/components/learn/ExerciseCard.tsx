@@ -1,8 +1,3 @@
-/**
- * ExerciseCard Component
- * Common wrapper for all exercise types with progress, feedback, and XP display
- */
-
 import React from 'react';
 import './ExerciseCard.css';
 
@@ -29,13 +24,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     showXpAnimation = false,
 }) => {
     const progress = ((currentIndex + 1) / totalExercises) * 100;
-    // XP animation is controlled by parent via showXpAnimation prop
-    // CSS animation handles the fade-out timing
     const showXp = showXpAnimation && xpEarned > 0;
 
     return (
         <div className="exercise-card">
-            {/* Progress header */}
             <header className="exercise-card__header">
                 <div className="exercise-card__progress-info">
                     <span className="exercise-card__progress-text">
