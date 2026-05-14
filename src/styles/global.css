@@ -1,12 +1,5 @@
-/**
- * Global Styles and Utilities
- * Base styles, resets, and utility classes
- */
-
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
 @import './tokens.css';
-
-/* ===== CSS RESET ===== */
 
 *,
 *::before,
@@ -33,12 +26,10 @@ body {
     overflow-x: hidden;
 }
 
-/* Smooth scrolling */
 html {
     scroll-behavior: smooth;
 }
 
-/* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
 
     *,
@@ -50,49 +41,6 @@ html {
         scroll-behavior: auto !important;
     }
 }
-
-/* ===== FOCUS INDICATORS (Accessibility) ===== */
-
-/* Remove default outline and use custom focus-visible styles */
-:focus {
-    outline: none;
-}
-
-/* Visible focus indicator for keyboard navigation */
-:focus-visible {
-    outline: 2px solid var(--md-sys-color-primary);
-    outline-offset: 2px;
-    border-radius: var(--md-sys-shape-corner-extra-small);
-}
-
-/* Enhanced focus for buttons and interactive elements */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-[role="button"]:focus-visible,
-[tabindex]:focus-visible {
-    outline: 2px solid var(--md-sys-color-primary);
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px hsla(205, 90%, 55%, 0.2);
-}
-
-/* Focus indicator for dark theme */
-[data-theme="dark"] :focus-visible {
-    outline-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 0 4px hsla(205, 90%, 70%, 0.2);
-}
-
-/* High contrast focus for accessibility */
-@media (prefers-contrast: more) {
-    :focus-visible {
-        outline: 3px solid currentColor;
-        outline-offset: 3px;
-    }
-}
-
-/* ===== TYPOGRAPHY UTILITIES ===== */
 
 .display-large {
     font-size: var(--md-sys-typescale-display-large-size);
@@ -145,15 +93,12 @@ textarea:focus-visible,
     line-height: var(--md-sys-typescale-label-large-line-height);
 }
 
-/* ===== FOCUS STYLES ===== */
-
 :focus-visible {
     outline: 3px solid var(--md-sys-color-primary);
     outline-offset: 2px;
     border-radius: var(--md-sys-shape-corner-small);
 }
 
-/* High contrast focus for accessibility */
 @media (prefers-contrast: high) {
     :focus-visible {
         outline-width: 4px;
@@ -161,14 +106,10 @@ textarea:focus-visible,
     }
 }
 
-/* ===== SELECTION ===== */
-
 ::selection {
     background-color: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
 }
-
-/* ===== ACCESSIBILITY UTILITIES ===== */
 
 .sr-only {
     position: absolute;
@@ -205,8 +146,6 @@ textarea:focus-visible,
     border-radius: var(--md-sys-shape-corner-medium);
 }
 
-/* ===== LAYOUT UTILITIES ===== */
-
 .container {
     width: 100%;
     max-width: 1200px;
@@ -241,8 +180,6 @@ textarea:focus-visible,
 .gap-lg {
     gap: var(--spacing-lg);
 }
-
-/* ===== ANIMATION UTILITIES ===== */
 
 .fade-in {
     animation: fadeIn var(--md-sys-motion-duration-medium-2) var(--md-sys-motion-easing-standard);
@@ -290,8 +227,6 @@ textarea:focus-visible,
     }
 }
 
-/* ===== RESPONSIVE UTILITIES ===== */
-
 @media (max-width: 768px) {
     .display-large {
         font-size: 2.5rem;
@@ -316,8 +251,6 @@ textarea:focus-visible,
     }
 }
 
-/* ===== BUTTON BASE ===== */
-
 button {
     font-family: inherit;
     cursor: pointer;
@@ -331,8 +264,6 @@ button:disabled {
     opacity: 0.38;
 }
 
-/* ===== INPUT BASE ===== */
-
 input,
 textarea {
     font-family: inherit;
@@ -340,8 +271,6 @@ textarea {
     border: none;
     outline: none;
 }
-
-/* ===== SCROLLBAR STYLING ===== */
 
 ::-webkit-scrollbar {
     width: 12px;
@@ -360,9 +289,7 @@ textarea {
     background: var(--md-sys-color-primary);
 }
 
-/* ===== SHARED MODAL CHROME ===== */
 /* Used by FeedbackModal, GeneralFeedbackModal, and ApiKeyModal */
-
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -440,9 +367,6 @@ textarea {
     justify-content: flex-end;
 }
 
-/* ===== SHARED FORM ELEMENTS ===== */
-/* Used across modal components */
-
 .form-group {
     margin-bottom: var(--spacing-xl);
 }
@@ -497,8 +421,6 @@ textarea {
     color: var(--md-sys-color-on-surface-variant);
     opacity: 0.6;
 }
-
-/* ===== SHARED MODAL BUTTONS ===== */
 
 .button-primary,
 .button-secondary {
@@ -569,7 +491,6 @@ textarea {
     transform: translateY(0);
 }
 
-/* Modal responsive / reduced-motion */
 @media (max-width: 768px) {
     .modal-container {
         max-height: 95vh;

@@ -68,7 +68,7 @@ interface PopularSearch {
     count: number;
 }
 
-interface DailyActiveUser {
+export interface DailyActiveUser {
     date: string;
     unique_users: number;
 }

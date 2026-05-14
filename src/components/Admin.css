@@ -1,9 +1,3 @@
-/**
- * Admin Dashboard — Clean analytics aesthetic
- * Warm cream background, white cards, colored stat accents
- */
-
-/* ─── Palette & tokens ──────────────────────────────────────────────────── */
 .admin-root {
   --ab:   #4A78E8;    /* blue   */
   --ag:   #2DC87A;    /* green  */
@@ -33,7 +27,6 @@
   color: var(--text);
 }
 
-/* ─── Login ─────────────────────────────────────────────────────────────── */
 .login-wrap {
   min-height: 100vh;
   display: flex;
@@ -150,7 +143,6 @@
 
 .login-back:hover { color: var(--ap); }
 
-/* ─── Header ─────────────────────────────────────────────────────────────── */
 .adm-header {
   background: var(--card);
   border-bottom: 1px solid var(--border);
@@ -230,7 +222,6 @@
   color: var(--ar);
 }
 
-/* ─── Main layout ────────────────────────────────────────────────────────── */
 .adm-main {
   max-width: 1200px;
   margin: 0 auto;
@@ -264,7 +255,6 @@
   font-size: 0.875rem;
 }
 
-/* ─── Stat cards ─────────────────────────────────────────────────────────── */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -328,7 +318,6 @@
   width: 110px;
 }
 
-/* ─── Shared card ────────────────────────────────────────────────────────── */
 .adm-card {
   background: var(--card);
   border-radius: var(--radius);
@@ -373,14 +362,12 @@
   align-items: center;
 }
 
-/* ─── Two-column section ─────────────────────────────────────────────────── */
 .adm-two-col {
   display: grid;
   grid-template-columns: 3fr 2fr;
   gap: 1.25rem;
 }
 
-/* ─── Bar chart ──────────────────────────────────────────────────────────── */
 .bar-chart-scroll {
   overflow-x: auto;
   padding-bottom: 4px;
@@ -404,7 +391,6 @@
   margin: 0;
 }
 
-/* ─── Popular searches list ──────────────────────────────────────────────── */
 .search-list {
   display: flex;
   flex-direction: column;
@@ -452,7 +438,6 @@
   flex-shrink: 0;
 }
 
-/* ─── Performance grid ───────────────────────────────────────────────────── */
 .perf-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -494,7 +479,6 @@
   color: var(--muted);
 }
 
-/* ─── Filter select ──────────────────────────────────────────────────────── */
 .filter-select {
   padding: 0.4rem 2rem 0.4rem 0.75rem;
   border: 1.5px solid var(--border);
@@ -517,7 +501,6 @@
   border-color: var(--ap);
 }
 
-/* ─── Feedback table ─────────────────────────────────────────────────────── */
 .table-scroll {
   overflow-x: auto;
   margin: 0 -1.5rem;
@@ -581,7 +564,6 @@
 
 .td-nil { color: var(--border); }
 
-/* ─── Pills (type/category badges) ──────────────────────────────────────── */
 .pill {
   display: inline-block;
   padding: 2px 9px;
@@ -596,7 +578,6 @@
 .pill-general     { background: var(--at-bg); color: var(--at); }
 .pill-category    { background: var(--ao-bg); color: var(--ao); }
 
-/* ─── Delete button ──────────────────────────────────────────────────────── */
 .btn-delete {
   padding: 4px 12px;
   border: 1.5px solid var(--border);
@@ -619,7 +600,6 @@
 
 .btn-delete:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ─── Pagination ─────────────────────────────────────────────────────────── */
 .adm-pagination {
   display: flex;
   align-items: center;
@@ -652,7 +632,6 @@
   font-weight: 600;
 }
 
-/* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .adm-two-col { grid-template-columns: 1fr; }
@@ -685,15 +664,4 @@
   .stat-grid { grid-template-columns: 1fr; }
 }
 
-/* ─── Reduced motion ─────────────────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .login-btn,
-  .adm-tab,
-  .btn-delete,
-  .page-btn,
-  .adm-signout,
-  .login-field input,
-  .filter-select {
-    transition: none;
-  }
-}
+/* Reduced motion: handled by global.css `* { transition-duration: 0.01ms !important }` */

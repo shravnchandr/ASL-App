@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAdminFeedback, deleteAdminFeedback, getAdminStats, getAnalyticsOverview } from '../services/api/admin';
-import type { PaginatedFeedback, AdminStats, FeedbackItem, AnalyticsOverview } from '../types';
+import type { PaginatedFeedback, AdminStats, FeedbackItem, AnalyticsOverview, DailyActiveUser } from '../types';
 import './Admin.css';
-
-// ─── Sub-components ──────────────────────────────────────────────────────────
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length < 2) return <div className="sparkline-empty" />;
@@ -64,7 +62,7 @@ function StatCard({ label, value, color, badge, sparkValues }: StatCardProps) {
   );
 }
 
-function DailyUsersChart({ data }: { data: Array<{ date: string; unique_users: number }> }) {
+function DailyUsersChart({ data }: { data: DailyActiveUser[] }) {
   if (!data.length) return <p className="chart-empty">No daily data yet</p>;
 
   // Pad to 14 days so the chart always has enough bars to fill its width.
@@ -128,8 +126,6 @@ function DailyUsersChart({ data }: { data: Array<{ date: string; unique_users: n
   );
 }
 
-// ─── Main component ──────────────────────────────────────────────────────────
-
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -145,6 +141,15 @@ export function Admin() {
   const [feedbackType, setFeedbackType] = useState<string>('');
   const [limit] = useState(50);
 
+  const resetAuth = useCallback(() => {
+    setIsAuthenticated(false);
+    setAdminPassword('');
+    setPassword('');
+    setFeedback(null);
+    setStats(null);
+    setAnalytics(null);
+  }, []);
+
   const loadData = useCallback(async () => {
     if (!adminPassword) return;
     setLoading(true);
@@ -159,18 +164,11 @@ export function Admin() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load data';
       setError(message);
-      if (message.includes('Invalid admin password')) {
-        setIsAuthenticated(false);
-        setAdminPassword('');
-        setPassword('');
-        setFeedback(null);
-        setStats(null);
-        setAnalytics(null);
-      }
+      if (message.includes('Invalid admin password')) resetAuth();
     } finally {
       setLoading(false);
     }
-  }, [adminPassword, currentPage, limit, feedbackType]);
+  }, [adminPassword, currentPage, limit, feedbackType, resetAuth]);
 
   const loadAnalytics = useCallback(async () => {
     if (!adminPassword) return;
@@ -182,18 +180,11 @@ export function Admin() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load analytics';
       setError(message);
-      if (message.includes('Invalid admin password')) {
-        setIsAuthenticated(false);
-        setAdminPassword('');
-        setPassword('');
-        setFeedback(null);
-        setStats(null);
-        setAnalytics(null);
-      }
+      if (message.includes('Invalid admin password')) resetAuth();
     } finally {
       setLoading(false);
     }
-  }, [adminPassword]);
+  }, [adminPassword, resetAuth]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -219,12 +210,7 @@ export function Admin() {
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    setAdminPassword('');
-    setPassword('');
-    setFeedback(null);
-    setStats(null);
-    setAnalytics(null);
+    resetAuth();
     setError('');
   };
 
@@ -250,8 +236,6 @@ export function Admin() {
     if (h > 0) return `${h}h ago`;
     return `${m}m ago`;
   };
-
-  // ── Login ──────────────────────────────────────────────────────────────────
 
   if (!isAuthenticated) {
     return (
@@ -287,8 +271,6 @@ export function Admin() {
     );
   }
 
-  // ── Dashboard ──────────────────────────────────────────────────────────────
-
   const dailyValues = analytics?.daily_active_users.map(d => d.unique_users) ?? [];
   const last7Values = analytics?.daily_active_users.slice(-7).map(d => d.unique_users) ?? [];
   const positiveRate = stats
@@ -299,7 +281,6 @@ export function Admin() {
 
   return (
     <div className="admin-root">
-      {/* Header */}
       <header className="adm-header">
         <div className="adm-header-inner">
           <div className="adm-brand">
@@ -327,7 +308,6 @@ export function Admin() {
       <main className="adm-main">
         {error && <div className="adm-error" role="alert">{error}</div>}
 
-        {/* ── Analytics tab ── */}
         {activeTab === 'analytics' && (
           <>
             {loading && !analytics && <p className="adm-loading">Loading analytics…</p>}
@@ -337,7 +317,6 @@ export function Admin() {
 
             {analytics && (
               <>
-                {/* Stat cards */}
                 <div className="stat-grid">
                   <StatCard
                     label="Users Today"
@@ -369,9 +348,7 @@ export function Admin() {
                   />
                 </div>
 
-                {/* Two-column section */}
                 <div className="adm-two-col">
-                  {/* Daily users chart */}
                   <div className="adm-card">
                     <div className="card-header">
                       <div>
@@ -382,7 +359,6 @@ export function Admin() {
                     <DailyUsersChart data={analytics.daily_active_users.slice(-14)} />
                   </div>
 
-                  {/* Popular searches */}
                   <div className="adm-card">
                     <div className="card-header">
                       <div>
@@ -409,7 +385,6 @@ export function Admin() {
                   </div>
                 </div>
 
-                {/* Translation performance */}
                 <div className="adm-card">
                   <div className="card-header">
                     <h2 className="card-title">Translation performance</h2>
@@ -433,10 +408,8 @@ export function Admin() {
           </>
         )}
 
-        {/* ── Feedback tab ── */}
         {activeTab === 'feedback' && (
           <>
-            {/* Stats row */}
             {stats && (
               <div className="stat-grid">
                 <StatCard
@@ -466,7 +439,6 @@ export function Admin() {
               </div>
             )}
 
-            {/* Feedback table */}
             <div className="adm-card">
               <div className="card-header">
                 <div>
