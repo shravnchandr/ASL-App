@@ -3,6 +3,118 @@ import { getAdminFeedback, deleteAdminFeedback, getAdminStats, getAnalyticsOverv
 import type { PaginatedFeedback, AdminStats, FeedbackItem, AnalyticsOverview } from '../types';
 import './Admin.css';
 
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function Sparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return <div className="sparkline-empty" />;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const W = 110, H = 34;
+  const pts = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * W;
+      const y = H - 3 - ((v - min) / range) * (H - 6);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="none" aria-hidden="true" className="sparkline-svg">
+      <polyline points={pts} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  color: 'blue' | 'green' | 'red' | 'orange' | 'purple' | 'teal';
+  badge?: string;
+  sparkValues?: number[];
+}
+
+function StatCard({ label, value, color, badge, sparkValues }: StatCardProps) {
+  const colorMap = {
+    blue:   { val: '#4A78E8', bg: '#EBF1FD', spark: '#4A78E8' },
+    green:  { val: '#2DC87A', bg: '#E6F8F0', spark: '#2DC87A' },
+    red:    { val: '#E84848', bg: '#FEEEEE', spark: '#E84848' },
+    orange: { val: '#F06A20', bg: '#FEF2E8', spark: '#F06A20' },
+    purple: { val: '#7C6FE0', bg: '#EFEDFB', spark: '#7C6FE0' },
+    teal:   { val: '#22B5AD', bg: '#E4F6F5', spark: '#22B5AD' },
+  };
+  const c = colorMap[color];
+  return (
+    <div className="stat-card">
+      <div className="stat-card-top">
+        <span className="stat-card-label">{label}</span>
+        {badge && (
+          <span className="stat-card-badge" style={{ background: c.bg, color: c.val }}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="stat-card-value" style={{ color: c.val }}>{value}</div>
+      <div className="stat-card-bottom">
+        {sparkValues && sparkValues.length >= 2
+          ? <Sparkline values={sparkValues} color={c.spark} />
+          : <div className="sparkline-empty" />
+        }
+      </div>
+    </div>
+  );
+}
+
+function DailyUsersChart({ data }: { data: Array<{ date: string; unique_users: number }> }) {
+  if (!data.length) return <p className="chart-empty">No daily data yet</p>;
+
+  const max = Math.max(...data.map(d => d.unique_users), 1);
+  const BAR_W = 18, GAP = 6, CHART_H = 140, LABEL_H = 22;
+  const totalW = data.length * (BAR_W + GAP) - GAP;
+
+  return (
+    <div className="bar-chart-scroll">
+      <svg
+        width="100%"
+        viewBox={`0 0 ${totalW} ${CHART_H + LABEL_H}`}
+        preserveAspectRatio="none"
+        className="bar-chart-svg"
+        aria-label="Daily active users chart"
+      >
+        <defs>
+          <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7C6FE0" />
+            <stop offset="100%" stopColor="#B3ACEF" />
+          </linearGradient>
+        </defs>
+        {data.map((d, i) => {
+          const barH = Math.max((d.unique_users / max) * CHART_H, 2);
+          const x = i * (BAR_W + GAP);
+          const y = CHART_H - barH;
+          const day = d.date.split('T')[0].split('-')[2];
+          return (
+            <g key={d.date}>
+              <rect x={x} y={y} width={BAR_W} height={barH} rx={4} fill="url(#barGrad)">
+                <title>{d.date.split('T')[0]}: {d.unique_users} users</title>
+              </rect>
+              <text
+                x={x + BAR_W / 2}
+                y={CHART_H + LABEL_H - 5}
+                textAnchor="middle"
+                className="bar-day-label"
+                fontSize="8"
+              >
+                {day}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -10,7 +122,7 @@ export function Admin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'feedback' | 'analytics'>('feedback');
+  const [activeTab, setActiveTab] = useState<'feedback' | 'analytics'>('analytics');
   const [feedback, setFeedback] = useState<PaginatedFeedback | null>(null);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
@@ -20,22 +132,18 @@ export function Admin() {
 
   const loadData = useCallback(async () => {
     if (!adminPassword) return;
-
     setLoading(true);
     setError('');
-
     try {
       const [feedbackData, statsData] = await Promise.all([
         getAdminFeedback(adminPassword, currentPage, limit, feedbackType || undefined),
         getAdminStats(adminPassword),
       ]);
-
       setFeedback(feedbackData);
       setStats(statsData);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load data';
       setError(message);
-
       if (message.includes('Invalid admin password')) {
         setIsAuthenticated(false);
         setAdminPassword('');
@@ -51,17 +159,14 @@ export function Admin() {
 
   const loadAnalytics = useCallback(async () => {
     if (!adminPassword) return;
-
     setLoading(true);
     setError('');
-
     try {
       const analyticsData = await getAnalyticsOverview(adminPassword);
       setAnalytics(analyticsData);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load analytics';
       setError(message);
-
       if (message.includes('Invalid admin password')) {
         setIsAuthenticated(false);
         setAdminPassword('');
@@ -77,11 +182,8 @@ export function Admin() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (activeTab === 'feedback') {
-        loadData();
-      } else if (activeTab === 'analytics') {
-        loadAnalytics();
-      }
+      if (activeTab === 'feedback') loadData();
+      else if (activeTab === 'analytics') loadAnalytics();
     }
   }, [isAuthenticated, activeTab, loadData, loadAnalytics]);
 
@@ -89,15 +191,13 @@ export function Admin() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await getAdminStats(password);
       setAdminPassword(password);
       setIsAuthenticated(true);
       setPassword('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Authentication failed';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -109,393 +209,353 @@ export function Admin() {
     setPassword('');
     setFeedback(null);
     setStats(null);
+    setAnalytics(null);
     setError('');
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this feedback?')) {
-      return;
-    }
-
+    if (!confirm('Delete this feedback entry?')) return;
     setLoading(true);
     try {
       await deleteAdminFeedback(adminPassword, id);
-      await loadData(); // Reload data
+      await loadData();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete feedback';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleString();
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    const h = Math.floor(m / 60);
+    const d = Math.floor(h / 24);
+    if (d > 0) return `${d}d ago`;
+    if (h > 0) return `${h}h ago`;
+    return `${m}m ago`;
   };
+
+  // ── Login ──────────────────────────────────────────────────────────────────
 
   if (!isAuthenticated) {
     return (
-      <div className="admin-container">
-        <div className="admin-login">
-          <div className="admin-login-card">
-            <h1 className="admin-title">Admin Panel</h1>
-            <p className="admin-subtitle">Enter your admin password to access the dashboard</p>
-
-            <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label htmlFor="password">Password</label>
+      <div className="admin-root">
+        <div className="login-wrap">
+          <div className="login-card">
+            <div className="login-emoji">🤟</div>
+            <h1 className="login-title">ASL Admin</h1>
+            <p className="login-sub">Enter your password to continue</p>
+            <form onSubmit={handleLogin} className="login-form">
+              <div className="login-field">
+                <label htmlFor="adm-pw">Password</label>
                 <input
-                  id="password"
+                  id="adm-pw"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Admin password"
                   required
                   autoFocus
                   disabled={loading}
                 />
               </div>
-
-              {error && (
-                <div className="admin-error" role="alert">
-                  {error}
-                </div>
-              )}
-
-              <button type="submit" className="admin-button" disabled={loading || !password}>
-                {loading ? 'Authenticating...' : 'Login'}
+              {error && <p className="login-error" role="alert">{error}</p>}
+              <button type="submit" className="login-btn" disabled={loading || !password}>
+                {loading ? 'Signing in…' : 'Sign in'}
               </button>
             </form>
-
-            <div className="admin-back">
-              <a href="/">← Back to ASL Dictionary</a>
-            </div>
+            <a href="/" className="login-back">← Back to app</a>
           </div>
         </div>
       </div>
     );
   }
 
+  // ── Dashboard ──────────────────────────────────────────────────────────────
+
+  const dailyValues = analytics?.daily_active_users.map(d => d.unique_users) ?? [];
+  const last7Values = analytics?.daily_active_users.slice(-7).map(d => d.unique_users) ?? [];
+  const positiveRate = stats
+    ? (stats.thumbs_up + stats.thumbs_down > 0
+        ? Math.round((stats.thumbs_up / (stats.thumbs_up + stats.thumbs_down)) * 100)
+        : 0)
+    : 0;
+
   return (
-    <div className="admin-container">
-      <header className="admin-header">
-        <div className="admin-header-content">
-          <h1 className="admin-title">Admin Dashboard</h1>
-          <button onClick={handleLogout} className="admin-logout-button">
-            Logout
-          </button>
+    <div className="admin-root">
+      {/* Header */}
+      <header className="adm-header">
+        <div className="adm-header-inner">
+          <div className="adm-brand">
+            <span className="adm-brand-icon">🤟</span>
+            <span className="adm-brand-name">ASL Admin</span>
+          </div>
+          <nav className="adm-tabs">
+            <button
+              className={`adm-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analytics')}
+            >
+              Analytics
+            </button>
+            <button
+              className={`adm-tab ${activeTab === 'feedback' ? 'active' : ''}`}
+              onClick={() => setActiveTab('feedback')}
+            >
+              Feedback
+            </button>
+          </nav>
+          <button onClick={handleLogout} className="adm-signout">Sign out</button>
         </div>
       </header>
 
-      <nav className="admin-tabs">
-        <button
-          className={`admin-tab ${activeTab === 'feedback' ? 'active' : ''}`}
-          onClick={() => setActiveTab('feedback')}
-        >
-          Feedback
-        </button>
-        <button
-          className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`}
-          onClick={() => setActiveTab('analytics')}
-        >
-          Analytics
-        </button>
-      </nav>
+      <main className="adm-main">
+        {error && <div className="adm-error" role="alert">{error}</div>}
 
-      <main className="admin-main">
-        {error && (
-          <div className="admin-error" role="alert">
-            {error}
-          </div>
-        )}
-
-        {activeTab === 'feedback' && (
+        {/* ── Analytics tab ── */}
+        {activeTab === 'analytics' && (
           <>
-            {stats && (
-          <section className="admin-stats">
-            <h2 className="section-title">Statistics</h2>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-value">{stats.total_feedback}</div>
-                <div className="stat-label">Total Feedback</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{stats.thumbs_up}</div>
-                <div className="stat-label">Thumbs Up</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{stats.thumbs_down}</div>
-                <div className="stat-label">Thumbs Down</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{stats.with_text_feedback}</div>
-                <div className="stat-label">With Comments</div>
-              </div>
-            </div>
+            {loading && !analytics && <p className="adm-loading">Loading analytics…</p>}
+            {!loading && !analytics && !error && (
+              <p className="adm-empty">No analytics data yet — start using the app!</p>
+            )}
 
-            {Object.keys(stats.by_type).length > 0 && (
-              <div className="stats-breakdown">
-                <h3>By Type</h3>
-                <div className="breakdown-items">
-                  {Object.entries(stats.by_type).map(([type, count]) => (
-                    <div key={type} className="breakdown-item">
-                      <span className="breakdown-label">{type}</span>
-                      <span className="breakdown-value">{count}</span>
+            {analytics && (
+              <>
+                {/* Stat cards */}
+                <div className="stat-grid">
+                  <StatCard
+                    label="Users Today"
+                    value={analytics.unique_users_today.toLocaleString()}
+                    color="purple"
+                    badge={last7Values.length > 1
+                      ? `${last7Values[last7Values.length - 1] >= last7Values[last7Values.length - 2] ? '+' : ''}${last7Values[last7Values.length - 1] - last7Values[Math.max(0, last7Values.length - 2)]} vs yesterday`
+                      : undefined}
+                    sparkValues={last7Values}
+                  />
+                  <StatCard
+                    label="Users (7 days)"
+                    value={analytics.unique_users_7d.toLocaleString()}
+                    color="blue"
+                    sparkValues={last7Values}
+                  />
+                  <StatCard
+                    label="Users (30 days)"
+                    value={analytics.unique_users_30d.toLocaleString()}
+                    color="teal"
+                    sparkValues={dailyValues}
+                  />
+                  <StatCard
+                    label="Total Translations"
+                    value={analytics.translations.total.toLocaleString()}
+                    color="orange"
+                    badge={`${analytics.translations.cache_hit_rate.toFixed(0)}% cached`}
+                    sparkValues={dailyValues}
+                  />
+                </div>
+
+                {/* Two-column section */}
+                <div className="adm-two-col">
+                  {/* Daily users chart */}
+                  <div className="adm-card">
+                    <div className="card-header">
+                      <div>
+                        <h2 className="card-title">Daily active users</h2>
+                        <p className="card-sub">Last {analytics.daily_active_users.slice(-14).length} days</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    <DailyUsersChart data={analytics.daily_active_users.slice(-14)} />
+                  </div>
 
-            {Object.keys(stats.by_category).length > 0 && (
-              <div className="stats-breakdown">
-                <h3>By Category</h3>
-                <div className="breakdown-items">
-                  {Object.entries(stats.by_category).map(([category, count]) => (
-                    <div key={category} className="breakdown-item">
-                      <span className="breakdown-label">{category}</span>
-                      <span className="breakdown-value">{count}</span>
+                  {/* Popular searches */}
+                  <div className="adm-card">
+                    <div className="card-header">
+                      <div>
+                        <h2 className="card-title">Popular searches</h2>
+                        <p className="card-sub">Last 30 days</p>
+                      </div>
+                      {analytics.popular_searches.length > 0 && (
+                        <span className="card-count">Top {analytics.popular_searches.length}</span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        <section className="admin-feedback">
-          <div className="feedback-header">
-            <h2 className="section-title">Feedback Entries</h2>
-
-            <div className="feedback-filters">
-              <label htmlFor="feedback-type">Filter by type:</label>
-              <select
-                id="feedback-type"
-                value={feedbackType}
-                onChange={(e) => {
-                  setFeedbackType(e.target.value);
-                  setCurrentPage(1); // Reset to first page
-                }}
-              >
-                <option value="">All Types</option>
-                <option value="translation">Translation</option>
-                <option value="general">General</option>
-              </select>
-            </div>
-          </div>
-
-          {loading && <div className="admin-loading">Loading...</div>}
-
-          {feedback && feedback.items.length === 0 && (
-            <div className="admin-empty">No feedback entries found</div>
-          )}
-
-          {feedback && feedback.items.length > 0 && (
-            <>
-              <div className="feedback-table-container">
-                <table className="feedback-table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Type</th>
-                      <th>Query</th>
-                      <th>Rating</th>
-                      <th>Category</th>
-                      <th>Feedback</th>
-                      <th>Email</th>
-                      <th>Date</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {feedback.items.map((item: FeedbackItem) => (
-                      <tr key={item.id}>
-                        <td>{item.id}</td>
-                        <td>
-                          <span className={`badge badge-${item.feedback_type}`}>
-                            {item.feedback_type}
-                          </span>
-                        </td>
-                        <td>{item.query || '-'}</td>
-                        <td>
-                          {item.rating ? (
-                            <span className={`rating rating-${item.rating}`}>
-                              {item.rating === 'up' ? '👍' : '👎'}
-                            </span>
-                          ) : '-'}
-                        </td>
-                        <td>{item.category || '-'}</td>
-                        <td className="feedback-text">
-                          {item.feedback_text || '-'}
-                        </td>
-                        <td>{item.email || '-'}</td>
-                        <td className="timestamp">{formatDate(item.timestamp)}</td>
-                        <td>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="delete-button"
-                            disabled={loading}
-                            title="Delete this feedback"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {feedback.pages > 1 && (
-                <div className="pagination">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1 || loading}
-                    className="pagination-button"
-                  >
-                    Previous
-                  </button>
-
-                  <span className="pagination-info">
-                    Page {currentPage} of {feedback.pages} ({feedback.total} total)
-                  </span>
-
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(feedback.pages, p + 1))}
-                    disabled={currentPage === feedback.pages || loading}
-                    className="pagination-button"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-          </>
-        )}
-
-        {activeTab === 'analytics' && analytics && (
-          <>
-            <section className="admin-stats">
-              <h2 className="section-title">User Analytics</h2>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-value">{analytics.unique_users_today}</div>
-                  <div className="stat-label">Users Today</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">{analytics.unique_users_7d}</div>
-                  <div className="stat-label">Users (7 days)</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">{analytics.unique_users_30d}</div>
-                  <div className="stat-label">Users (30 days)</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">{analytics.translations.total}</div>
-                  <div className="stat-label">Total Translations</div>
-                </div>
-              </div>
-            </section>
-
-            <section className="admin-stats">
-              <h2 className="section-title">Translation Performance</h2>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-value">{analytics.translations.cache_hits}</div>
-                  <div className="stat-label">Cache Hits</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">{analytics.translations.cache_misses}</div>
-                  <div className="stat-label">Cache Misses</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">{analytics.translations.cache_hit_rate.toFixed(1)}%</div>
-                  <div className="stat-label">Cache Hit Rate</div>
-                </div>
-              </div>
-            </section>
-
-            {analytics.popular_searches.length > 0 && (
-              <section className="admin-analytics-section">
-                <h2 className="section-title">Popular Searches (Last 30 Days)</h2>
-                <div className="popular-searches">
-                  <table className="analytics-table">
-                    <thead>
-                      <tr>
-                        <th>Rank</th>
-                        <th>Query</th>
-                        <th>Count</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.popular_searches.map((search, index) => (
-                        <tr key={search.query}>
-                          <td className="rank">#{index + 1}</td>
-                          <td className="query">{search.query}</td>
-                          <td className="count">{search.count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
-
-            {analytics.daily_active_users.length > 0 && (
-              <section className="admin-analytics-section">
-                <h2 className="section-title">Daily Active Users (Last 30 Days)</h2>
-                <div className="chart-container">
-                  <div className="bar-chart">
-                    {analytics.daily_active_users.map((day) => {
-                      const maxUsers = Math.max(...analytics.daily_active_users.map(d => d.unique_users));
-                      const height = maxUsers > 0 ? (day.unique_users / maxUsers) * 100 : 0;
-                      return (
-                        <div key={day.date} className="bar-item" title={`${day.date}: ${day.unique_users} users`}>
-                          <div className="bar" style={{ height: `${height}%` }}>
-                            <span className="bar-value">{day.unique_users}</span>
+                    {analytics.popular_searches.length === 0 ? (
+                      <p className="adm-empty">No searches recorded yet</p>
+                    ) : (
+                      <div className="search-list">
+                        {analytics.popular_searches.map((s, i) => (
+                          <div key={s.query} className="search-row">
+                            <span className="search-rank">{i + 1}</span>
+                            <span className="search-query">{s.query}</span>
+                            <span className="search-count">{s.count.toLocaleString()}</span>
                           </div>
-                          <div className="bar-label">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                        </div>
-                      );
-                    })}
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </section>
-            )}
 
-            <section className="admin-analytics-section">
-              <h2 className="section-title">Hourly Usage Pattern (Last 7 Days)</h2>
-              <div className="chart-container">
-                <div className="bar-chart horizontal">
-                  {Object.entries(analytics.hourly_usage)
-                    .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                    .map(([hour, count]) => {
-                      const maxCount = Math.max(...Object.values(analytics.hourly_usage));
-                      const width = maxCount > 0 ? (count / maxCount) * 100 : 0;
-                      return (
-                        <div key={hour} className="bar-item horizontal">
-                          <div className="bar-label">{hour}:00</div>
-                          <div className="bar horizontal" style={{ width: `${width}%` }} title={`${count} requests`}>
-                            <span className="bar-value">{count}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                {/* Translation performance */}
+                <div className="adm-card">
+                  <div className="card-header">
+                    <h2 className="card-title">Translation performance</h2>
+                  </div>
+                  <div className="perf-grid">
+                    {[
+                      { label: 'Cache hits',   value: analytics.translations.cache_hits.toLocaleString(),  color: 'green'  as const },
+                      { label: 'Cache misses', value: analytics.translations.cache_misses.toLocaleString(), color: 'orange' as const },
+                      { label: 'Hit rate',     value: `${analytics.translations.cache_hit_rate.toFixed(1)}%`, color: 'blue' as const },
+                      { label: 'Total',        value: analytics.translations.total.toLocaleString(),        color: 'purple' as const },
+                    ].map(p => (
+                      <div key={p.label} className={`perf-item perf-${p.color}`}>
+                        <span className="perf-val">{p.value}</span>
+                        <span className="perf-label">{p.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </section>
+              </>
+            )}
           </>
         )}
 
-        {activeTab === 'analytics' && loading && (
-          <div className="admin-loading">Loading analytics...</div>
-        )}
+        {/* ── Feedback tab ── */}
+        {activeTab === 'feedback' && (
+          <>
+            {/* Stats row */}
+            {stats && (
+              <div className="stat-grid">
+                <StatCard
+                  label="Total Feedback"
+                  value={stats.total_feedback.toLocaleString()}
+                  color="blue"
+                  badge={`${positiveRate}% positive`}
+                />
+                <StatCard
+                  label="Thumbs Up"
+                  value={stats.thumbs_up.toLocaleString()}
+                  color="green"
+                  badge="👍"
+                />
+                <StatCard
+                  label="Thumbs Down"
+                  value={stats.thumbs_down.toLocaleString()}
+                  color="red"
+                  badge="👎"
+                />
+                <StatCard
+                  label="With Comments"
+                  value={stats.with_text_feedback.toLocaleString()}
+                  color="purple"
+                  badge="text"
+                />
+              </div>
+            )}
 
-        {activeTab === 'analytics' && !loading && !analytics && !error && (
-          <div className="admin-empty">No analytics data available yet. Start using the app to see metrics!</div>
+            {/* Feedback table */}
+            <div className="adm-card">
+              <div className="card-header">
+                <div>
+                  <h2 className="card-title">Feedback entries</h2>
+                  {feedback && <p className="card-sub">{feedback.total.toLocaleString()} total</p>}
+                </div>
+                <div className="card-actions">
+                  <select
+                    value={feedbackType}
+                    onChange={e => { setFeedbackType(e.target.value); setCurrentPage(1); }}
+                    className="filter-select"
+                    aria-label="Filter by type"
+                  >
+                    <option value="">All types</option>
+                    <option value="translation">Translation</option>
+                    <option value="general">General</option>
+                  </select>
+                </div>
+              </div>
+
+              {loading && <p className="adm-loading">Loading…</p>}
+
+              {!loading && feedback && feedback.items.length === 0 && (
+                <p className="adm-empty">No feedback entries found</p>
+              )}
+
+              {feedback && feedback.items.length > 0 && (
+                <>
+                  <div className="table-scroll">
+                    <table className="adm-table">
+                      <thead>
+                        <tr>
+                          <th>Type</th>
+                          <th>Query</th>
+                          <th>Rating</th>
+                          <th>Category</th>
+                          <th>Comment</th>
+                          <th>Submitted</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {feedback.items.map((item: FeedbackItem) => (
+                          <tr key={item.id}>
+                            <td>
+                              <span className={`pill pill-${item.feedback_type}`}>
+                                {item.feedback_type}
+                              </span>
+                            </td>
+                            <td className="td-query">{item.query || <span className="td-nil">—</span>}</td>
+                            <td>
+                              {item.rating === 'up' && <span className="rating-up" aria-label="thumbs up">👍</span>}
+                              {item.rating === 'down' && <span className="rating-down" aria-label="thumbs down">👎</span>}
+                              {!item.rating && <span className="td-nil">—</span>}
+                            </td>
+                            <td>
+                              {item.category
+                                ? <span className="pill pill-category">{item.category}</span>
+                                : <span className="td-nil">—</span>
+                              }
+                            </td>
+                            <td className="td-comment">
+                              {item.feedback_text || <span className="td-nil">—</span>}
+                            </td>
+                            <td className="td-time">{timeAgo(item.timestamp)}</td>
+                            <td>
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="btn-delete"
+                                disabled={loading}
+                                title="Delete entry"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {feedback.pages > 1 && (
+                    <div className="adm-pagination">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1 || loading}
+                        className="page-btn"
+                      >
+                        ← Prev
+                      </button>
+                      <span className="page-info">Page {currentPage} of {feedback.pages}</span>
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(feedback.pages, p + 1))}
+                        disabled={currentPage === feedback.pages || loading}
+                        className="page-btn"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </>
         )}
       </main>
     </div>
