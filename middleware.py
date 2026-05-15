@@ -30,12 +30,12 @@ async def add_security_headers(request: Request, call_next):
     if settings.environment == "production":
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; "
+            "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https:; "
             "font-src 'self' data:; "
             "connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; "
-            "worker-src 'self' blob:; "
+            "worker-src 'self' blob: https://cdn.jsdelivr.net; "
         )
 
     return response
