@@ -70,6 +70,10 @@ const LearnPageContent: React.FC = () => {
             } catch { /* ignore parse errors */ }
         }
 
+        if (searchParams.get('browse') === '1') {
+            setShowSignBrowser(true);
+        }
+
         return () => {
             isMountedRef.current = false;
             if (autoAdvanceTimerRef.current) {
