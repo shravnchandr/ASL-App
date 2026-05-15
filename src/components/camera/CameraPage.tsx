@@ -172,8 +172,13 @@ export default function CameraPage({ onBack }: CameraPageProps) {
   }, [state, error]);
 
   const handleRetry = useCallback(() => {
+    // If hand/model detection failed, the singleton promise was reset — need a full reload to retry.
+    if (handError || modelError) {
+      window.location.reload();
+      return;
+    }
     startCamera();
-  }, [startCamera]);
+  }, [handError, modelError, startCamera]);
 
   const handleClearSpelling = useCallback(() => {
     setSpelledLetters([]);
