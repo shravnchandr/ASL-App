@@ -197,7 +197,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: flex-start;
     padding: var(--spacing-lg, 24px);
 }
@@ -519,6 +519,30 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+}
+
+.learn-page__xp-gem-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    gap: 1px;
+}
+
+.learn-page__xp-gem-value {
+    font-family: var(--md-sys-typescale-font-family-display);
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--md-sys-color-on-secondary);
+}
+
+.learn-page__xp-gem-label {
+    font-size: 0.625rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--md-sys-color-on-secondary);
+    opacity: 0.8;
+    text-transform: uppercase;
 }
 
 .learn-stats-badge {

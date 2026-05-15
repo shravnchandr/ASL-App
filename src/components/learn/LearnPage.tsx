@@ -9,6 +9,7 @@ import { CameraPracticeExercise } from './CameraPracticeExercise';
 import { SignBrowser } from './SignBrowser';
 import { LevelSelector } from './LevelSelector';
 import { FlowerShape } from '../FlowerShape';
+import { GemShape } from '../GemShape';
 import { formatSignName } from '../../utils/format';
 import { getLevelById, MASTERY_THRESHOLD } from '../../constants/levels';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
@@ -557,12 +558,6 @@ const LearnPageContent: React.FC = () => {
                         <h1 className="learn-page__hero-title">
                             Sign by sign,<br/>step by step.
                         </h1>
-                        <button className="learn-page__browse-btn--inline" onClick={() => setShowSignBrowser(true)}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" fill="currentColor" />
-                            </svg>
-                            Browse all signs
-                        </button>
                     </div>
                     <div className="learn-page__hero-badges">
                         {state.streak > 0 && (
@@ -573,12 +568,12 @@ const LearnPageContent: React.FC = () => {
                                 <span>{state.streak} days</span>
                             </div>
                         )}
-                        <div className="learn-stat-pill learn-stat-pill--xp">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--md-sys-color-accent-gold)" aria-hidden="true">
-                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                            </svg>
-                            <span>{state.totalXP} XP</span>
-                        </div>
+                        <GemShape size={84} fill="var(--md-sys-color-secondary)" className="learn-page__xp-gem">
+                            <div className="learn-page__xp-gem-inner">
+                                <span className="learn-page__xp-gem-value">{state.totalXP}</span>
+                                <span className="learn-page__xp-gem-label">XP</span>
+                            </div>
+                        </GemShape>
                     </div>
                 </div>
 

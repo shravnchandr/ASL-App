@@ -77,7 +77,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - Single `Limiter` instance imported by both `app.py` and all route modules (avoids duplication)
 
 **Middleware:** `middleware.py`
-- `add_security_headers` — CSP (production only), HSTS, X-Frame-Options, X-Content-Type-Options
+- `add_security_headers` — CSP (production only), HSTS, X-Frame-Options, X-Content-Type-Options. **CSP must include `cdn.jsdelivr.net` in `script-src`, `connect-src`, and `worker-src` for MediaPipe WASM to load, plus `'wasm-unsafe-eval'` in `script-src` and `blob:` in `worker-src`.** Missing any of these directives silently breaks the camera page in production.
 - `analytics_tracking_middleware` — records page views to the Analytics table in the background
 - Both are registered in `app.py` via `app.middleware("http")(fn)`
 
@@ -317,12 +317,12 @@ Or set `CORS_ORIGINS` environment variable as JSON array.
 ### Security Headers
 
 Configured in `middleware.py` → `add_security_headers`:
-- CSP (Content Security Policy): Production only, allows inline styles/scripts
+- CSP (Content Security Policy): Production only. **MediaPipe requires `cdn.jsdelivr.net` in `script-src`, `connect-src`, and `worker-src`; `'wasm-unsafe-eval'` in `script-src`; and `blob:` in `worker-src`.** Omitting any of these blocks camera hand detection silently (no JS error, just fails to load).
 - HSTS: Enforces HTTPS
 - X-Frame-Options: Prevents clickjacking
 - X-Content-Type-Options: Prevents MIME sniffing
 
-Modify CSP if adding external scripts or resources.
+Modify CSP if adding external scripts or resources. The CSP is only applied in production (`settings.environment == "production"`), so camera works locally but may fail on Render if CSP is wrong.
 
 ## Common Pitfalls
 
@@ -416,6 +416,8 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 **Frontend Core:**
 - `src/App.tsx`: Main React component with lazy loading
 - `src/main.tsx`: Entry point with ErrorBoundary
+- `src/components/Layout.tsx`: App shell with top bar and bottom pill nav. Nav adds `layout__nav--scrolled` class when `window.scrollY > 50`, which shrinks the nav to icon-only width via CSS `width` transition. Hovering the scrolled nav restores full size. **Learn nav icon is a graduation cap** (not a typography glyph).
+- `src/components/GemShape.tsx`: M3 Expressive rounded heptagon shape component (7-sided, heavy corner rounding). Used for XP display on Learn page hero. Same pattern as `FlowerShape.tsx`.
 - `src/services/api/client.ts`: Axios instance, `setCustomApiKey`, `API_PREFIX`
 - `src/services/api/translate.ts`: `translateToASL`, `getRateLimitStatus`
 - `src/services/api/feedback.ts`: `submitFeedback`, `submitGeneralFeedback`
@@ -423,7 +425,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/ErrorBoundary.tsx`: Global error handling
 
 **Learning Feature:**
-- `src/components/learn/LearnPage.tsx`: Main learning page. No header bar — bottom nav handles navigation. Level-detail view has an inline "← All levels" back button. Landing page hero has an inline "Browse all signs" link. Session complete screen shows a blue header + floating score card + two-column sign list/actions layout (stacks to single column below 720px)
+- `src/components/learn/LearnPage.tsx`: Main learning page. No header bar — bottom nav handles navigation. Level-detail view has an inline "← All levels" back button. Hero is left-aligned; XP shown in a `GemShape` (M3 rounded heptagon). **Browse all signs is no longer in the hero** — navigate to `/learn?browse=1` instead (home page "Browse library" card does this). Handles `?browse=1` on mount to open `SignBrowser` directly. Session complete screen shows a blue header + floating score card + two-column sign list/actions layout (stacks to single column below 720px)
 - `src/components/learn/LevelCard.tsx`: Level card component with FlowerShape badge, status indicators (Complete/Continue/Locked)
 - `src/components/learn/LevelSelector.tsx`: Level selection grid with a current-level hero card above the grid
 - `src/components/learn/CameraPracticeExercise.tsx`: Camera practice integration
@@ -440,7 +442,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/camera/SessionStats.tsx`: Session statistics
 - `src/components/camera/CameraTutorial.tsx`: Onboarding tutorial
 - `src/hooks/useCamera.ts`: Camera stream management
-- `src/hooks/useHandDetection.ts`: MediaPipe Hands integration — module-level singleton (`_singleton.landmarker`); `getOrLoadHandLandmarker()` coalesces concurrent mounts onto one load promise, resets on failure for retryability; no `close()` on unmount so the landmarker persists for the session
+- `src/hooks/useHandDetection.ts`: MediaPipe Hands integration — module-level singleton (`_singleton.landmarker`); `getOrLoadHandLandmarker()` coalesces concurrent mounts onto one load promise, resets on failure for retryability; no `close()` on unmount so the landmarker persists for the session. **`MEDIAPIPE_VERSION` constant must match the installed `@mediapipe/tasks-vision` package version** (currently `0.10.32`) — mismatch causes silent WASM init failure in production
 - `src/hooks/useASLClassifier.ts`: TensorFlow.js inference — module-level singleton (`_singleton.model/scaler/labels`); same coalescing pattern as useHandDetection; `predict()` is async (uses `await probabilities.data()` instead of `dataSync()` to avoid blocking the main thread); no `dispose()` on unmount
 - `src/hooks/useSoundEffects.ts`: Web Audio API sounds
 - `src/utils/predictionBuffer.ts`: Rolling window smoothing

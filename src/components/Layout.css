@@ -96,8 +96,9 @@
 .layout__nav {
     position: fixed;
     bottom: 14px;
-    left: 18px;
-    right: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 36px);
     display: flex;
     align-items: center;
     gap: 0;
@@ -108,6 +109,18 @@
     padding: 6px;
     padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 10px 30px rgba(34, 19, 5, 0.22);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.layout__nav--scrolled {
+    width: 216px;
+    opacity: 0.72;
+}
+
+.layout__nav--scrolled:hover {
+    width: calc(100% - 36px);
+    opacity: 1;
 }
 
 [data-theme="dark"] .layout__nav {
@@ -129,7 +142,7 @@
     font-size: 0.8125rem;
     font-weight: 700;
     border-radius: 999px;
-    transition: flex 0.3s cubic-bezier(0.6, 1.5, 0.6, 1), background 0.2s ease, color 0.2s ease;
+    transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease, color 0.2s ease;
     white-space: nowrap;
     overflow: hidden;
 }
@@ -150,6 +163,46 @@
 
 .nav-item--active span {
     display: inline;
+    max-width: 80px;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, font-size 0.3s ease, line-height 0.3s ease;
+}
+
+/* Scrolled: collapse active label, equalize sizes, reduce height */
+.layout__nav--scrolled .nav-item {
+    height: 40px;
+    gap: 0;
+}
+
+.layout__nav--scrolled .nav-item--active {
+    flex: 1;
+}
+
+.layout__nav--scrolled .nav-item--active span {
+    max-width: 0;
+    opacity: 0;
+    font-size: 0;
+    line-height: 0;
+}
+
+/* Hover restore */
+.layout__nav--scrolled:hover .nav-item {
+    height: 52px;
+    gap: 6px;
+}
+
+.layout__nav--scrolled:hover .nav-item--active {
+    flex: 1.6;
+}
+
+.layout__nav--scrolled:hover .nav-item--active span {
+    max-width: 80px;
+    opacity: 1;
+    font-size: 0.8125rem;
+    line-height: 1.2;
 }
 
 /* ===== PAGE LOADER ===== */
@@ -186,14 +239,22 @@
         height: 56px;
     }
 
-    /* Keep pill nav on desktop too, but position at bottom-right or bottom-center */
+    /* Keep pill nav on desktop too, centered */
     .layout__nav {
         bottom: 20px;
         left: 50%;
         right: auto;
         transform: translateX(-50%);
-        width: auto;
-        min-width: 440px;
+        width: 520px;
+        min-width: 0;
+    }
+
+    .layout__nav--scrolled {
+        width: 232px;
+    }
+
+    .layout__nav--scrolled:hover {
+        width: 520px;
     }
 
     .nav-item {

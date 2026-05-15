@@ -18,6 +18,7 @@ export const Layout: React.FC = () => {
     const { customApiKey } = useApp();
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
 
     const handleGeneralFeedbackSubmit = async (category: string, feedbackText: string, email?: string) => {
         try {
@@ -34,6 +35,12 @@ export const Layout: React.FC = () => {
         const handleOpenModal = () => setShowApiKeyModal(true);
         window.addEventListener('openApiKeyModal', handleOpenModal);
         return () => window.removeEventListener('openApiKeyModal', handleOpenModal);
+    }, []);
+
+    React.useEffect(() => {
+        const handleScroll = () => setIsScrolled(window.scrollY > 50);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
     return (
@@ -80,7 +87,7 @@ export const Layout: React.FC = () => {
                 </Suspense>
             </main>
 
-            <nav className="layout__nav" aria-label="Main navigation">
+            <nav className={`layout__nav${isScrolled ? ' layout__nav--scrolled' : ''}`} aria-label="Main navigation">
                 <NavLink
                     to="/"
                     end
@@ -109,8 +116,8 @@ export const Layout: React.FC = () => {
                     aria-label="Learn signs"
                 >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M12 14L9 5L6 14M12 14L9 5M12 14H6M19 14L16 5L13 14M19 14L16 5M19 14H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M5 19H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M6 12v5c3 3 9 3 12 0v-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                     <span>Learn</span>
                 </NavLink>
