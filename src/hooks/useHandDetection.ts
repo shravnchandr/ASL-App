@@ -18,7 +18,7 @@ export interface UseHandDetectionResult {
 }
 
 // Pin to specific version to prevent breaking changes
-const MEDIAPIPE_VERSION = '0.10.14';
+const MEDIAPIPE_VERSION = '0.10.32';
 const HAND_LANDMARKER_WASM_PATH = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
 const HAND_LANDMARKER_MODEL_PATH = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
