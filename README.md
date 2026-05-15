@@ -44,7 +44,7 @@ Type any English phrase and get a complete ASL breakdown: grammar-reordered glos
 
 | Learn | Camera |
 |:---:|:---:|
-| ![Sign-to-word exercise with animated sign playing and multiple choice answers](screenshots/Learn_Page.gif) | ![Live camera recognizing the letter O with MediaPipe landmark overlay](screenshots/Camera_Page.png) |
+| <img src="screenshots/Learn_Page.gif" width="420" alt="Sign-to-word exercise with animated sign playing and multiple choice answers"> | <img src="screenshots/Camera_Page.png" width="420" alt="Live camera recognizing the letter O with MediaPipe landmark overlay"> |
 
 ---
 
