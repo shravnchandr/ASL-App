@@ -12,7 +12,7 @@ interface CameraViewProps {
   landmarks: NormalizedLandmark[] | null;
 }
 
-const LANDMARK_COLOR = '#00FF88';
+const LANDMARK_COLOR = '#6aafc0';
 const CONNECTION_COLOR = 'rgba(0, 255, 136, 0.6)';
 const LANDMARK_RADIUS = 5;
 const CONNECTION_WIDTH = 2;

@@ -47,7 +47,7 @@ const SignCard = memo<{
                         signData={signData}
                         isPlaying={isPlaying}
                         playbackSpeed={1}
-                        size="small"
+                        size="card"
                     />
                 ) : (
                     <div className="sign-browser__placeholder" aria-hidden="true" />

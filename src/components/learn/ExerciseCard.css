@@ -1,55 +1,73 @@
 /**
- * ExerciseCard Component Styles
- * M3 Expressive with hero moments and status feedback
+ * ExerciseCard Component Styles — full-page redesign
  */
 
 .exercise-card {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg, 24px);
-    padding: var(--spacing-lg, 24px);
+    gap: 20px;
     background: var(--md-sys-color-surface);
-    border-radius: var(--shape-card);
-    box-shadow: var(--md-sys-elevation-3);
+    border-radius: 16px;
+    box-shadow: var(--md-sys-elevation-2);
     position: relative;
     overflow: hidden;
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
 }
 
 [data-theme="dark"] .exercise-card {
     background: var(--md-sys-color-surface-container);
 }
 
-/* Header with progress */
+/* ── Progress bar (thin, at top) ──────────────── */
+.exercise-card__progress-bar {
+    height: 4px;
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: 0;
+    overflow: hidden;
+    margin: 0;
+    position: relative;
+}
+
+.exercise-card__progress-fill {
+    height: 100%;
+    background: var(--gradient-ocean);
+    border-radius: 0;
+    transition: width var(--duration-smooth) var(--spring-smooth);
+}
+
+/* ── Header row ───────────────────────────────── */
 .exercise-card__header {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm, 8px);
+    gap: 0;
+    padding: 0;
 }
 
 .exercise-card__progress-info {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 14px 20px 0;
 }
 
 .exercise-card__progress-text {
-    font-size: var(--md-sys-typescale-body-small-size, 0.875rem);
-    font-weight: var(--md-sys-typescale-label-medium-weight, 500);
+    font-size: 0.8125rem;
+    font-weight: 600;
     color: var(--md-sys-color-on-surface-variant);
 }
 
 .exercise-card__skip-btn {
-    padding: 6px 16px;
-    border: none;
+    padding: 5px 14px;
+    border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--md-sys-shape-corner-pill);
-    background: var(--md-sys-color-surface-container-high);
+    background: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-on-surface-variant);
-    font-size: var(--md-sys-typescale-body-small-size, 0.875rem);
-    font-weight: var(--md-sys-typescale-label-medium-weight, 500);
+    font-size: 0.8125rem;
+    font-weight: 500;
     cursor: pointer;
-    transition:
-        background-color var(--duration-quick) ease,
-        transform var(--duration-quick) var(--spring-bounce);
+    transition: background 120ms ease, transform 120ms ease;
 }
 
 [data-theme="dark"] .exercise-card__skip-btn {
@@ -57,90 +75,59 @@
 }
 
 .exercise-card__skip-btn:hover {
-    background: var(--md-sys-color-surface-container-highest);
+    background: var(--md-sys-color-surface-container-high);
     transform: scale(1.02);
 }
 
-[data-theme="dark"] .exercise-card__skip-btn:hover {
-    background: var(--md-sys-color-outline-variant);
+/* ── Skip action row ──────────────────────────── */
+.exercise-card__actions {
+    display: flex;
+    justify-content: center;
+    padding: 0 20px 16px;
 }
 
-/* Progress bar */
-.exercise-card__progress-bar {
-    height: 8px;
-    background: var(--md-sys-color-surface-container-highest);
-    border-radius: var(--md-sys-shape-corner-small);
-    overflow: hidden;
-}
-
-.exercise-card__progress-fill {
-    height: 100%;
-    background: var(--gradient-ocean);
-    border-radius: var(--md-sys-shape-corner-small);
-    transition: width var(--duration-smooth) var(--spring-smooth);
-}
-
-/* Main content */
+/* ── Main content ─────────────────────────────── */
 .exercise-card__content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--spacing-lg, 24px);
+    gap: 20px;
+    padding: 12px 20px 20px;
     min-height: 300px;
 }
 
-/* Feedback display */
+/* ── Feedback display ─────────────────────────── */
 .exercise-card__feedback {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm, 8px);
-    padding: var(--spacing-md, 16px);
+    gap: 10px;
+    padding: 14px 18px;
     border-radius: var(--md-sys-shape-corner-medium);
     animation: slideUp var(--duration-smooth) var(--spring-bounce);
+    margin: 0 20px 16px;
 }
 
 @keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Correct feedback - Success colors with hero animation */
 .exercise-card__feedback--correct {
-    background: var(--md-sys-color-success-container);
-    color: var(--md-sys-color-on-success-container);
-    animation:
-        slideUp var(--duration-smooth) var(--spring-bounce),
-        heroCorrect var(--duration-slow) var(--spring-energetic);
+    background: rgba(46, 125, 50, 0.12);
+    color: #1b5e20;
+    border: 1px solid rgba(46, 125, 50, 0.3);
 }
 
-@keyframes heroCorrect {
-    0% {
-        transform: translateY(0) scale(1);
-    }
-    25% {
-        transform: translateY(0) scale(1.05);
-    }
-    50% {
-        transform: translateY(0) scale(0.98);
-    }
-    75% {
-        transform: translateY(0) scale(1.02);
-    }
-    100% {
-        transform: translateY(0) scale(1);
-    }
+[data-theme="dark"] .exercise-card__feedback--correct {
+    background: rgba(76, 175, 80, 0.15);
+    color: #a5d6a7;
+    border-color: rgba(76, 175, 80, 0.25);
 }
 
-/* Incorrect feedback - Error colors */
 .exercise-card__feedback--incorrect {
     background: var(--md-sys-color-error-container);
     color: var(--md-sys-color-on-error-container);
+    border: 1px solid rgba(186, 26, 26, 0.2);
 }
 
 .exercise-card__feedback-icon {
@@ -151,85 +138,56 @@
 }
 
 .exercise-card__feedback-message {
-    font-weight: var(--md-sys-typescale-label-large-weight, 500);
+    font-weight: 600;
+    font-size: 0.9375rem;
 }
 
-/* XP animation */
+/* ── XP animation ─────────────────────────────── */
 .exercise-card__xp-animation {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: var(--md-sys-typescale-headline-large-size, 2rem);
-    font-weight: var(--md-sys-typescale-headline-large-weight, 700);
+    font-size: 2rem;
+    font-weight: 900;
     color: var(--md-sys-color-primary);
     animation: xpPop 1.5s var(--spring-energetic) forwards;
     pointer-events: none;
-    text-shadow: var(--shadow-primary);
+    text-shadow: 0 2px 8px rgba(61, 124, 143, 0.4);
+    z-index: 10;
 }
 
 @keyframes xpPop {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.5);
-    }
-    20% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.3);
-    }
-    35% {
-        transform: translate(-50%, -50%) scale(0.95);
-    }
-    50% {
-        transform: translate(-50%, -50%) scale(1.1);
-    }
-    70% {
-        opacity: 1;
-        transform: translate(-50%, -70%) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(-50%, -100%) scale(0.8);
-    }
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+    35% { transform: translate(-50%, -50%) scale(0.95); }
+    50% { transform: translate(-50%, -50%) scale(1.1); }
+    70% { opacity: 1; transform: translate(-50%, -70%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(0.8); }
 }
 
-/* Responsive adjustments */
+/* ── Responsive ───────────────────────────────── */
 @media (max-width: 480px) {
     .exercise-card {
-        padding: var(--spacing-md, 16px);
-        border-radius: var(--md-sys-shape-corner-large);
+        border-radius: 12px;
     }
-
     .exercise-card__content {
+        padding: 10px 14px 16px;
         min-height: 250px;
+    }
+    .exercise-card__progress-info {
+        padding: 10px 14px 0;
+    }
+    .exercise-card__feedback {
+        margin: 0 14px 12px;
     }
 }
 
-/* Reduced Motion */
+/* ── Reduced motion ───────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-    .exercise-card__skip-btn {
-        transition: none;
-    }
-
-    .exercise-card__skip-btn:hover {
-        transform: none;
-    }
-
-    .exercise-card__progress-fill {
-        transition: none;
-    }
-
-    .exercise-card__feedback {
-        animation: none;
-    }
-
-    .exercise-card__feedback--correct {
-        animation: none;
-    }
-
-    .exercise-card__xp-animation {
-        animation: none;
-        opacity: 1;
-        transform: translate(-50%, -50%);
-    }
+    .exercise-card__skip-btn { transition: none; }
+    .exercise-card__skip-btn:hover { transform: none; }
+    .exercise-card__progress-fill { transition: none; }
+    .exercise-card__feedback { animation: none; }
+    .exercise-card__xp-animation { animation: none; opacity: 1; transform: translate(-50%, -50%); }
 }

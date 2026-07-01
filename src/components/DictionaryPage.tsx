@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { SearchBar } from './SearchBar';
 import { SignCard } from './SignCard';
 import { FeedbackWidget } from './FeedbackWidget';
 import { FeedbackModal } from './FeedbackModal';
-import { LoadingState } from './LoadingState';
-import { SearchHistory } from './features/SearchHistory';
 import { ActionButtons } from './features/ActionButtons';
 import { RateLimitBanner } from './features/RateLimitBanner';
 import { SentenceAnimator } from './SentenceAnimator';
@@ -15,7 +12,6 @@ import { submitFeedback, submitGeneralFeedback } from '../services/api/feedback'
 import { announceToScreenReader } from '../utils/accessibility';
 import { print } from '../utils/print';
 import { useApp } from '../contexts/AppContext';
-import { storage } from '../utils/storage';
 import { formatSignName } from '../utils/format';
 import { LEVELS } from '../constants/levels';
 import type { TranslateResponse } from '../types';
@@ -53,7 +49,7 @@ function getFollowUpSuggestions(query: string, resultWords: string[]): string[] 
     return [];
 }
 
-const GlossBar: React.FC<{ gloss: string; query: string }> = ({ gloss, query }) => {
+const GlossBar: React.FC<{ gloss: string; query: string }> = ({ gloss }) => {
     const [copied, setCopied] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,87 +67,348 @@ const GlossBar: React.FC<{ gloss: string; query: string }> = ({ gloss, query }) 
 
     return (
         <div className="gloss-bar" aria-label="ASL grammar transformation">
-            <div className="gloss-bar__row">
-                <span className="gloss-bar__lang-label">English</span>
-                <span className="gloss-bar__english">{query}</span>
-            </div>
-            <div className="gloss-bar__row">
-                <span className="gloss-bar__lang-label">ASL order</span>
-                <span className="gloss-bar__sequence">
-                    {tokens.map((token, i) => (
-                        <span
-                            key={i}
-                            className={`gloss-token ${token.toLowerCase().startsWith('fs-') ? 'gloss-token--fs' : ''}`}
-                        >
-                            {token}
-                        </span>
-                    ))}
-                </span>
-                <button
-                    className="gloss-bar__copy"
-                    onClick={handleCopy}
-                    aria-label="Copy ASL gloss sequence"
-                >
-                    {copied ? 'Copied' : 'Copy'}
-                </button>
-            </div>
-        </div>
-    );
-};
-
-
-
-const OnboardingCallout: React.FC = () => {
-    const [visible, setVisible] = useState(() => !storage.isOnboardingDismissed());
-    if (!visible) return null;
-
-    const dismiss = () => {
-        storage.dismissOnboarding();
-        setVisible(false);
-    };
-
-    return (
-        <div className="onboarding-callout" role="status">
-            <div className="onboarding-callout__content">
-                <h3 className="onboarding-callout__title">Welcome to ASL Guide</h3>
-                <p className="onboarding-callout__text">
-                    Type any English phrase to get sign-by-sign ASL instructions with animations.
-                    You can also <Link to="/learn">learn interactively</Link> or <Link to="/camera">practice with your camera</Link>.
-                </p>
-            </div>
-            <button className="onboarding-callout__close" onClick={dismiss} aria-label="Dismiss">
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            <span className="gloss-bar__lang-label">ASL ORDER</span>
+            <span className="gloss-bar__sequence">
+                {tokens.map((token, i) => (
+                    <span
+                        key={i}
+                        className={`gloss-token ${token.toLowerCase().startsWith('fs-') ? 'gloss-token--fs' : ''}`}
+                    >
+                        <span className="gloss-token__num">{String(i + 1).padStart(2, '0')}</span>
+                        {token}
+                    </span>
+                ))}
+            </span>
+            <button
+                className="gloss-bar__copy"
+                onClick={handleCopy}
+                aria-label="Copy ASL gloss sequence"
+            >
+                {copied ? 'Copied' : 'Copy'}
             </button>
         </div>
     );
 };
 
-const LearnProgressCard: React.FC = () => {
-    const [stats] = useState(() => storage.getLearningStats());
-    if (stats.totalXP === 0) return null;
+
+
+const QUICK_TRIES = [
+    'Good morning, how are you?',
+    'Where is the bathroom?',
+    'Thank you so much for your help.',
+    'My name is Alex, nice to meet you.',
+    'Can you sign slower, please?',
+];
+
+const RECENT_TRANSLATIONS = [
+    { phrase: "What's your favorite food?", signs: 5, date: '3 days ago' },
+    { phrase: 'I am learning sign language.', signs: 5, date: '1 week ago' },
+    { phrase: 'Where do you work?', signs: 4, date: '1 week ago' },
+];
+
+const TranslateLanding: React.FC<{
+    isLoading: boolean;
+    onSearch: (query: string) => void;
+}> = ({ isLoading, onSearch }) => {
+    const [draft, setDraft] = useState('');
+    const charCount = draft.length;
+    const canSubmit = draft.trim().length > 0 && !isLoading;
+
+    const submit = () => {
+        const value = draft.trim();
+        if (!value || isLoading) return;
+        onSearch(value);
+    };
+
+    const handlePaste = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) setDraft(text.slice(0, 300));
+        } catch {
+            // Browser denied clipboard access; leave the composer unchanged.
+        }
+    };
 
     return (
-        <Link to="/learn" className="learn-progress" aria-label="Continue learning">
-            <div className="learn-progress__stats">
-                <div className="learn-progress__stat">
-                    <span className="learn-progress__value">{stats.streak}</span>
-                    <span className="learn-progress__label">Day Streak</span>
+        <section className="translate-landing" aria-label="Translate English to ASL">
+            <div className="translate-hero">
+                <div className="translate-hero__eyebrow">
+                    <span aria-hidden="true" /> ENGLISH → ASL
                 </div>
-                <div className="learn-progress__stat">
-                    <span className="learn-progress__value">{stats.level}</span>
-                    <span className="learn-progress__label">Level</span>
-                </div>
-                <div className="learn-progress__stat">
-                    <span className="learn-progress__value">{stats.totalXP}</span>
-                    <span className="learn-progress__label">XP</span>
+                <h1 className="translate-hero__title">
+                    What would you like to <em>sign?</em>
+                </h1>
+                <p className="translate-hero__sub">
+                    Type any English phrase. We'll convert it to ASL gloss order and show you each sign
+                    with a verified breakdown.
+                </p>
+            </div>
+
+            <div className="translate-composer">
+                <textarea
+                    value={draft}
+                    onChange={event => setDraft(event.target.value.slice(0, 300))}
+                    onKeyDown={event => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                            event.preventDefault();
+                            submit();
+                        }
+                    }}
+                    placeholder="Type a phrase..."
+                    aria-label="Phrase to translate"
+                    maxLength={300}
+                    disabled={isLoading}
+                />
+                <div className="translate-composer__bar">
+                    <button type="button" onClick={handlePaste}>
+                        <span aria-hidden="true">+</span>
+                        Paste
+                    </button>
+                    <button type="button" onClick={() => setDraft('Good morning, how are you?')}>
+                        <span aria-hidden="true">▣</span>
+                        From a saved phrase
+                    </button>
+                    <span className="translate-composer__count">{charCount} / 300 chars</span>
+                    <span className="translate-composer__shortcut">Press <kbd>↵</kbd> to translate</span>
+                    <button
+                        type="button"
+                        className="translate-composer__submit"
+                        onClick={submit}
+                        disabled={!canSubmit}
+                    >
+                        {isLoading ? 'Translating…' : 'Translate'}
+                        <span aria-hidden="true">→</span>
+                    </button>
                 </div>
             </div>
-            <span className="learn-progress__cta">Continue Learning &rarr;</span>
-        </Link>
+
+            <div className="translate-tries" aria-label="Try one">
+                <div className="translate-tries__label">TRY ONE</div>
+                <div className="translate-tries__chips">
+                    {QUICK_TRIES.map(phrase => (
+                        <button key={phrase} onClick={() => onSearch(phrase)} disabled={isLoading}>
+                            <span aria-hidden="true">"</span>
+                            {phrase}
+                            <span aria-hidden="true">"</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="translate-info-grid">
+                <section className="translate-card translate-recent" aria-label="Recent translations">
+                    <header>
+                        <h2>Recent translations</h2>
+                        <Link to="/translate">Open library</Link>
+                    </header>
+                    <div className="translate-recent__rows">
+                        {RECENT_TRANSLATIONS.map(row => (
+                            <button key={row.phrase} onClick={() => onSearch(row.phrase)} disabled={isLoading}>
+                                <strong>"{row.phrase}"</strong>
+                                <span>{row.signs} signs</span>
+                                <span>{row.date}</span>
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="translate-card translate-steps" aria-label="How this works">
+                    <h2>How this works</h2>
+                    {[
+                        ['01', 'Grammar pass', 'A grammar agent rewrites English into ASL gloss — topic-comment order, time before topic, no articles.'],
+                        ['02', 'Sign lookup', 'Each gloss is matched against 100 verified Lifeprint entries. Anything missing is generated by AI and clearly marked.'],
+                        ['03', 'Animation', 'Stick-figure animations show the handshape, location, and movement of every sign — loop and slow them as you watch.'],
+                    ].map(([n, title, text]) => (
+                        <div className="translate-step" key={n}>
+                            <span>{n}</span>
+                            <div>
+                                <h3>{title}</h3>
+                                <p>{text}</p>
+                            </div>
+                        </div>
+                    ))}
+                </section>
+            </div>
+
+            <section className="translate-privacy" aria-label="Privacy">
+                <div className="translate-privacy__icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </div>
+                <div>
+                    <h2>Everything stays on your device.</h2>
+                    <p>Translations are processed locally. Phrases you save sync only if you turn on sync in settings.</p>
+                </div>
+                <Link to="/onboarding">Learn more →</Link>
+            </section>
+        </section>
     );
 };
 
-const QUICK_TRIES = ['Hello', 'Thank you', 'I love you', 'How are you', 'My name is'];
+const PIPELINE_STEPS = [
+    { label: 'Parsing English',      desc: 'Tokenizing and tagging parts of speech' },
+    { label: 'ASL grammar pass',     desc: 'Reordering to topic–comment, dropping articles' },
+    { label: 'Sign lookup',          desc: 'Matching gloss against the verified knowledge base' },
+    { label: 'Building animations',  desc: 'Assembling handshape, location and movement' },
+];
+
+// Advance timings match typical backend latency breakdown
+const STEP_TIMINGS = [0, 800, 1700, 2700];
+
+const TranslateLoadingView: React.FC<{
+    phrase: string;
+    onCancel: () => void;
+    hint: string | null;
+}> = ({ phrase, onCancel, hint }) => {
+    const [activeStep, setActiveStep] = React.useState(0);
+    const [tick, setTick] = React.useState(0);
+
+    // Spinner rotation
+    React.useEffect(() => {
+        let raf: number;
+        let start: number | null = null;
+        const loop = (ts: number) => {
+            if (!start) start = ts;
+            setTick(((ts - start) % 1400) / 1400);
+            raf = requestAnimationFrame(loop);
+        };
+        raf = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(raf);
+    }, []);
+
+    // Advance pipeline steps
+    React.useEffect(() => {
+        const timers = STEP_TIMINGS.slice(1).map((delay, i) =>
+            setTimeout(() => setActiveStep(i + 1), delay)
+        );
+        return () => timers.forEach(clearTimeout);
+    }, []);
+
+    const tokenCount = Math.max(3, Math.min(6, phrase.trim().split(/\s+/).length));
+    const spinAngle = Math.round(tick * 360);
+    const spR = 5.5, spC = 2 * Math.PI * spR, spDash = spC * 0.3;
+
+    return (
+        <section className="tl-view" aria-label="Translating">
+            {/* ── Phrase header card ─────────────────────────── */}
+            <div className="tl-phrase-card">
+                <div className="tl-phrase-card__top">
+                    <div className="tl-phrase-card__english">
+                        <div className="tl-phrase-card__lang">ENGLISH</div>
+                        <div className="tl-phrase-card__query">&ldquo;{phrase}&rdquo;</div>
+                    </div>
+                    <div className="tl-translating-pill" aria-live="polite">
+                        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"
+                            style={{ transform: `rotate(${spinAngle}deg)` }}>
+                            <circle cx="8" cy="8" r={spR} fill="none"
+                                stroke="var(--md-sys-color-primary-container)" strokeWidth="2"/>
+                            <circle cx="8" cy="8" r={spR} fill="none"
+                                stroke="var(--md-sys-color-primary)" strokeWidth="2"
+                                strokeDasharray={`${spDash} ${spC}`} strokeLinecap="round"/>
+                        </svg>
+                        Translating…
+                    </div>
+                </div>
+                <div className="tl-phrase-card__divider" />
+                <div className="tl-gloss-row">
+                    <span className="tl-gloss-row__label">ASL GLOSS</span>
+                    {Array.from({ length: tokenCount }).map((_, i) => (
+                        <div key={i} className={`tl-gloss-skel ${activeStep >= 1 ? 'tl-gloss-skel--lit' : ''}`}
+                            style={{ width: [68, 84, 56, 72, 60, 78][i % 6],
+                                animationDelay: `${i * 0.08}s` }} />
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Two columns ────────────────────────────────── */}
+            <div className="tl-columns">
+                {/* Left: skeleton sign cards */}
+                <div className="tl-skels">
+                    {[0, 1, 2].map(i => (
+                        <div key={i} className="tl-skel-card">
+                            <div className="tl-skel-card__thumb">
+                                <div className="tl-skel-block tl-skel-block--thumb"
+                                    style={{ animationDelay: `${i * 0.1}s` }} />
+                            </div>
+                            <div className="tl-skel-card__body">
+                                <div className="tl-skel-row">
+                                    <div className="tl-skel-block" style={{ width: 56, height: 11, animationDelay: `${i * 0.1}s` }} />
+                                    <div className="tl-skel-block" style={{ width: 64, height: 18, borderRadius: 999, animationDelay: `${i * 0.1 + 0.05}s` }} />
+                                </div>
+                                <div className="tl-skel-block" style={{ width: 120, height: 22, animationDelay: `${i * 0.1}s` }} />
+                                <div className="tl-skel-block" style={{ width: '100%', height: 11, animationDelay: `${i * 0.1 + 0.1}s` }} />
+                                <div className="tl-skel-block" style={{ width: '82%', height: 11, animationDelay: `${i * 0.1 + 0.15}s` }} />
+                                <div className="tl-skel-row">
+                                    {[84, 84, 84].map((w, j) => (
+                                        <div key={j} className="tl-skel-block" style={{ width: w, height: 10, animationDelay: `${i * 0.1 + 0.2 + j * 0.05}s` }} />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Right: pipeline card */}
+                <div className="tl-pipeline-wrap">
+                    <div className="tl-pipeline-card">
+                        <div className="tl-pipeline-card__header">
+                            <span className="tl-pipeline-card__title">Two-agent pipeline</span>
+                            <span className="tl-pipeline-card__counter">{Math.min(activeStep + 1, 4)} / 4</span>
+                        </div>
+
+                        <div className="tl-steps">
+                            {PIPELINE_STEPS.map((step, i) => {
+                                const done = i < activeStep;
+                                const running = i === activeStep;
+                                return (
+                                    <div key={i}
+                                        className={`tl-step ${running ? 'tl-step--running' : ''}`}
+                                        aria-current={running ? 'step' : undefined}>
+                                        <div className={`tl-step__icon ${done ? 'tl-step__icon--done' : running ? 'tl-step__icon--running' : ''}`}>
+                                            {done ? (
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M4 12l5 5L20 6" stroke="currentColor" strokeWidth="2.8"
+                                                        strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            ) : running ? (
+                                                <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"
+                                                    style={{ transform: `rotate(${spinAngle}deg)` }}>
+                                                    <circle cx="8" cy="8" r="4.5" fill="none"
+                                                        stroke="var(--md-sys-color-primary-container)" strokeWidth="2"/>
+                                                    <circle cx="8" cy="8" r="4.5" fill="none"
+                                                        stroke="var(--md-sys-color-primary)" strokeWidth="2"
+                                                        strokeDasharray={`${2*Math.PI*4.5*0.3} ${2*Math.PI*4.5}`} strokeLinecap="round"/>
+                                                </svg>
+                                            ) : (
+                                                <span className="tl-step__num">{i + 1}</span>
+                                            )}
+                                        </div>
+                                        <div className="tl-step__text">
+                                            <div className={`tl-step__label ${done || running ? '' : 'tl-step__label--dim'}`}>
+                                                {step.label}
+                                            </div>
+                                            <div className={`tl-step__desc ${done || running ? '' : 'tl-step__desc--dim'}`}>
+                                                {step.desc}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="tl-pipeline-card__footer">
+                            <span className="tl-pipeline-card__hint">
+                                {hint ?? 'Usually under two seconds.'}
+                            </span>
+                            <button className="tl-cancel-btn" onClick={onCancel}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
 
 export const DictionaryPage: React.FC = () => {
     const { customApiKey, addToHistory } = useApp();
@@ -297,112 +554,20 @@ export const DictionaryPage: React.FC = () => {
         <div className="dictionary-page">
             <RateLimitBanner customApiKey={customApiKey} />
 
-            <section className="dictionary-page__search" aria-label="Search for ASL translations">
-                <h1 className="dictionary-page__title">
-                    Let's sign<br/><span className="dictionary-page__title-accent">something today.</span>
-                </h1>
-                <SearchBar onSearch={handleSearch} isLoading={isLoading} />
-                <SearchHistory onSelectQuery={handleSearch} />
-            </section>
-
             {showLanding && (
-                <>
-                    <OnboardingCallout />
-
-                    <section className="quick-tries" aria-label="Try these phrases">
-                        <p className="quick-tries__label">Try these</p>
-                        <div className="quick-tries__chips">
-                            {QUICK_TRIES.map(phrase => (
-                                <button
-                                    key={phrase}
-                                    className="quick-tries__chip"
-                                    onClick={() => handleSearch(phrase)}
-                                >
-                                    {phrase}
-                                </button>
-                            ))}
-                        </div>
-                    </section>
-
-                    <LearnProgressCard />
-
-                    {storage.getLearningStats().totalXP === 0 && (
-                        <section className="feature-cards" aria-label="Explore features">
-                            <Link to="/learn" className="feature-card feature-card--learn">
-                                <div className="feature-card__icon">
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="M12 14L9 5L6 14M12 14L9 5M12 14H6M19 14L16 5L13 14M19 14L16 5M19 14H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        <path d="M5 19H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                    </svg>
-                                </div>
-                                <div className="feature-card__content">
-                                    <h3 className="feature-card__title">Learn Signs</h3>
-                                    <p className="feature-card__desc">Practice with animated sign demos across 10 levels, Duolingo-style</p>
-                                </div>
-                                <span className="feature-card__arrow" aria-hidden="true">&rarr;</span>
-                            </Link>
-
-                            <Link to="/camera" className="feature-card feature-card--camera">
-                                <div className="feature-card__icon">
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2" />
-                                    </svg>
-                                </div>
-                                <div className="feature-card__content">
-                                    <h3 className="feature-card__title">Live Camera</h3>
-                                    <p className="feature-card__desc">Use your webcam to practice fingerspelling with real-time recognition</p>
-                                </div>
-                                <span className="feature-card__arrow" aria-hidden="true">&rarr;</span>
-                            </Link>
-                        </section>
-                    )}
-
-                    <section className="sign-categories" aria-label="Browse by category">
-                        <h2 className="sign-categories__title">Browse by Category</h2>
-                        <div className="sign-categories__grid">
-                            <button className="category-card" onClick={() => handleSearch('Hello')}>
-                                <span className="category-card__emoji">👋</span>
-                                <span className="category-card__name">Greetings</span>
-                                <span className="category-card__count">8 signs</span>
-                            </button>
-                            <button className="category-card" onClick={() => handleSearch('Happy')}>
-                                <span className="category-card__emoji">😊</span>
-                                <span className="category-card__name">Feelings</span>
-                                <span className="category-card__count">7 signs</span>
-                            </button>
-                            <button className="category-card" onClick={() => handleSearch('Mother')}>
-                                <span className="category-card__emoji">👨‍👩‍👧</span>
-                                <span className="category-card__name">Family</span>
-                                <span className="category-card__count">5 signs</span>
-                            </button>
-                            <button className="category-card" onClick={() => handleSearch('Where')}>
-                                <span className="category-card__emoji">❓</span>
-                                <span className="category-card__name">Questions</span>
-                                <span className="category-card__count">6 signs</span>
-                            </button>
-                        </div>
-                    </section>
-                </>
+                <TranslateLanding isLoading={isLoading} onSearch={handleSearch} />
             )}
 
             {isLoading && (
-                <section aria-label="Loading results">
-                    <LoadingState />
-                    {loadingHint && (
-                        <p className="loading-hint" role="status" aria-live="polite">
-                            {loadingHint}
-                        </p>
-                    )}
-                    <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
-                        <button
-                            className="loading-cancel"
-                            onClick={() => { abortControllerRef.current?.abort(); setIsLoading(false); clearLoadingTimers(); }}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </section>
+                <TranslateLoadingView
+                    phrase={searchParams.get('q') || ''}
+                    hint={loadingHint}
+                    onCancel={() => {
+                        abortControllerRef.current?.abort();
+                        setIsLoading(false);
+                        clearLoadingTimers();
+                    }}
+                />
             )}
 
             {error && (() => {
@@ -476,29 +641,37 @@ export const DictionaryPage: React.FC = () => {
                     aria-label="Translation results"
                     data-print-date={print.getFormattedDate()}
                 >
-                    <div className="results-header">
-                        <h2 className="results-header__title">
-                            ASL Signs for &ldquo;{result.query}&rdquo;
-                        </h2>
-                            <p className="results-header__count" aria-live="polite">
-                            {result.signs.length} {result.signs.length === 1 ? 'sign' : 'signs'}
-                        </p>
-                        <p className="results-header__disclaimer">
-                            AI generated · verify with a native signer or <a href="https://www.lifeprint.com" target="_blank" rel="noopener noreferrer">ASL resource</a>
-                        </p>
+                    <div className="results-phrase-card">
+                        <div className="results-phrase-card__top">
+                            <div className="results-phrase-card__english">
+                                <div className="results-phrase-card__lang">ENGLISH</div>
+                                <h2 className="results-phrase-card__query">&ldquo;{result.query}&rdquo;</h2>
+                            </div>
+                            <div className="results-phrase-card__actions-col">
+                                <ActionButtons query={result.query} signsCount={result.signs.length} />
+                                <button
+                                    className="results-new-search"
+                                    onClick={() => { setResult(null); setError(null); setSearchParams({}); }}
+                                    aria-label="Start a new search"
+                                >
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                                        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+                                    </svg>
+                                    New search
+                                </button>
+                            </div>
+                        </div>
+                        <div className="results-phrase-card__divider" />
+                        {result.asl_gloss_order && (
+                            <GlossBar gloss={result.asl_gloss_order} query={result.query} />
+                        )}
                     </div>
-
-                    {result.asl_gloss_order && (
-                        <GlossBar gloss={result.asl_gloss_order} query={result.query} />
-                    )}
-
-                    <ActionButtons query={result.query} signsCount={result.signs.length} />
 
                     <div className="results-columns">
                         <div className="results-left">
                             <div className="signs-list">
                                 {result.signs.map((sign, index) => (
-                                    <SignCard key={`${sign.word}-${index}`} sign={sign} index={index} />
+                                    <SignCard key={`${sign.word}-${index}`} sign={sign} index={index} totalCount={result.signs.length} />
                                 ))}
                             </div>
                         </div>
@@ -510,6 +683,10 @@ export const DictionaryPage: React.FC = () => {
                             }))} />
                         </div>
                     </div>
+
+                    <p className="results-disclaimer">
+                        AI generated · verify with a native signer or <a href="https://www.lifeprint.com" target="_blank" rel="noopener noreferrer">ASL resource</a>
+                    </p>
 
                     {result.note && (
                         <div className="grammar-note">

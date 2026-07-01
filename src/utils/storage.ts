@@ -1,4 +1,4 @@
-import type { SignProgress } from '../types';
+import type { SignProgress, Exercise } from '../types';
 
 const STORAGE_KEYS = {
     SEARCH_HISTORY: 'asl_search_history',
@@ -11,7 +11,15 @@ const STORAGE_KEYS = {
     LEARNING_STATS: 'asl_learn_stats',
     LEVEL_PROGRESS: 'asl_level_progress',
     ONBOARDING_DISMISSED: 'asl_onboarding_dismissed',
+    ACTIVE_SESSION: 'asl_active_session',
 } as const;
+
+export interface ActiveSessionData {
+    exercises: Exercise[];
+    currentIndex: number;
+    levelId: number;
+    sessionScore: number;
+}
 
 interface LearningStats {
     totalXP: number;
@@ -373,6 +381,46 @@ export const storage = {
             localStorage.setItem(STORAGE_KEYS.ONBOARDING_DISMISSED, 'true');
         } catch (error) {
             console.error('Failed to dismiss onboarding:', error);
+        }
+    },
+
+    saveActiveSession(data: ActiveSessionData): void {
+        try {
+            localStorage.setItem(STORAGE_KEYS.ACTIVE_SESSION, JSON.stringify(data));
+        } catch (error) {
+            console.error('Failed to save active session:', error);
+        }
+    },
+
+    getActiveSession(): ActiveSessionData | null {
+        try {
+            const data = localStorage.getItem(STORAGE_KEYS.ACTIVE_SESSION);
+            if (!data) return null;
+            const parsed = JSON.parse(data) as ActiveSessionData;
+            // Structural validation — reject corrupted or tampered entries
+            if (
+                !Array.isArray(parsed.exercises) ||
+                typeof parsed.currentIndex !== 'number' ||
+                typeof parsed.levelId !== 'number' ||
+                typeof parsed.sessionScore !== 'number' ||
+                parsed.exercises.some(
+                    e => typeof e.sign !== 'string' || !/^[a-z0-9_]+$/i.test(e.sign)
+                )
+            ) {
+                localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
+                return null;
+            }
+            return parsed;
+        } catch {
+            return null;
+        }
+    },
+
+    clearActiveSession(): void {
+        try {
+            localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
+        } catch (error) {
+            console.error('Failed to clear active session:', error);
         }
     },
 };

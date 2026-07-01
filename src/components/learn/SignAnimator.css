@@ -11,8 +11,7 @@
 
 .sign-animator__canvas {
     border-radius: var(--md-sys-shape-corner-medium);
-    box-shadow: var(--md-sys-elevation-2);
-    background: var(--md-sys-color-surface-container);
+    background: transparent;
 }
 
 .sign-animator__placeholder {
@@ -59,6 +58,18 @@
 }
 
 /* Size variants */
+.sign-animator--xs .sign-animator__canvas,
+.sign-animator--xs .sign-animator__placeholder {
+    width: 100px;
+    height: 108px;
+}
+
+.sign-animator--card .sign-animator__canvas,
+.sign-animator--card .sign-animator__placeholder {
+    width: 130px;
+    height: 140px;
+}
+
 .sign-animator--small .sign-animator__canvas,
 .sign-animator--small .sign-animator__placeholder {
     width: 200px;

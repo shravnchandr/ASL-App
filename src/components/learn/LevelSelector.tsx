@@ -11,6 +11,8 @@ interface LevelSelectorProps {
     onSelectLevel: (levelId: number) => void;
     getLevelMastery: (levelId: number) => number;
     getReviewDueCount: (levelId: number) => number;
+    hasResumeSession?: boolean;
+    onResume?: () => void;
 }
 
 export const LevelSelector: React.FC<LevelSelectorProps> = ({
@@ -20,17 +22,18 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
     onSelectLevel,
     getLevelMastery,
     getReviewDueCount,
+    hasResumeSession = false,
+    onResume,
 }) => {
-    const currentLevelInfo = levels.find(l => l.id === currentLevel);
+    const currentLevelInfo = levels.find(level => level.id === currentLevel);
     const mastery = getLevelMastery(currentLevel);
-    const nextLevel = levels.find(l => l.id === currentLevel + 1);
+    const nextLevel = levels.find(level => level.id === currentLevel + 1);
     const signsLearned = currentLevelInfo
         ? Math.round((mastery / 100) * currentLevelInfo.signs.length)
         : 0;
 
     return (
         <div className="level-selector">
-            {/* Current level hero card */}
             {currentLevelInfo && (
                 <div className="current-level-card">
                     <div className="current-level-card__badge">
@@ -46,11 +49,11 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                             {nextLevel && ` · ${MASTERY_THRESHOLD}% to unlock ${nextLevel.name}`}
                         </p>
                         <div className="current-level-card__dots">
-                            {currentLevelInfo.signs.slice(0, 10).map((_, i) => (
+                            {currentLevelInfo.signs.slice(0, 10).map((_, index) => (
                                 <span
-                                    key={i}
+                                    key={index}
                                     className={`current-level-card__dot ${
-                                        i < signsLearned ? 'current-level-card__dot--filled' : ''
+                                        index < signsLearned ? 'current-level-card__dot--filled' : ''
                                     }`}
                                 />
                             ))}
@@ -61,20 +64,41 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                             )}
                         </div>
                     </div>
-                    <button
-                        className="current-level-card__resume-btn"
-                        onClick={() => onSelectLevel(currentLevel)}
-                        aria-label={`Resume Level ${currentLevel}: ${currentLevelInfo.name}`}
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
-                        Resume lesson
-                    </button>
+                    {hasResumeSession && onResume ? (
+                        <div className="current-level-card__btn-group">
+                            <button
+                                className="current-level-card__resume-btn current-level-card__resume-btn--primary"
+                                onClick={onResume}
+                                aria-label={`Resume session for Level ${currentLevel}: ${currentLevelInfo.name}`}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                                Resume session
+                            </button>
+                            <button
+                                className="current-level-card__resume-btn current-level-card__resume-btn--ghost"
+                                onClick={() => onSelectLevel(currentLevel)}
+                                aria-label={`Start new session for Level ${currentLevel}: ${currentLevelInfo.name}`}
+                            >
+                                New session
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            className="current-level-card__resume-btn"
+                            onClick={() => onSelectLevel(currentLevel)}
+                            aria-label={`Preview Level ${currentLevel}: ${currentLevelInfo.name}`}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Preview session
+                        </button>
+                    )}
                 </div>
             )}
 
-            {/* All levels grid */}
             <div className="level-selector__section-title">All levels</div>
 
             <div className="level-selector__grid">

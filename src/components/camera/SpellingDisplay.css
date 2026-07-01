@@ -98,8 +98,8 @@
 }
 
 .spelling-display__letter--latest {
-  background: rgba(0, 255, 136, 0.2);
-  color: #00ff88;
+  background: rgba(106, 175, 192, 0.22);
+  color: #a8d0dc;
   animation: letterPop 0.3s ease;
 }
 

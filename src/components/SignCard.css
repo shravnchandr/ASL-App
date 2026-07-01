@@ -1,40 +1,67 @@
 /**
- * SignCard Styles — Playful Springs redesign
+ * SignCard Styles — redesign with animation panel
  */
 
 .sign-card {
     background: var(--md-sys-color-surface);
     border: 1px solid var(--md-sys-color-outline-variant);
-    border-radius: var(--md-sys-shape-corner-extra-large);
+    border-radius: 14px;
+    box-shadow: var(--md-sys-elevation-1);
     overflow: hidden;
+    display: grid;
+    grid-template-columns: 110px 1fr;
     transition: transform 200ms ease, box-shadow 200ms ease;
 }
 
 .sign-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--md-sys-elevation-3);
+    transform: translateY(-2px);
+    box-shadow: var(--md-sys-elevation-2);
 }
 
-/* ── Hero strip ───────────────────────────── */
-.sign-card__hero {
-    padding: 18px 20px 14px;
-    background: var(--md-sys-color-primary-container);
-    position: relative;
-}
-
-.sign-card__hero-badges {
+/* ── Left animation panel ─────────────────────── */
+.sign-card__anim-panel {
+    background: var(--md-sys-color-surface-variant);
+    border-right: 1px solid var(--md-sys-color-outline-variant);
     display: flex;
-    gap: 6px;
-    margin-bottom: 6px;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    overflow: hidden;
 }
 
+.sign-card__stick-figure {
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.45;
+}
+
+/* ── Meta row (badges + counter) ─────────────── */
+.sign-card__meta-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
+/* ── Counter ──────────────────────────────────── */
+.sign-card__counter {
+    margin-left: auto;
+    font-family: var(--md-sys-typescale-font-family-mono, 'Roboto Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+/* ── Badge styles ─────────────────────────────── */
 .sign-card__badge {
     display: inline-block;
-    font-size: 0.625rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    padding: 3px 10px;
+    padding: 2px 8px;
     border-radius: var(--md-sys-shape-corner-pill);
 }
 
@@ -56,144 +83,96 @@
     border: 1px solid var(--md-sys-color-outline-variant);
 }
 
+/* ── Word heading ─────────────────────────────── */
 .sign-card__word {
     font-family: var(--md-sys-typescale-font-family-display);
-    font-size: 1.75rem;
-    font-weight: 900;
-    color: var(--md-sys-color-on-primary-container);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--md-sys-color-on-surface);
     letter-spacing: -0.01em;
-    margin: 0;
+    margin: 0 0 6px;
     line-height: 1.1;
 }
 
-/* ── Body ─────────────────────────────────── */
+/* ── Body ─────────────────────────────────────── */
 .sign-card__body {
-    padding: 16px 20px 20px;
+    padding: 14px 18px 16px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 8px;
 }
 
-
-.sign-card__play-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 7px 16px;
-    background: var(--md-sys-color-secondary);
-    color: var(--md-sys-color-on-secondary);
-    border: none;
-    border-radius: var(--md-sys-shape-corner-pill);
-    font-size: 0.8125rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 150ms ease, box-shadow 150ms ease;
-    box-shadow: var(--shadow-secondary);
-}
-
-.sign-card__play-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--md-sys-elevation-3), var(--shadow-secondary);
-}
-
-.sign-card__play-btn:active {
-    transform: scale(0.96);
-}
-
-.sign-card__replay-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 7px 14px;
-    background: none;
-    color: var(--md-sys-color-on-surface-variant);
-    border: 1px solid var(--md-sys-color-outline-variant);
-    border-radius: var(--md-sys-shape-corner-pill);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 150ms ease, color 150ms ease;
-}
-
-.sign-card__replay-btn:hover {
-    background: var(--md-sys-color-surface-container);
-    color: var(--md-sys-color-on-surface);
-}
-
-/* ── Description ──────────────────────────── */
-.sign-card__desc-block {
-    padding: 12px 14px;
-    background: var(--md-sys-color-surface-container);
-    border-radius: var(--md-sys-shape-corner-medium);
-}
-
-.sign-card__desc-label {
-    font-size: 0.625rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--md-sys-color-primary);
-    margin-bottom: 5px;
-}
-
+/* ── Description ──────────────────────────────── */
 .sign-card__desc {
     margin: 0;
-    font-size: 0.9375rem;
+    font-size: 0.9rem;
     line-height: 1.55;
     color: var(--md-sys-color-on-surface);
 }
 
-/* ── Attribute tiles ──────────────────────── */
-.sign-card__tiles {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+/* ── Inline metadata ──────────────────────────── */
+.sign-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12.5px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-top: 4px;
+    margin-bottom: 2px;
 }
 
-.sign-card__tile {
-    padding: 10px 12px;
-    border-radius: var(--md-sys-shape-corner-medium);
-    min-height: 60px;
-}
-
-.sign-card__tile-label {
-    font-size: 0.625rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-    opacity: 0.75;
-}
-
-.sign-card__tile-value {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    line-height: 1.45;
-}
-
-/* Tile color variants */
-.sign-card__tile--hand {
-    background: var(--md-sys-color-primary-container);
-    color: var(--md-sys-color-on-primary-container);
-}
-
-.sign-card__tile--location {
-    background: var(--md-sys-color-secondary-container);
-    color: var(--md-sys-color-on-secondary-container);
-}
-
-.sign-card__tile--movement {
-    background: var(--md-sys-color-tertiary-container);
-    color: var(--md-sys-color-on-tertiary-container);
-}
-
-.sign-card__tile--expression {
-    background: var(--md-sys-color-surface-container-highest);
+.sign-card__meta-key {
+    font-weight: 600;
     color: var(--md-sys-color-on-surface);
-    border: 1px solid var(--md-sys-color-outline-variant);
+    margin-right: 5px;
 }
 
-/* ── Practice links ───────────────────────── */
+/* ── Details toggle ───────────────────────────── */
+.sign-card__details-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    align-self: flex-start;
+    padding: 4px 10px;
+    background: none;
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-medium);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+    margin-top: 2px;
+}
+
+.sign-card__details-toggle:hover {
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+}
+
+.sign-card__chevron {
+    transition: transform 200ms ease;
+}
+
+.sign-card__chevron--open {
+    transform: rotate(180deg);
+}
+
+/* ── Expanded details ─────────────────────────── */
+.sign-card__expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: fadeSlideIn 200ms ease;
+    margin-top: 2px;
+}
+
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Practice links ───────────────────────────── */
 .sign-card__practice {
     display: flex;
     gap: 8px;
@@ -204,7 +183,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
+    padding: 6px 14px;
     border-radius: var(--md-sys-shape-corner-pill);
     font-size: 0.8125rem;
     font-weight: 700;
@@ -232,53 +211,9 @@
     box-shadow: var(--shadow-primary);
 }
 
-/* ── Details toggle ───────────────────────── */
-.sign-card__details-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    width: 100%;
-    padding: 8px;
-    background: none;
-    color: var(--md-sys-color-on-surface-variant);
-    border: 1px solid var(--md-sys-color-outline-variant);
-    border-radius: var(--md-sys-shape-corner-medium);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 150ms ease, color 150ms ease;
-}
-
-.sign-card__details-toggle:hover {
-    background: var(--md-sys-color-surface-container);
-    color: var(--md-sys-color-on-surface);
-}
-
-.sign-card__chevron {
-    transition: transform 200ms ease;
-}
-
-.sign-card__chevron--open {
-    transform: rotate(180deg);
-}
-
-/* ── Expanded details ─────────────────────── */
-.sign-card__expanded {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    animation: fadeSlideIn 200ms ease;
-}
-
-@keyframes fadeSlideIn {
-    from { opacity: 0; transform: translateY(-6px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
 /* Fingerspelling */
 .sign-card__fingerspell {
-    padding: 12px 14px;
+    padding: 10px 12px;
     background: var(--md-sys-color-primary-container);
     border-radius: var(--md-sys-shape-corner-large);
 }
@@ -288,7 +223,7 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .sign-card__fs-label {
@@ -309,8 +244,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: var(--md-sys-shape-corner-small);
     background: var(--md-sys-color-surface);
     color: var(--md-sys-color-primary);
@@ -334,7 +269,7 @@
 }
 
 .sign-card__fs-guide {
-    margin-top: 10px;
+    margin-top: 8px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -370,7 +305,7 @@
 
 .sign-card__links a {
     display: inline-block;
-    padding: 6px 14px;
+    padding: 5px 12px;
     background: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-primary);
     text-decoration: none;
@@ -387,17 +322,27 @@
     transform: translateY(-2px);
 }
 
-/* ── Responsive ───────────────────────────── */
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 560px) {
+    .sign-card {
+        grid-template-columns: 80px 1fr;
+    }
+    .sign-card__anim-panel {
+        min-height: 110px;
+    }
+    .sign-card__word {
+        font-size: 1.2rem;
+    }
+}
+
 @media (max-width: 400px) {
-    .sign-card__tiles {
-        grid-template-columns: 1fr;
+    .sign-card {
+        grid-template-columns: 64px 1fr;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .sign-card,
-    .sign-card__play-btn,
-    .sign-card__replay-btn,
     .sign-card__chevron {
         transition: none;
     }

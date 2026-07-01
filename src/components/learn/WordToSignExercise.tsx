@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { SignAnimator } from './SignAnimator';
 import { formatSignName } from '../../utils/format';
-import type { SignData } from '../../types';
+import type { SignData } from '../../types/index';
 import './WordToSignExercise.css';
+
+const OPTION_LABELS = ['A', 'B', 'C', 'D'];
 
 interface SignOption {
     sign: string;
@@ -28,66 +30,64 @@ export const WordToSignExercise: React.FC<WordToSignExerciseProps> = ({
     const [hasAnswered, setHasAnswered] = useState(false);
     const [playingIndex, setPlayingIndex] = useState<number | null>(null);
 
-    const handleOptionClick = useCallback((sign: string) => {
+    const handleSelect = useCallback((sign: string) => {
         if (hasAnswered || disabled) return;
-
         setSelectedAnswer(sign);
         setHasAnswered(true);
         const isCorrect = sign.toLowerCase() === correctAnswer.toLowerCase();
         onAnswer(sign, isCorrect);
     }, [hasAnswered, disabled, correctAnswer, onAnswer]);
 
-    const handlePlayOption = useCallback((index: number) => {
+    const handleTogglePlay = useCallback((index: number, e: React.MouseEvent) => {
+        e.stopPropagation();
         setPlayingIndex(prev => prev === index ? null : index);
     }, []);
 
     const getOptionClassName = (sign: string) => {
-        let className = 'word-to-sign__option';
-
+        let cls = 'sign-option';
         if (hasAnswered) {
             if (sign.toLowerCase() === correctAnswer.toLowerCase()) {
-                className += ' word-to-sign__option--correct';
+                cls += ' sign-option--correct';
             } else if (sign === selectedAnswer) {
-                className += ' word-to-sign__option--incorrect';
+                cls += ' sign-option--incorrect';
             } else {
-                className += ' word-to-sign__option--disabled';
+                cls += ' sign-option--disabled';
             }
         }
-
-        return className;
+        return cls;
     };
 
     return (
         <div className="word-to-sign">
-            <h2 className="word-to-sign__prompt">
-                Which sign means "<span className="word-to-sign__target">{formatSignName(targetWord)}</span>"?
-            </h2>
+            {/* Prompt */}
+            <div className="wts-prompt">
+                <div className="wts-prompt__label">WHICH SIGN MEANS</div>
+                <div className="wts-prompt__word-box">
+                    <span className="wts-prompt__word">"{formatSignName(targetWord)}"</span>
+                </div>
+                <p className="wts-prompt__sub">Tap any sign to preview it. Take your time — we wait for you.</p>
+            </div>
 
+            {/* 2×2 option grid */}
             <div className="word-to-sign__options" role="group" aria-label="Sign options">
                 {options.map((option, index) => (
                     <div
                         key={option.sign}
                         className={getOptionClassName(option.sign)}
+                        onClick={() => handleSelect(option.sign)}
+                        role="button"
+                        tabIndex={hasAnswered || disabled ? -1 : 0}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleSelect(option.sign); }}
+                        aria-label={`Option ${OPTION_LABELS[index]}: ${formatSignName(option.sign)}`}
+                        aria-disabled={hasAnswered || disabled}
                     >
-                        <button
-                            className="word-to-sign__play-btn"
-                            onClick={() => handlePlayOption(index)}
-                            disabled={disabled}
-                            aria-label={`Play sign ${index + 1}`}
-                        >
-                            {playingIndex === index ? (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                    <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" />
-                                    <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" />
-                                </svg>
-                            ) : (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                    <path d="M8 5v14l11-7L8 5z" fill="currentColor" />
-                                </svg>
-                            )}
-                        </button>
+                        <div className="sign-option__label">{OPTION_LABELS[index]}</div>
 
-                        <div className="word-to-sign__animation">
+                        <div
+                            className="sign-option__anim"
+                            onClick={e => handleTogglePlay(index, e)}
+                            aria-label={`Preview option ${OPTION_LABELS[index]}`}
+                        >
                             <SignAnimator
                                 signData={option.data}
                                 isPlaying={playingIndex === index}
@@ -96,21 +96,22 @@ export const WordToSignExercise: React.FC<WordToSignExerciseProps> = ({
                             />
                         </div>
 
-                        <button
-                            className="word-to-sign__select-btn"
-                            onClick={() => handleOptionClick(option.sign)}
-                            disabled={hasAnswered || disabled}
-                            aria-label={`Select option ${index + 1}`}
-                        >
-                            Select
-                        </button>
+                        <div className="sign-option__footer">
+                            <span className="sign-option__frames">
+                                {option.data?.frame_count ?? 0} fr
+                            </span>
+                            <button
+                                className="sign-option__select"
+                                onClick={e => { e.stopPropagation(); handleSelect(option.sign); }}
+                                disabled={hasAnswered || disabled}
+                                aria-label={`Select option ${OPTION_LABELS[index]}`}
+                            >
+                                Select
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>
-
-            <p className="word-to-sign__hint">
-                Tap play to preview each sign, then select your answer
-            </p>
         </div>
     );
 };

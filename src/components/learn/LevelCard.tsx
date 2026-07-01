@@ -13,19 +13,6 @@ interface LevelCardProps {
     onClick: () => void;
 }
 
-const LEVEL_COLORS: Array<{ fill: string; bg: string }> = [
-    { fill: '#4F8B47', bg: '#CFEFC9' },   // 1 — green
-    { fill: '#0B6BC4', bg: '#D0E8FF' },   // 2 — blue
-    { fill: '#E46A2C', bg: '#FFD9C2' },   // 3 — coral
-    { fill: '#0B6BC4', bg: '#D0E8FF' },   // 4
-    { fill: '#4F8B47', bg: '#CFEFC9' },   // 5
-    { fill: '#E46A2C', bg: '#FFD9C2' },   // 6
-    { fill: '#0B6BC4', bg: '#D0E8FF' },   // 7
-    { fill: '#4F8B47', bg: '#CFEFC9' },   // 8
-    { fill: '#E46A2C', bg: '#FFD9C2' },   // 9
-    { fill: '#0B6BC4', bg: '#D0E8FF' },   // 10
-];
-
 export const LevelCard: React.FC<LevelCardProps> = ({
     level,
     mastery,
@@ -35,13 +22,13 @@ export const LevelCard: React.FC<LevelCardProps> = ({
     reviewDue = 0,
     onClick,
 }) => {
-    const colors = LEVEL_COLORS[(level.id - 1) % LEVEL_COLORS.length];
+    const accent = 'var(--md-sys-color-primary)';
     const badgeFill = isCompleted
-        ? '#4F8B47'
+        ? accent
         : isCurrent
-        ? colors.fill
+        ? accent
         : isUnlocked
-        ? colors.fill
+        ? accent
         : 'var(--md-sys-color-surface-container-high)';
 
     const cardClass = [
@@ -97,7 +84,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({
                         <div className="level-card__bar">
                             <div
                                 className="level-card__bar-fill"
-                                style={{ width: `${mastery}%`, background: isCompleted ? 'var(--md-sys-color-tertiary)' : colors.fill }}
+                                style={{ width: `${mastery}%`, background: accent }}
                             />
                         </div>
                     </div>

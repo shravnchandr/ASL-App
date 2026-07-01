@@ -1,11 +1,11 @@
 /**
- * LevelCard Styles — Playful Springs redesign
+ * LevelCard Styles — Calm redesign
  */
 
 .level-card {
     width: 100%;
     background: var(--md-sys-color-surface);
-    border: 1.5px solid var(--md-sys-color-outline-variant);
+    border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--md-sys-shape-corner-large);
     padding: 14px 16px 12px;
     display: flex;
@@ -18,8 +18,8 @@
 }
 
 .level-card--unlocked:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--md-sys-elevation-3);
+    transform: translateY(-1px);
+    box-shadow: var(--md-sys-elevation-2);
 }
 
 .level-card--locked {
@@ -29,9 +29,9 @@
 
 /* Current level — coral border highlight */
 .level-card--current {
-    border-color: var(--md-sys-color-secondary);
-    border-width: 2px;
-    box-shadow: 0 0 0 2px rgba(228, 106, 44, 0.12);
+    border-color: var(--md-sys-color-primary);
+    border-width: 1px;
+    box-shadow: 0 0 0 3px var(--md-sys-color-primary-container);
 }
 
 /* Completed — green tint */
@@ -55,7 +55,7 @@
 
 .level-card__badge-num {
     font-size: 1.1rem;
-    font-weight: 900;
+    font-weight: 700;
     color: white;
     line-height: 1;
 }
@@ -69,7 +69,7 @@
 .level-card__eyebrow {
     display: block;
     font-size: 0.5625rem;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--md-sys-color-on-surface-variant);
     text-transform: uppercase;
@@ -78,7 +78,7 @@
 
 .level-card__name {
     font-size: 0.9375rem;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--md-sys-color-on-surface);
     margin: 0 0 2px;
     line-height: 1.25;
@@ -127,7 +127,7 @@
 
 .level-card__status {
     font-size: 0.6875rem;
-    font-weight: 800;
+    font-weight: 700;
     padding: 2px 8px;
     border-radius: var(--md-sys-shape-corner-pill);
 }

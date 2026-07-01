@@ -33,12 +33,12 @@ interface StatCardProps {
 
 function StatCard({ label, value, color, badge, sparkValues }: StatCardProps) {
   const colorMap = {
-    blue:   { val: '#4A78E8', bg: '#EBF1FD', spark: '#4A78E8' },
-    green:  { val: '#2DC87A', bg: '#E6F8F0', spark: '#2DC87A' },
-    red:    { val: '#E84848', bg: '#FEEEEE', spark: '#E84848' },
-    orange: { val: '#F06A20', bg: '#FEF2E8', spark: '#F06A20' },
-    purple: { val: '#7C6FE0', bg: '#EFEDFB', spark: '#7C6FE0' },
-    teal:   { val: '#22B5AD', bg: '#E4F6F5', spark: '#22B5AD' },
+    blue:   { val: '#3d7c8f', bg: '#e9f1f4', spark: '#3d7c8f' },
+    green:  { val: '#3d7c8f', bg: '#e9f1f4', spark: '#3d7c8f' },
+    red:    { val: '#3d7c8f', bg: '#e9f1f4', spark: '#3d7c8f' },
+    orange: { val: '#3d7c8f', bg: '#e9f1f4', spark: '#3d7c8f' },
+    purple: { val: '#3d7c8f', bg: '#e9f1f4', spark: '#3d7c8f' },
+    teal:   { val: '#3d7c8f', bg: '#e9f1f4', spark: '#3d7c8f' },
   };
   const c = colorMap[color];
   return (
@@ -95,8 +95,8 @@ function DailyUsersChart({ data }: { data: DailyActiveUser[] }) {
       >
         <defs>
           <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7C6FE0" />
-            <stop offset="100%" stopColor="#B3ACEF" />
+            <stop offset="0%" stopColor="#3d7c8f" />
+            <stop offset="100%" stopColor="#3d7c8f" />
           </linearGradient>
         </defs>
         {padded.map((d, i) => {

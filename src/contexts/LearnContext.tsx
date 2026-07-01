@@ -29,6 +29,7 @@ interface LearnState {
     isLoading: boolean;
     error: string | null;
     loadedSigns: Record<string, SignData>;
+    activeSessionLevelId: number | null;
 }
 
 type LearnAction =
@@ -47,7 +48,9 @@ type LearnAction =
     | { type: 'SET_CURRENT_LEVEL'; payload: number }
     | { type: 'SELECT_LEVEL'; payload: number | null }
     | { type: 'UNLOCK_LEVEL'; payload: number }
-    | { type: 'CLEAR_JUST_UNLOCKED' };
+    | { type: 'CLEAR_JUST_UNLOCKED' }
+    | { type: 'SET_ACTIVE_SESSION_LEVEL'; payload: number | null }
+    | { type: 'RESTORE_SESSION'; payload: { exercises: Exercise[]; currentIndex: number; sessionScore: number; levelId: number } };
 
 const initialState: LearnState = {
     exercises: [],
@@ -67,6 +70,7 @@ const initialState: LearnState = {
     isLoading: false,
     error: null,
     loadedSigns: {},
+    activeSessionLevelId: null,
 };
 
 function learnReducer(state: LearnState, action: LearnAction): LearnState {
@@ -178,6 +182,25 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
                 justUnlockedLevel: null,
             };
 
+        case 'SET_ACTIVE_SESSION_LEVEL':
+            return {
+                ...state,
+                activeSessionLevelId: action.payload,
+            };
+
+        case 'RESTORE_SESSION':
+            return {
+                ...state,
+                exercises: action.payload.exercises,
+                currentIndex: action.payload.currentIndex,
+                sessionScore: action.payload.sessionScore,
+                isSessionActive: true,
+                selectedLevel: action.payload.levelId,
+                currentLevel: action.payload.levelId,
+                activeSessionLevelId: null,
+                error: null,
+            };
+
         default:
             return state;
     }
@@ -188,6 +211,7 @@ interface LearnContextType {
     startSession: (exerciseCount?: number) => Promise<void>;
     startLevelSession: (levelId: number, exerciseCount?: number, cameraPractice?: boolean) => Promise<void>;
     startPracticeSession: (signWords: string[]) => Promise<void>;
+    resumeSession: () => Promise<void>;
     endSession: () => void;
     answerExercise: (answer: string, isCorrect: boolean) => void;
     skipExercise: () => void;
@@ -219,6 +243,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const stats = storage.getLearningStats();
         const settings = storage.getLearningSettings();
         const levelProgress = storage.getLevelProgress();
+        const saved = storage.getActiveSession();
 
         dispatch({
             type: 'RESTORE_STATE',
@@ -231,6 +256,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 difficulty: settings.difficulty,
                 unlockedLevels: levelProgress.unlockedLevels,
                 currentLevel: levelProgress.currentLevel,
+                activeSessionLevelId: saved ? saved.levelId : null,
             },
         });
     }, []);
@@ -390,6 +416,8 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, [state.signProgress, loadSign]);
 
     const endSession = useCallback(() => {
+        storage.clearActiveSession();
+        dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
         dispatch({ type: 'END_SESSION' });
     }, []);
 
@@ -452,6 +480,33 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             storage.unlockLevel(nextLevel);
         }
     }, [state.currentLevel, state.unlockedLevels, calculateLevelMastery]);
+
+    // Sync currentIndex and sessionScore to localStorage so resume picks up at the right spot
+    useEffect(() => {
+        if (!state.isSessionActive || state.exercises.length === 0) return;
+        const saved = storage.getActiveSession();
+        if (!saved) return;
+        storage.saveActiveSession({ ...saved, currentIndex: state.currentIndex, sessionScore: state.sessionScore });
+    }, [state.currentIndex, state.sessionScore, state.isSessionActive, state.exercises.length]);
+
+    const resumeSession = useCallback(async () => {
+        const saved = storage.getActiveSession();
+        if (!saved) return;
+
+        dispatch({ type: 'SET_LOADING', payload: true });
+        try {
+            const signsToLoad = [...new Set(saved.exercises.map(e => e.sign))];
+            await preloadSigns(signsToLoad);
+            for (const sign of signsToLoad) {
+                await loadSign(sign);
+            }
+            dispatch({ type: 'RESTORE_SESSION', payload: saved });
+        } catch (error) {
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to resume session' });
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: false });
+        }
+    }, [loadSign]);
 
     const generateLevelExercises = useCallback(async (levelId: number, count: number, cameraPractice: boolean = false): Promise<Exercise[]> => {
         const level = getLevelById(levelId);
@@ -537,7 +592,9 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dispatch({ type: 'SET_ERROR', payload: null });
         dispatch({ type: 'SELECT_LEVEL', payload: levelId });
         dispatch({ type: 'SET_CURRENT_LEVEL', payload: levelId });
+        dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
         storage.setCurrentLevel(levelId);
+        storage.clearActiveSession();
 
         try {
             const exercises = await generateLevelExercises(levelId, exerciseCount, cameraPractice);
@@ -548,6 +605,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 await loadSign(sign);
             }
 
+            storage.saveActiveSession({ exercises, currentIndex: 0, levelId, sessionScore: 0 });
             dispatch({ type: 'START_SESSION', payload: exercises });
         } catch (error) {
             dispatch({
@@ -605,6 +663,13 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         dispatch({ type: 'ANSWER_EXERCISE', payload: { isCorrect, xp } });
+
+        // Clear the saved session when the last exercise is answered (session complete)
+        if (state.currentIndex >= state.exercises.length - 1) {
+            storage.clearActiveSession();
+            dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
+        }
+
         setTimeout(() => checkLevelUnlock(), 100); // let progress state flush before unlock check
     }, [state.exercises, state.currentIndex, state.sessionScore, checkLevelUnlock]);
 
@@ -613,6 +678,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         startSession,
         startLevelSession,
         startPracticeSession,
+        resumeSession,
         endSession,
         answerExercise: answerExerciseWithLevelCheck,
         skipExercise,

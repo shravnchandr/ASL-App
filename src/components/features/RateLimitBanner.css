@@ -26,59 +26,35 @@
 
 /* Status: Good (Success) */
 .rate-limit-banner.status-good {
-    background: linear-gradient(
-        135deg,
-        var(--md-sys-color-success-container) 0%,
-        hsl(174, 62%, 85%) 100%
-    );
+    background: var(--md-sys-color-success-container);
     color: var(--md-sys-color-on-success-container);
     border-bottom-color: var(--md-sys-color-success);
 }
 
 [data-theme="dark"] .rate-limit-banner.status-good {
-    background: linear-gradient(
-        135deg,
-        var(--md-sys-color-success-container) 0%,
-        hsl(174, 70%, 15%) 100%
-    );
+    background: var(--md-sys-color-success-container);
 }
 
 /* Status: Warning */
 .rate-limit-banner.status-warning {
-    background: linear-gradient(
-        135deg,
-        var(--md-sys-color-warning-container) 0%,
-        hsl(40, 90%, 85%) 100%
-    );
+    background: var(--md-sys-color-warning-container);
     color: var(--md-sys-color-on-warning-container);
     border-bottom-color: var(--md-sys-color-warning);
 }
 
 [data-theme="dark"] .rate-limit-banner.status-warning {
-    background: linear-gradient(
-        135deg,
-        var(--md-sys-color-warning-container) 0%,
-        hsl(40, 90%, 15%) 100%
-    );
+    background: var(--md-sys-color-warning-container);
 }
 
 /* Status: Critical (Error) */
 .rate-limit-banner.status-critical {
-    background: linear-gradient(
-        135deg,
-        var(--md-sys-color-error-container) 0%,
-        hsl(0, 72%, 85%) 100%
-    );
+    background: var(--md-sys-color-error-container);
     color: var(--md-sys-color-on-error-container);
     border-bottom-color: var(--md-sys-color-error);
 }
 
 [data-theme="dark"] .rate-limit-banner.status-critical {
-    background: linear-gradient(
-        135deg,
-        var(--md-sys-color-error-container) 0%,
-        hsl(0, 80%, 15%) 100%
-    );
+    background: var(--md-sys-color-error-container);
 }
 
 .banner-content {

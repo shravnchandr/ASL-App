@@ -1,0 +1,177 @@
+/* Final cross-route consistency layer for the Calm design system. */
+
+button,
+input,
+textarea,
+select {
+    font-family: var(--md-sys-typescale-font-family);
+}
+
+button {
+    letter-spacing: 0;
+}
+
+.exercise-card,
+.camera-tutorial,
+.prediction-card,
+.hand-guide,
+.sentence-animator,
+.feedback-modal__content,
+.general-feedback-modal__content,
+.api-key-modal__content {
+    border-radius: 14px;
+}
+
+.exercise-card {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    box-shadow: var(--md-sys-elevation-1);
+}
+
+.exercise-card__progress-fill,
+.level-detail__progress-fill,
+.presession-progress__fill {
+    background: var(--md-sys-color-primary);
+}
+
+.exercise-card__skip-btn,
+.level-detail__back-btn,
+.presession-back-home,
+.queue-preview__shuffle {
+    border-radius: 8px;
+}
+
+.learn-landing__start-btn,
+.level-detail__start-btn,
+.level-detail__camera-btn,
+.sc-actions__primary,
+.sc-actions__secondary {
+    border-radius: 10px;
+    background: var(--md-sys-color-primary);
+    box-shadow: var(--shadow-primary);
+}
+
+.learn-landing__start-btn:hover:not(:disabled),
+.level-detail__start-btn:hover:not(:disabled),
+.level-detail__camera-btn:hover:not(:disabled),
+.sc-actions__primary:hover {
+    transform: translateY(-1px);
+}
+
+.prediction-card {
+    padding: 18px 30px;
+    background: rgba(15, 28, 36, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(12px);
+}
+
+.prediction-card__letter,
+.prediction-card--high .prediction-card__letter,
+.prediction-card--medium .prediction-card__letter,
+.prediction-card--low .prediction-card__letter {
+    background: none;
+    color: #ffffff;
+    -webkit-text-fill-color: currentColor;
+    filter: none;
+}
+
+.prediction-card--high .prediction-card__confidence {
+    color: #a8d0dc;
+}
+
+.prediction-card--medium .prediction-card__confidence,
+.prediction-card--low .prediction-card__confidence {
+    color: #e4dfd0;
+}
+
+.prediction-card__progress-bar {
+    background: #6aafc0;
+}
+
+.camera-controls {
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    background: rgba(15, 28, 36, 0.88);
+    backdrop-filter: blur(12px);
+}
+
+.camera-controls__button {
+    width: 42px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.camera-controls__button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: none;
+}
+
+.camera-controls__button--active {
+    background: rgba(106, 175, 192, 0.22);
+    color: #a8d0dc;
+}
+
+.theme-button,
+.text-size-button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+}
+
+.theme-button:hover:not(:disabled),
+.text-size-button:hover:not(:disabled) {
+    transform: none;
+}
+
+.theme-button--auto {
+    background: var(--md-sys-color-primary-container);
+}
+
+.theme-button--auto::before {
+    display: none;
+}
+
+.rate-limit-banner {
+    padding: 10px 16px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.rate-limit-banner.status-good,
+[data-theme="dark"] .rate-limit-banner.status-good {
+    background: var(--md-sys-color-success-container);
+}
+
+.rate-limit-banner.status-warning,
+[data-theme="dark"] .rate-limit-banner.status-warning {
+    background: var(--md-sys-color-warning-container);
+}
+
+.rate-limit-banner.status-critical,
+[data-theme="dark"] .rate-limit-banner.status-critical {
+    background: var(--md-sys-color-error-container);
+}
+
+.banner-action {
+    border-radius: 8px;
+}
+
+.feedback-modal__header,
+.general-feedback-modal__header,
+.api-key-modal__header {
+    background: var(--md-sys-color-surface-container);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .level-card,
+    .sbp-card,
+    .review-card,
+    .feature-card {
+        transition-duration: 150ms;
+    }
+}

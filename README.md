@@ -2,7 +2,6 @@
 
 A production-ready web app for learning American Sign Language — AI-powered sign breakdowns, animated demonstrations, and live camera recognition.
 
-[![Material 3](https://img.shields.io/badge/Material%203-Expressive-blue)](https://m3.material.io/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.3+-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue)](https://www.typescriptlang.org/)
@@ -12,13 +11,13 @@ A production-ready web app for learning American Sign Language — AI-powered si
 
 > **Note:** This is a study tool that generates AI-powered text descriptions. Always verify signs with video tutorials and practice with fluent signers for accurate learning.
 
-![Translation results showing sign cards with Verified badges, gloss bar, and SentenceAnimator playing](screenshots/Translation_Results.gif)
+![Home page showing Sign of the Day, lesson plan, and streak card](screenshots/Home_Page.png)
 
 ---
 
 ## What it does
 
-Type any English phrase and get a complete ASL breakdown: grammar-reordered gloss, plain-English signing instructions, animated demonstrations, and links to video resources. A built-in learning module with spaced repetition and live camera recognition round out the app. Try it with the shared API key — no setup required.
+Type any English phrase and get a complete ASL breakdown: grammar-reordered gloss, plain-English signing instructions, animated demonstrations, and links to video resources. Browse the full sign library at `/dictionary` — 100 verified signs with category filters, A–Z sidebar, and live animation previews. A built-in learning module with spaced repetition and live camera recognition round out the app. Try it with the shared API key — no setup required.
 
 ---
 
@@ -30,9 +29,9 @@ Type any English phrase and get a complete ASL breakdown: grammar-reordered glos
 
 **Deterministic Fingerspelling** — Proper nouns are detected through a 3-layer pipeline (Grammar Agent gloss conventions → KB context injection → Python post-processing), not LLM output. Multi-word proper nouns like "New York City" collapse into a single fingerspelled token with a letter-by-letter breakdown on the sign card.
 
-**100 Animated Signs** — MediaPipe landmark-based stick figure animations for the full alphabet, numbers, months, and common vocabulary. A sticky SentenceAnimator plays all signs in sequence with word chip progress indicators.
+**100 Animated Signs** — MediaPipe landmark-based stick figure animations for the full alphabet, numbers, months, and common vocabulary. A sticky SentenceAnimator plays all signs in sequence with word chip progress indicators. The **Sign Dictionary** (`/dictionary`) lets you browse all 100 signs by category — including derived filters for Greetings (8), Family (5), and Verified only (100) — with an A–Z sidebar and live animation previews on click.
 
-**SM-2 Spaced Repetition** — The learning module schedules signs for review using the SM-2 algorithm (ease factor, interval, repetitions). Ten progressive levels unlock at 80% mastery, with four exercise types ranging from multiple-choice to free recall and live camera practice.
+**SM-2 Spaced Repetition** — The learning module schedules signs for review using the SM-2 algorithm (ease factor, interval, repetitions). Ten progressive levels unlock at 80% mastery, with four exercise types ranging from multiple-choice to free recall and live camera practice. Sessions auto-save to localStorage so you can resume mid-session after navigating away — the level card shows "Resume session" when an incomplete session exists.
 
 **Live Camera Recognition** — A TensorFlow.js classifier (95.5% accuracy, 36 classes: A–Z + 0–9) runs entirely in-browser via MediaPipe Hands (Tasks Vision API v0.10.32). Hold a sign for 1 second to add it to a spelled word — no server round-trip.
 
@@ -42,9 +41,9 @@ Type any English phrase and get a complete ASL breakdown: grammar-reordered glos
 
 ## Screenshots
 
-| Learn | Camera |
-|:---:|:---:|
-| <img src="screenshots/Learn_Page.gif" width="420" alt="Sign-to-word exercise with animated sign playing and multiple choice answers"> | <img src="screenshots/Camera_Page.png" width="420" alt="Live camera recognizing the letter O with MediaPipe landmark overlay"> |
+| Home | Translate | Learn | Camera |
+|:---:|:---:|:---:|:---:|
+| <img src="screenshots/Home_Page.png" width="220" alt="Home page with Sign of the Day, lesson plan, and streak"> | <img src="screenshots/Translation_Results.gif" width="220" alt="Translate results showing ASL gloss order, verified sign cards, and sentence animation"> | <img src="screenshots/Learn_Page.gif" width="220" alt="Sign-to-word exercise with animated sign playing and multiple choice answers"> | <img src="screenshots/Camera_Page.png" width="220" alt="Live camera recognizing the letter O with MediaPipe landmark overlay"> |
 
 ---
 
@@ -99,7 +98,7 @@ docker build -t asl-guide . && docker run -p 8000:8000 -e GOOGLE_API_KEY=your_ke
 
 | Layer | Technologies |
 |-------|-------------|
-| Frontend | React 18.3, TypeScript 5.9, Vite 7, Material 3 Expressive |
+| Frontend | React 18.3, TypeScript 5.9, Vite 7, custom Calm design system |
 | Backend | FastAPI, Python 3.11+, Google Gemini 2.5 Flash |
 | Browser ML | TensorFlow.js, MediaPipe Hands (Tasks Vision API) |
 | Database | SQLAlchemy async, SQLite (dev) / PostgreSQL (prod) |
@@ -142,7 +141,7 @@ MIT — see [LICENSE](LICENSE)
 
 - **Bill Vicars / Lifeprint (ASLU)** — ASL education reference used for the verified sign knowledge base
 - **Google Gemini** — AI-powered translation pipeline
-- **Material 3** — Design system
+- **Custom Calm design system** — warm off-white, ocean accent, inspired by Apple Translate / Linear / Notion
 - **FastAPI & React** — Core frameworks
 
 ---

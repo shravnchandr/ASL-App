@@ -19,7 +19,7 @@
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: 24px;
+  border-radius: 14px;
   border: 2px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   min-width: 140px;
@@ -48,7 +48,7 @@
 
 /* Confidence level colors */
 .prediction-card--high .prediction-card__letter {
-  background: linear-gradient(135deg, hsl(145, 70%, 55%) 0%, hsl(160, 60%, 50%) 100%);
+  background: #a8d0dc;
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -68,7 +68,7 @@
 }
 
 .prediction-card--low .prediction-card__letter {
-  background: linear-gradient(135deg, hsl(35, 90%, 55%) 0%, hsl(25, 85%, 50%) 100%);
+  background: #e4dfd0;
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -89,7 +89,7 @@
 
 .prediction-card__progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, hsl(145, 70%, 55%), hsl(160, 60%, 50%));
+  background: #6aafc0;
   border-radius: 2px;
   transition: width 0.1s linear;
 }
@@ -120,7 +120,7 @@
 
   .prediction-card {
     padding: 16px 32px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .prediction-card__letter {

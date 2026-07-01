@@ -130,7 +130,7 @@
 
 .camera-practice__match-bar {
   height: 100%;
-  background: linear-gradient(90deg, hsl(145, 70%, 55%), hsl(160, 60%, 50%));
+  background: var(--md-sys-color-primary);
   border-radius: 3px;
   transition: width 0.1s linear;
 }

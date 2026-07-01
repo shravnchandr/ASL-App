@@ -236,29 +236,6 @@
 }
 
 /* ── Secondary actions ────────────────────── */
-.sign-to-word__secondary-actions {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-}
-
-.sign-to-word__secondary-btn {
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--md-sys-color-on-surface-variant);
-    cursor: pointer;
-    text-decoration: underline;
-    text-decoration-color: transparent;
-    transition: color 150ms ease, text-decoration-color 150ms ease;
-}
-
-.sign-to-word__secondary-btn:hover {
-    color: var(--md-sys-color-on-surface);
-    text-decoration-color: currentColor;
-}
 
 /* ── Responsive ───────────────────────────── */
 @media (max-width: 640px) {

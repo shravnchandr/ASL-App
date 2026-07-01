@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ASL Dictionary is a full-stack web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. The app uses a React TypeScript frontend with Material 3 design and a FastAPI Python backend with a direct google-genai SDK pipeline for AI workflow orchestration.
+ASL Dictionary is a full-stack web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. The app uses a React TypeScript frontend with a custom calm design system and a FastAPI Python backend with a direct google-genai SDK pipeline for AI workflow orchestration.
 
 ## Development Commands
 
@@ -164,7 +164,8 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `src/components/SearchBar.tsx`: Main search input with URL query param support
 - `src/components/SignCard.tsx`: Text-only sign card — word name + "HOW TO DO IT" plain-English description always visible; expandable "More details" shows hand shape tiles, practice links, fingerspell guide, and external links. No per-card animation (animation handled by SentenceAnimator). Hero strip shows a **"Verified"** badge (green, `sign-card__badge--verified`) when `kb_verified=true`, or an **"AI generated"** badge (muted outline, `sign-card__badge--ai`) when `kb_verified` is falsy and the sign is not fingerspelled; fingerspelled signs show neither
 - `src/components/SentenceAnimator.tsx`: Plays sign animations in sequence in a sticky right column alongside the sign cards. Always shown for any result (not just multi-sign). Word chips show progress, skips single-letter non-fingerspelled words
-- `src/components/DictionaryPage.tsx`: Main dictionary page. Landing state shows onboarding callout, quick-try chips, learn progress card, category cards. Results use a two-column grid: sign cards on the left, SentenceAnimator sticky on the right; grammar notes + follow-up suggestions + feedback widget are full-width below the grid. Results cache to `sessionStorage` keyed by lowercased query (`asl_result:<query>`) — checked on every `handleSearch` call before hitting the API, and on page load. `?q=` param synced to URL for shareable links. Results header includes an **AI disclaimer**. The **GlossBar** shows two rows: "English: [original query]" and "ASL order: [gloss tokens]". The results footer includes a **"Practice these signs"** button. **Error handling**: errors are prefixed by type (`ai_busy:`, `rate_limit:N:`, `network:`, `server:`) so the error card can show a context-aware title, the right hint, and the right actions — auto-retry for transient errors, a live countdown for rate limits (parsed from `Retry-After` header), a "Report this error" button for unexpected failures (calls `submitGeneralFeedback` with the error pre-filled). A **Cancel** button aborts the in-flight request via `AbortController`. Progressive loading hints appear at 4s/8s/14s to reassure users during backend retries.
+- `src/components/DictionaryPage.tsx`: AI translation page at `/translate`. Landing state shows onboarding callout, quick-try chips, learn progress card, category cards. During a translation, shows `TranslateLoadingView` — a full-screen pipeline progress card (4 steps with shimmer skeleton sign cards and CSS `@keyframes tlShimmer` animation) that replaces the old simple spinner. Results use a two-column grid: sign cards on the left, SentenceAnimator sticky on the right; grammar notes + follow-up suggestions + feedback widget are full-width below the grid. Results cache to `sessionStorage` keyed by lowercased query (`asl_result:<query>`) — checked on every `handleSearch` call before hitting the API, and on page load. `?q=` param synced to URL for shareable links. Results header includes an **AI disclaimer**. The **GlossBar** shows two rows: "English: [original query]" and "ASL order: [gloss tokens]". The results footer includes a **"Practice these signs"** button. **Error handling**: errors are prefixed by type (`ai_busy:`, `rate_limit:N:`, `network:`, `server:`) so the error card can show a context-aware title, the right hint, and the right actions — auto-retry for transient errors, a live countdown for rate limits (parsed from `Retry-After` header), a "Report this error" button for unexpected failures (calls `submitGeneralFeedback` with the error pre-filled). A **Cancel** button aborts the in-flight request via `AbortController`. Progressive loading hints appear at 4s/8s/14s to reassure users during backend retries.
+- `src/components/SignBrowserPage.tsx`: Sign dictionary browser at `/dictionary` (alias `/signs`). Features: A–Z sidebar jump nav, search bar, category filter tabs (All, A–Z, Numbers, Months, Common, Greetings, Family, Verified only — last three are derived filters, not metadata categories). Cards are grouped by first letter, each with an IntersectionObserver lazy-load for sign data + `SignAnimator`. Only one card plays at a time (`playingSign` state). The "Verified only" filter shows signs where `source !== 'ai_generated'`; Greetings and Family are derived from hardcoded `GREETINGS_SIGNS` / `FAMILY_SIGNS` sets matching Level 3 & 4 sign lists.
 - `src/components/FeedbackWidget.tsx`: Rating system (thumbs up/down)
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
@@ -177,15 +178,14 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - All API calls go to `/api/*` prefix; dev mode proxied to localhost:8000 via Vite config
 
 **Utilities:**
-- `src/utils/storage.ts`: LocalStorage wrapper with SM-2 spaced repetition (search history, favorites, theme, API key, learning progress with `easeFactor`, `interval`, `repetitions`, `nextReview`, and `getSignsDueForReview()`)
+- `src/utils/storage.ts`: LocalStorage wrapper with SM-2 spaced repetition (search history, favorites, theme, API key, learning progress with `easeFactor`, `interval`, `repetitions`, `nextReview`, and `getSignsDueForReview()`). Also persists active session state via `ActiveSessionData` interface and `saveActiveSession` / `getActiveSession` / `clearActiveSession` — used for mid-session resume. `getActiveSession()` validates structural integrity and sign-name format before returning data.
 - `src/utils/signOfTheDay.ts`: Deterministic daily sign picker using date hash
 - `src/utils/accessibility.ts`: Screen reader announcements
 - `src/utils/print.ts`: Print-optimized layouts
 - `src/utils/share.ts`: Web Share API integration
 
 **Styling:**
-- Material 3 Expressive design system
-- Ocean Blue & Teal color palette
+- Custom "Calm" design system — warm off-white paper, cool slate ink, ocean accent (inspired by Apple Translate / Linear / Notion). Uses `--md-sys-*` CSS custom property naming but does **not** import the Material 3 library.
 - CSS custom properties for theming (light/dark/high-contrast)
 - All styles are component-scoped CSS files
 
@@ -380,11 +380,11 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 
 ### SEO files in place (as of April 2026):
 - `public/robots.txt` — allows all crawlers, points to sitemap
-- `public/sitemap.xml` — covers `/`, `/dictionary`, `/learn`, `/camera`
+- `public/sitemap.xml` — covers `/`, `/translate`, `/dictionary`, `/learn`, `/camera`
 - `public/og-image.svg` — 1200×630 social share image
 - `public/googleed041497d630e95f.html` — Google Search Console verification
 - `index.html` — JSON-LD (`WebSite` + `SearchAction` + `EducationalApplication`), og:image, keywords, canonical
-- `src/components/DictionaryPage.tsx` — `?q=` param synced to URL (shareable search results)
+- `src/components/DictionaryPage.tsx` — `?q=` param synced to URL for shareable translation results
 
 ## Key Files Reference
 
@@ -414,9 +414,13 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `python_code/sign_knowledge_base.json`: Verified sign descriptions for all 100 signs (grounding source)
 
 **Frontend Core:**
-- `src/App.tsx`: Main React component with lazy loading
+- `src/App.tsx`: Main React component with lazy loading. Route map: `/` → `HomePage`, `/translate` → `DictionaryPage`, `/dictionary` + `/signs` → `SignBrowserPage`, `/learn` → `LearnPage`, `/camera` → `CameraPage`, `/onboarding` → `OnboardingPage`, `/admin` → `Admin`.
 - `src/main.tsx`: Entry point with ErrorBoundary
-- `src/components/Layout.tsx`: App shell with top bar and bottom pill nav. Nav adds `layout__nav--scrolled` class when `window.scrollY > 50`, which shrinks the nav to icon-only width via CSS `width` transition. Hovering the scrolled nav restores full size. **Learn nav icon is a graduation cap** (not a typography glyph).
+- `src/components/Layout.tsx`: App shell with top bar and bottom pill nav. Top nav items: Home, Translate, Learn, Camera, Dictionary. ⌘K shortcut navigates to `/dictionary`. Learn nav icon is a graduation cap.
+- `src/components/HomePage.tsx`: Home page at `/` with Sign of the Day, lesson plan card, streak card, and mode selection shortcuts.
+- `src/components/DictionaryPage.tsx`: AI translation page at `/translate` (see Key Components above).
+- `src/components/SignBrowserPage.tsx`: Sign dictionary at `/dictionary` — A–Z sidebar, search, category filters, lazy-loaded card grid (see Key Components above).
+- `src/components/OnboardingPage.tsx`: Onboarding walkthrough at `/onboarding`.
 - `src/components/GemShape.tsx`: M3 Expressive rounded heptagon shape component (7-sided, heavy corner rounding). Used for XP display on Learn page hero. Same pattern as `FlowerShape.tsx`.
 - `src/services/api/client.ts`: Axios instance, `setCustomApiKey`, `API_PREFIX`
 - `src/services/api/translate.ts`: `translateToASL`, `getRateLimitStatus`
@@ -427,9 +431,9 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 **Learning Feature:**
 - `src/components/learn/LearnPage.tsx`: Main learning page. No header bar — bottom nav handles navigation. Level-detail view has an inline "← All levels" back button. Hero is left-aligned; XP shown in a `GemShape` (M3 rounded heptagon). **Browse all signs is no longer in the hero** — navigate to `/learn?browse=1` instead (home page "Browse library" card does this). Handles `?browse=1` on mount to open `SignBrowser` directly. Session complete screen shows a blue header + floating score card + two-column sign list/actions layout (stacks to single column below 720px)
 - `src/components/learn/LevelCard.tsx`: Level card component with FlowerShape badge, status indicators (Complete/Continue/Locked)
-- `src/components/learn/LevelSelector.tsx`: Level selection grid with a current-level hero card above the grid
+- `src/components/learn/LevelSelector.tsx`: Level selection grid with a current-level hero card above the grid. Accepts `hasResumeSession` and `onResume` props — when a saved incomplete session exists for the current level, shows **"Resume session"** (primary) + **"New session"** (ghost) buttons; otherwise shows **"Preview session"** alone.
 - `src/components/learn/CameraPracticeExercise.tsx`: Camera practice integration
-- `src/contexts/LearnContext.tsx`: Exercise generation — sign-to-word and word-to-sign are mixed from the first session (50/50 random); recall only appears when mastery ≥ 70% and timesStudied ≥ 3. Exposes `startPracticeSession(signWords: string[])` which filters a caller-supplied word list to signs available in the animation library, deduplicates, and starts a mixed SM-2-aware session — used by the "Practice these signs" flow from the dictionary
+- `src/contexts/LearnContext.tsx`: Exercise generation — sign-to-word and word-to-sign are mixed from the first session (50/50 random); recall only appears when mastery ≥ 70% and timesStudied ≥ 3. Exposes `startPracticeSession(signWords: string[])` which filters a caller-supplied word list to signs available in the animation library, deduplicates, and starts a mixed SM-2-aware session — used by the "Practice these signs" flow from the dictionary. Also exposes `resumeSession()` which loads a persisted incomplete session from localStorage and resumes at the saved `currentIndex`. `state.activeSessionLevelId` is non-null when an incomplete saved session exists for that level (drives the "Resume session" button). Session state is synced to localStorage after every index/score change via a `useEffect`, and cleared on `endSession()` or when the last exercise is answered.
 - `src/constants/levels.ts`: Level definitions
 
 **Camera Feature:**
@@ -479,7 +483,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 
 ## Tech Stack Summary
 
-- **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Vitest, Material 3 Design
+- **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Vitest, custom Calm design system
 - **Backend**: FastAPI, Python 3.11+, uvicorn
 - **AI**: Google Gemini 2.5 Flash, google-genai SDK, sentence-transformers (all-MiniLM-L6-v2, opt-in)
 - **Browser ML**: TensorFlow.js, MediaPipe Hands (Tasks Vision API)
@@ -496,16 +500,17 @@ The app includes a Duolingo-style learning feature with animated sign demonstrat
 ### App Modes (Home Page)
 
 The app has three modes accessible from the home page (`/`):
-1. **Text to Signs** (`/dictionary`) - AI-powered text translation to ASL instructions
+1. **Text to Signs** (`/translate`) - AI-powered text translation to ASL instructions
 2. **Learn Signs** (`/learn`) - Interactive exercises with animated sign demonstrations
 3. **Live Camera** (`/camera`) - Real-time ASL fingerspelling recognition using browser camera
 
 ### Learning Feature Architecture
 
 **Entry Points:**
-- `src/components/DictionaryPage.tsx` - Landing page with mode selection (also handles `/`, `/dictionary`, `/translate` routes)
+- `src/components/DictionaryPage.tsx` - AI translation page at `/translate`. Landing state shows onboarding callout, quick-try chips, and category cards. Translation results use a two-column grid. During loading, shows `TranslateLoadingView` — a pipeline progress card with shimmer skeleton sign cards.
+- `src/components/SignBrowserPage.tsx` - Sign library browser at `/dictionary` (and `/signs` alias). Sidebar A–Z jump nav, search bar, category filter tabs (All, A–Z, Numbers, Months, Common, Greetings, Family, Verified only), section-grouped card grid with IntersectionObserver lazy loading.
 - `src/components/learn/LearnPage.tsx` - Main learning page with exercises
-- `src/components/learn/SignBrowser.tsx` - Sign library browser with search
+- `src/components/learn/SignBrowser.tsx` - (Legacy) embedded sign browser used within LearnPage
 
 **Key Components:**
 - `SignAnimator.tsx` - Canvas-based MediaPipe landmark renderer
@@ -635,6 +640,9 @@ LEARNING_SETTINGS: 'asl_learn_settings',  // Animation speed, difficulty
 LEARNING_STATS: 'asl_learn_stats',        // Total XP, level, streak
 LEVEL_PROGRESS: 'asl_level_progress',     // Unlocked levels, current level
 ONBOARDING_DISMISSED: 'asl_onboarding_dismissed',  // First-visit callout
+ACTIVE_SESSION: 'asl_active_session',     // Incomplete session queue + index for mid-session resume
+                                          // Cleared on endSession() or when last exercise is answered
+                                          // Structure: ActiveSessionData { exercises, currentIndex, levelId, sessionScore }
 
 // Camera feature keys
 SOUND_EFFECTS_KEY: 'asl_sound_effects_enabled',  // Sound toggle
@@ -667,10 +675,15 @@ asl_practice_words         // JSON string[] of normalized sign words set by Dict
 
 ### Sign Browser Features
 
-- Category filters: All, Alphabet, Numbers, Months, Common
-- Search bar for quick sign lookup
-- Play/pause animation previews
-- "Press Play to View" placeholder for unloaded signs
+**`SignBrowserPage`** (`/dictionary`) is the standalone sign library:
+- Category filters: All, A–Z, Numbers, Months, Common, Greetings (8), Family (5), Verified only (100)
+  - Greetings and Family are derived from hardcoded sets (not a metadata category)
+  - Verified only = signs where `source !== 'ai_generated'` in metadata.json
+- A–Z sidebar for jump navigation
+- Search bar — filters by sign name in real time
+- Cards grouped by first letter; one playing at a time
+- IntersectionObserver lazy-loads sign JSON + `SignAnimator` on scroll-into-view
+- AI badge on unverified signs
 
 ### Animation Renderer Features
 
@@ -1098,4 +1111,4 @@ ThemeSwitcher is displayed in the global app header for easy access:
 
 ### Styling
 
-Admin uses M3 Expressive design with glassmorphism effects matching the rest of the app. See `src/components/Admin.css` for styling.
+Admin uses the same Calm design system with glassmorphism effects matching the rest of the app. See `src/components/Admin.css` for styling.

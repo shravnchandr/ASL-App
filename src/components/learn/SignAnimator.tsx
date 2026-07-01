@@ -6,7 +6,7 @@ interface SignAnimatorProps {
     signData: SignData | null;
     isPlaying: boolean;
     playbackSpeed: number;
-    size: 'small' | 'medium' | 'large';
+    size: 'xs' | 'card' | 'small' | 'medium' | 'large';
     onAnimationEnd?: () => void;
     onFrameChange?: (frame: number) => void;
 }
@@ -19,19 +19,15 @@ const POSE_CONNECTIONS: [number, number][] = [
 
 const UPPER_BODY_INDICES = [11, 12, 13, 14, 15, 16, 23, 24];
 
-// Indices map to a reduced subset of MediaPipe's 478 face landmarks — see extraction script.
-// Indices: 0=mouth, 1=nose, 2=nose, 3-5=mouth, 6=left_eye, 7-11=mouth, 12-13=left_eyebrow,
-// 14-15=left_eye, 16-19=chin, 18=left_eye, 20=right_eye, 21-25=mouth, 22-27=right_eyebrow,
-// 28-29=right_eye, 30-32=chin, 31=right_eye
 const FACE_CONNECTIONS: [number, number][] = [
-    [10, 8], [8, 12], [12, 9], [9, 13],   // left eyebrow
-    [24, 22], [22, 26], [26, 23], [23, 27], // right eyebrow
-    [6, 18], [18, 14], [14, 15], [15, 6],  // left eye
-    [28, 31], [31, 20], [20, 29], [29, 28], // right eye
-    [7, 11], [11, 21], [21, 25], [25, 7],  // mouth outer
-    [0, 3], [3, 5], [5, 4], [4, 0],        // mouth inner
-    [1, 2],                                 // nose
-    [16, 17], [17, 19], [19, 30], [30, 32], // chin
+    [10, 8], [8, 12], [12, 9], [9, 13],
+    [24, 22], [22, 26], [26, 23], [23, 27],
+    [6, 18], [18, 14], [14, 15], [15, 6],
+    [28, 31], [31, 20], [20, 29], [29, 28],
+    [7, 11], [11, 21], [21, 25], [25, 7],
+    [0, 3], [3, 5], [5, 4], [4, 0],
+    [1, 2],
+    [16, 17], [17, 19], [19, 30], [30, 32],
 ];
 
 const HAND_CONNECTIONS: [number, number][] = [
@@ -43,19 +39,27 @@ const HAND_CONNECTIONS: [number, number][] = [
     [5, 9], [9, 13], [13, 17],           // palm
 ];
 
-const COLORS = {
-    body: '#2196F3',
-    leftHand: '#4CAF50',
-    rightHand: '#FF9800',
-    face: '#9C27B0',
-    background: '#1a1a2e',
-    backgroundLight: '#f5f5f5',
+const COLORS_LIGHT = {
+    body: '#1a232f',
+    leftHand: '#1a232f',
+    rightHand: '#1a232f',
+    face: '#1a232f',
 };
 
+const COLORS_DARK = {
+    body: '#e4dfd0',
+    leftHand: '#e4dfd0',
+    rightHand: '#e4dfd0',
+    face: '#e4dfd0',
+};
+
+
 const SIZE_CONFIG = {
-    small: { width: 200, height: 200, lineWidth: 1.5, pointRadius: 2, handPointRadius: 1.5, handZoomSize: 80 },
-    medium: { width: 300, height: 300, lineWidth: 2, pointRadius: 3, handPointRadius: 2, handZoomSize: 100 },
-    large: { width: 400, height: 400, lineWidth: 2.5, pointRadius: 4, handPointRadius: 2.5, handZoomSize: 120 },
+    xs:    { width: 100, height: 108, lineWidth: 1.1, pointRadius: 1.3, handPointRadius: 1.1, handZoomSize: 0 },
+    card:  { width: 130, height: 140, lineWidth: 1.3, pointRadius: 1.6, handPointRadius: 1.3, handZoomSize: 55 },
+    small: { width: 200, height: 200, lineWidth: 1.5, pointRadius: 2,   handPointRadius: 1.5, handZoomSize: 80 },
+    medium:{ width: 300, height: 300, lineWidth: 2,   pointRadius: 3,   handPointRadius: 2,   handZoomSize: 100 },
+    large: { width: 400, height: 400, lineWidth: 2.5, pointRadius: 4,   handPointRadius: 2.5, handZoomSize: 120 },
 };
 
 export const SignAnimator: React.FC<SignAnimatorProps> = ({
@@ -184,25 +188,26 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
         ctx: CanvasRenderingContext2D,
         pose: Coordinate[],
         leftHand: Coordinate[] | null,
-        rightHand: Coordinate[] | null
+        rightHand: Coordinate[] | null,
+        ink: string
     ) => {
         for (const [i, j] of POSE_CONNECTIONS) {
             const p1 = transformCoord(pose[i]);
             const p2 = transformCoord(pose[j]);
-            drawLine(ctx, p1, p2, COLORS.body);
+            drawLine(ctx, p1, p2, ink);
         }
 
         if (leftHand && leftHand[0]) {
-            drawLine(ctx, transformCoord(pose[15]), transformCoord(leftHand[0]), COLORS.leftHand);
+            drawLine(ctx, transformCoord(pose[15]), transformCoord(leftHand[0]), ink);
         }
         if (rightHand && rightHand[0]) {
-            drawLine(ctx, transformCoord(pose[16]), transformCoord(rightHand[0]), COLORS.rightHand);
+            drawLine(ctx, transformCoord(pose[16]), transformCoord(rightHand[0]), ink);
         }
 
         for (const i of UPPER_BODY_INDICES) {
             const point = transformCoord(pose[i]);
-            const isMainJoint = [11, 12, 23, 24].includes(i); // shoulders and hips slightly larger
-            drawPoint(ctx, point, COLORS.body, isMainJoint ? config.pointRadius : config.pointRadius * 0.7);
+            const isMainJoint = [11, 12, 23, 24].includes(i);
+            drawPoint(ctx, point, ink, isMainJoint ? config.pointRadius : config.pointRadius * 0.7);
         }
     }, [transformCoord, drawLine, drawPoint, config.pointRadius]);
 
@@ -219,8 +224,7 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
                 ctx.moveTo(p1[0], p1[1]);
                 ctx.lineTo(p2[0], p2[1]);
                 ctx.strokeStyle = color;
-                const isFingerConnection = i > 0 || j > 0; // thinner than palm connections
-                ctx.lineWidth = isFingerConnection ? config.lineWidth * 0.7 : config.lineWidth;
+                ctx.lineWidth = config.lineWidth * 0.7;
                 ctx.lineCap = 'round';
                 ctx.stroke();
             }
@@ -228,14 +232,13 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
 
         for (let i = 0; i < hand.length; i++) {
             const point = transformCoord(hand[i]);
-            if (point) {
-                const isFingertip = [4, 8, 12, 16, 20].includes(i);
-                const isWrist = i === 0;
-                let radius = config.handPointRadius;
-                if (isFingertip) radius = config.handPointRadius * 1.3;
-                if (isWrist) radius = config.handPointRadius * 1.5;
-                drawPoint(ctx, point, color, radius);
-            }
+            if (!point) continue;
+            const isFingertip = [4, 8, 12, 16, 20].includes(i);
+            const isWrist = i === 0;
+            let radius = config.handPointRadius;
+            if (isFingertip) radius *= 1.3;
+            if (isWrist) radius *= 1.5;
+            drawPoint(ctx, point, color, radius);
         }
     }, [transformCoord, drawPoint, config.lineWidth, config.handPointRadius]);
 
@@ -265,33 +268,24 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
     const drawFace = useCallback((
         ctx: CanvasRenderingContext2D,
         face: Coordinate[],
-        pose?: Coordinate[]
+        pose?: Coordinate[],
+        ink: string = '#1a232f'
     ) => {
         const validPoints: [number, number][] = [];
-        for (let i = 0; i < face.length; i++) {
-            if (face[i]) {
-                const p = transformCoord(face[i]);
-                if (p) validPoints.push(p);
-            }
+        for (const coordinate of face) {
+            const point = coordinate ? transformCoord(coordinate) : null;
+            if (point) validPoints.push(point);
         }
 
         let headBounds: { centerX: number; centerY: number; radiusX: number; radiusY: number } | null = null;
-
         if (validPoints.length >= 5) {
-            let minX = Infinity, maxX = -Infinity;
-            let minY = Infinity, maxY = -Infinity;
-            for (const [x, y] of validPoints) {
-                minX = Math.min(minX, x);
-                maxX = Math.max(maxX, x);
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y);
-            }
-
+            const xs = validPoints.map(point => point[0]);
+            const ys = validPoints.map(point => point[1]);
             headBounds = {
-                centerX: (minX + maxX) / 2,
-                centerY: (minY + maxY) / 2,
-                radiusX: (maxX - minX) / 2 * 1.3,
-                radiusY: (maxY - minY) / 2 * 1.4
+                centerX: (Math.min(...xs) + Math.max(...xs)) / 2,
+                centerY: (Math.min(...ys) + Math.max(...ys)) / 2,
+                radiusX: (Math.max(...xs) - Math.min(...xs)) / 2 * 1.3,
+                radiusY: (Math.max(...ys) - Math.min(...ys)) / 2 * 1.4,
             };
         } else if (pose) {
             headBounds = estimateHeadFromPose(pose);
@@ -301,53 +295,22 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
 
         ctx.beginPath();
         ctx.ellipse(headBounds.centerX, headBounds.centerY, headBounds.radiusX, headBounds.radiusY, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = COLORS.face;
+        ctx.strokeStyle = ink;
         ctx.lineWidth = config.lineWidth * 0.6;
         ctx.stroke();
-
-        if (validPoints.length < 5) {
-            const eyeY = headBounds.centerY - headBounds.radiusY * 0.15;
-            const eyeSpacing = headBounds.radiusX * 0.5;
-            const eyeRadius = headBounds.radiusX * 0.12;
-
-            ctx.beginPath();
-            ctx.ellipse(headBounds.centerX - eyeSpacing, eyeY, eyeRadius, eyeRadius * 0.6, 0, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.ellipse(headBounds.centerX + eyeSpacing, eyeY, eyeRadius, eyeRadius * 0.6, 0, 0, Math.PI * 2);
-            ctx.stroke();
-
-            const mouthY = headBounds.centerY + headBounds.radiusY * 0.4;
-            const mouthWidth = headBounds.radiusX * 0.5;
-            ctx.beginPath();
-            ctx.moveTo(headBounds.centerX - mouthWidth, mouthY);
-            ctx.lineTo(headBounds.centerX + mouthWidth, mouthY);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(headBounds.centerX, headBounds.centerY - headBounds.radiusY * 0.1);
-            ctx.lineTo(headBounds.centerX, headBounds.centerY + headBounds.radiusY * 0.15);
-            ctx.stroke();
-
-            return;
-        }
 
         ctx.lineWidth = config.lineWidth * 0.5;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-
         for (const [i, j] of FACE_CONNECTIONS) {
-            if (i < face.length && j < face.length && face[i] && face[j]) {
-                const p1 = transformCoord(face[i]);
-                const p2 = transformCoord(face[j]);
-                if (p1 && p2) {
-                    ctx.beginPath();
-                    ctx.moveTo(p1[0], p1[1]);
-                    ctx.lineTo(p2[0], p2[1]);
-                    ctx.stroke();
-                }
-            }
+            if (!face[i] || !face[j]) continue;
+            const p1 = transformCoord(face[i]);
+            const p2 = transformCoord(face[j]);
+            if (!p1 || !p2) continue;
+            ctx.beginPath();
+            ctx.moveTo(p1[0], p1[1]);
+            ctx.lineTo(p2[0], p2[1]);
+            ctx.stroke();
         }
     }, [transformCoord, config.lineWidth, estimateHeadFromPose]);
 
@@ -360,8 +323,11 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
 
         const size = handZoomSize;
 
-        ctx.fillStyle = isDarkMode ? COLORS.background : COLORS.backgroundLight;
-        ctx.fillRect(0, 0, size, size);
+        ctx.clearRect(0, 0, size, size);
+        if (isDarkMode) {
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0, 0, size, size);
+        }
 
         const validPoints: { idx: number; coord: [number, number, number] }[] = [];
         for (let i = 0; i < hand.length; i++) {
@@ -450,18 +416,24 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
 
         transformRef.current = computeTransform(frame);
 
-        ctx.fillStyle = isDarkMode ? COLORS.background : COLORS.backgroundLight;
-        ctx.fillRect(0, 0, config.width, config.height);
+        ctx.clearRect(0, 0, config.width, config.height);
+        if (isDarkMode) {
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0, 0, config.width, config.height);
+        }
 
-        if (frame.pose) drawPose(ctx, frame.pose, frame.left_hand, frame.right_hand);
-        drawFace(ctx, frame.face || [], frame.pose || undefined); // pose used to estimate head when face absent
-        if (frame.left_hand) drawHand(ctx, frame.left_hand, COLORS.leftHand);
-        if (frame.right_hand) drawHand(ctx, frame.right_hand, COLORS.rightHand);
+        const colors = isDarkMode ? COLORS_DARK : COLORS_LIGHT;
+        const ink = colors.body;
+
+        if (frame.pose) drawPose(ctx, frame.pose, frame.left_hand, frame.right_hand, ink);
+        drawFace(ctx, frame.face || [], frame.pose || undefined, ink);
+        if (frame.left_hand) drawHand(ctx, frame.left_hand, colors.leftHand);
+        if (frame.right_hand) drawHand(ctx, frame.right_hand, colors.rightHand);
 
         if (frame.right_hand) {
-            renderHandZoom(frame.right_hand, COLORS.rightHand, 'Right Hand');
+            renderHandZoom(frame.right_hand, colors.rightHand, 'Right Hand');
         } else if (frame.left_hand) {
-            renderHandZoom(frame.left_hand, COLORS.leftHand, 'Left Hand');
+            renderHandZoom(frame.left_hand, colors.leftHand, 'Left Hand');
         }
     }, [config.width, config.height, isDarkMode, computeTransform, drawPose, drawFace, drawHand, renderHandZoom]);
 
@@ -517,12 +489,13 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
         setCurrentFrame(0);
     }, [signData?.sign]);
 
+    const showZoom = config.handZoomSize > 0;
+    const showInfo = size === 'large';
+
     if (!signData) {
         return (
             <div className={`sign-animator sign-animator--${size}`}>
-                <div className="sign-animator__placeholder">
-                    Press Play to View
-                </div>
+                <div className="sign-animator__placeholder" />
             </div>
         );
     }
@@ -537,21 +510,25 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
                     className="sign-animator__canvas"
                     aria-label={`Animation of the sign for "${signData.sign}"`}
                 />
-                <div className="sign-animator__hand-zoom">
-                    <canvas
-                        ref={handCanvasRef}
-                        width={handZoomSize}
-                        height={handZoomSize}
-                        className="sign-animator__hand-canvas"
-                        aria-label="Zoomed view of hand"
-                    />
+                {showZoom && (
+                    <div className="sign-animator__hand-zoom">
+                        <canvas
+                            ref={handCanvasRef}
+                            width={handZoomSize}
+                            height={handZoomSize}
+                            className="sign-animator__hand-canvas"
+                            aria-label="Zoomed view of hand"
+                        />
+                    </div>
+                )}
+            </div>
+            {showInfo && (
+                <div className="sign-animator__info">
+                    <span className="sign-animator__frame">
+                        Frame {currentFrame + 1} / {signData.frame_count}
+                    </span>
                 </div>
-            </div>
-            <div className="sign-animator__info">
-                <span className="sign-animator__frame">
-                    Frame {currentFrame + 1} / {signData.frame_count}
-                </span>
-            </div>
+            )}
         </div>
     );
 };

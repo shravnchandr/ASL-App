@@ -1,31 +1,251 @@
 /**
- * CameraPage Styles
- * Full-screen camera view with floating overlays
+ * CameraPage Styles — split two-panel layout
  */
 
 .camera-page {
-  position: fixed;
-  inset: 0;
-  background: var(--md-sys-color-surface);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr);
+  gap: 20px;
+  width: 100%;
+  min-height: calc(100vh - 56px);
+  padding: 24px 32px 40px;
+  background: var(--md-sys-color-background);
 }
 
-/* Loading state */
-.camera-page__loading {
+/* ── Left panel (dark, camera) ─────────────────── */
+.camera-page__left {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 14px;
+  box-shadow: var(--md-sys-elevation-1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 620px;
+  overflow: hidden;
+}
+
+.camera-page__stage {
+  position: relative;
+  flex: 1;
+  min-height: 560px;
+  overflow: hidden;
+  background: #0f1c24;
+}
+
+.camera-page__camera-footer {
+  height: 64px;
+  flex-shrink: 0;
+  background: var(--md-sys-color-surface);
+}
+
+.camera-page__device-badge {
+  position: absolute;
+  left: 20px;
+  bottom: 18px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(15, 28, 36, 0.86);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.camera-page__device-badge span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6aafc0;
+}
+
+/* ── Right panel (light, info) ─────────────────── */
+.camera-page__right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.camera-page__right-top,
+.camera-page__stats-section,
+.camera-page__privacy {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 14px;
+  box-shadow: var(--md-sys-elevation-1);
+}
+
+.camera-page__right-top {
+  padding: 28px 30px 30px;
+}
+
+.camera-page__your-turn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-primary);
+  margin-bottom: 8px;
+}
+
+.camera-page__spell-heading {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+
+.camera-page__instruction {
+  font-size: 1rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0 0 22px;
+  line-height: 1.55;
+}
+
+/* Letter boxes */
+.camera-page__letter-boxes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.camera-page__letter-box {
+  width: 54px;
+  height: 58px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface-container);
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.camera-page__letter-box--filled {
+  background: var(--md-sys-color-surface-variant);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Hint / skip buttons */
+.camera-page__right-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.camera-page__hint-btn,
+.camera-page__skip-btn {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  transition: background 150ms ease;
+}
+
+.camera-page__hint-btn:hover,
+.camera-page__skip-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* Stats section */
+.camera-page__stats-section {
+  padding: 24px 30px 26px;
+}
+
+.camera-page__stats-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 10px;
+}
+
+.camera-page__stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+}
+
+.camera-page__stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-items: flex-start;
+  padding: 14px 0 0;
+  background: transparent;
+  gap: 8px;
+}
+
+.camera-page__stat-val {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1;
+}
+
+.camera-page__stat-lbl {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: left;
+}
+
+/* Privacy notice */
+.camera-page__privacy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  min-height: 100px;
+  padding: 20px 24px;
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  background: var(--md-sys-color-primary-container);
+}
+
+.camera-page__privacy svg {
+  color: var(--md-sys-color-primary);
+  width: 28px;
+  height: 28px;
+}
+
+/* Loading and error states — full grid span */
+.camera-page__loading,
+.camera-page__error {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-lg, 24px);
+  gap: 20px;
+  padding: 40px;
+  min-height: 400px;
   color: var(--md-sys-color-on-surface);
 }
 
 .camera-page__loading p {
-  font-size: var(--md-sys-typescale-body-large-size, 1rem);
+  font-size: 1rem;
   color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
@@ -33,15 +253,15 @@
 .camera-page__loading-steps {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm, 8px);
-  margin-top: var(--spacing-md, 16px);
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .camera-page__loading-step {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm, 8px);
-  font-size: var(--md-sys-typescale-body-medium-size, 0.875rem);
+  gap: 8px;
+  font-size: 0.875rem;
   color: var(--md-sys-color-on-surface-variant);
 }
 
@@ -78,7 +298,7 @@
 .camera-page__spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid var(--md-sys-color-surface-variant);
+  border: 4px solid rgba(255,255,255,0.15);
   border-top-color: var(--md-sys-color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -88,22 +308,10 @@
   to { transform: rotate(360deg); }
 }
 
-/* Error state */
-.camera-page__error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: var(--spacing-xl, 32px);
-  max-width: 400px;
-}
-
 .camera-page__error-icon {
   width: 64px;
   height: 64px;
   color: var(--md-sys-color-error);
-  margin-bottom: var(--spacing-lg, 24px);
 }
 
 .camera-page__error-icon svg {
@@ -112,33 +320,34 @@
 }
 
 .camera-page__error h2 {
-  font-size: var(--md-sys-typescale-headline-small-size, 1.5rem);
+  font-size: 1.5rem;
   color: var(--md-sys-color-on-surface);
-  margin: 0 0 var(--spacing-md, 16px) 0;
+  margin: 0 0 16px 0;
 }
 
 .camera-page__error p {
-  font-size: var(--md-sys-typescale-body-medium-size, 1rem);
+  font-size: 1rem;
   color: var(--md-sys-color-on-surface-variant);
-  margin: 0 0 var(--spacing-xl, 32px) 0;
+  margin: 0 0 32px 0;
   line-height: 1.6;
+  text-align: center;
 }
 
 .camera-page__error-actions {
   display: flex;
-  gap: var(--spacing-md, 16px);
+  gap: 16px;
 }
 
 .camera-page__button {
-  padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
-  border-radius: var(--md-sys-shape-corner-full, 9999px);
-  font-size: var(--md-sys-typescale-label-large-size, 1rem);
-  font-weight: var(--md-sys-typescale-label-large-weight, 600);
+  padding: 8px 24px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
   border: 2px solid var(--md-sys-color-outline);
   background: transparent;
   color: var(--md-sys-color-on-surface);
   cursor: pointer;
-  transition: all var(--duration-quick) ease;
+  transition: background 150ms ease;
 }
 
 .camera-page__button:hover {
@@ -156,9 +365,27 @@
   color: var(--md-sys-color-on-primary-container);
 }
 
+/* ── Responsive ────────────────────────────────── */
+@media (max-width: 768px) {
+  .camera-page {
+    grid-template-columns: 1fr;
+    padding: 16px 16px 92px;
+  }
+  .camera-page__left {
+    min-height: 500px;
+  }
+  .camera-page__stage {
+    min-height: 440px;
+  }
+  .camera-page__stats-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .camera-page__spinner {
+  .camera-page__spinner,
+  .camera-page__step-spinner {
     animation: none;
     border-top-color: var(--md-sys-color-primary);
   }

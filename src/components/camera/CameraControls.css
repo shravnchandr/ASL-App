@@ -15,7 +15,7 @@
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: 48px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 10;
 }
@@ -65,12 +65,12 @@
 
 /* Active state (e.g., sound enabled) */
 .camera-controls__button--active {
-  background: rgba(0, 255, 136, 0.25);
-  color: #00ff88;
+  background: rgba(106, 175, 192, 0.22);
+  color: #a8d0dc;
 }
 
 .camera-controls__button--active:hover {
-  background: rgba(0, 255, 136, 0.35);
+  background: rgba(106, 175, 192, 0.32);
 }
 
 /* Mobile adjustments */

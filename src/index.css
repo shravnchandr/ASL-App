@@ -13,6 +13,7 @@
 @import './styles/global.css';
 @import './styles/components.css';
 @import './styles/expressive.css';
+@import './styles/calm-overrides.css';
 
 /* Base reset - minimal, non-conflicting with global.css */
 :root {

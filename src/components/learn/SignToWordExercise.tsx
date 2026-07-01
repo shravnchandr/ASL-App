@@ -141,17 +141,6 @@ export const SignToWordExercise: React.FC<SignToWordExerciseProps> = ({
                         Check answer
                     </button>
 
-                    {!hasAnswered && (
-                        <div className="sign-to-word__secondary-actions">
-                            <button
-                                className="sign-to-word__secondary-btn"
-                                onClick={() => onAnswer('', false)}
-                                disabled={disabled}
-                            >
-                                Skip
-                            </button>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

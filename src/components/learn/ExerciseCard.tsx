@@ -15,46 +15,33 @@ interface ExerciseCardProps {
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
-    currentIndex,
-    totalExercises,
     children,
     onSkip,
     feedback,
     xpEarned = 0,
     showXpAnimation = false,
 }) => {
-    const progress = ((currentIndex + 1) / totalExercises) * 100;
     const showXp = showXpAnimation && xpEarned > 0;
 
     return (
         <div className="exercise-card">
-            <header className="exercise-card__header">
-                <div className="exercise-card__progress-info">
-                    <span className="exercise-card__progress-text">
-                        Exercise {currentIndex + 1} of {totalExercises}
-                    </span>
-                    {onSkip && (
-                        <button
-                            className="exercise-card__skip-btn"
-                            onClick={onSkip}
-                            aria-label="Skip this exercise"
-                        >
-                            Skip
-                        </button>
-                    )}
-                </div>
-                <div className="exercise-card__progress-bar">
-                    <div
-                        className="exercise-card__progress-fill"
-                        style={{ width: `${progress}%` }}
-                    />
-                </div>
-            </header>
-
             {/* Main content area */}
             <main className="exercise-card__content">
                 {children}
             </main>
+
+            {/* Skip action (before answering) */}
+            {!feedback && onSkip && (
+                <div className="exercise-card__actions">
+                    <button
+                        className="exercise-card__skip-btn"
+                        onClick={onSkip}
+                        aria-label="Skip this exercise"
+                    >
+                        Skip
+                    </button>
+                </div>
+            )}
 
             {/* Feedback display */}
             {feedback && (

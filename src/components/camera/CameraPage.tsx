@@ -9,7 +9,6 @@ import { CameraView } from './CameraView';
 import { PredictionDisplay } from './PredictionDisplay';
 import { CameraControls } from './CameraControls';
 import { SpellingDisplay } from './SpellingDisplay';
-import { SessionStats } from './SessionStats';
 import { HandGuide } from './HandGuide';
 import { CameraTutorial } from './CameraTutorial';
 import './CameraPage.css';
@@ -190,6 +189,9 @@ export default function CameraPage({ onBack }: CameraPageProps) {
     lastAddedLetterRef.current = null;
   }, []);
 
+  // Confidence percentage label for display
+  const confidencePct = Math.round(confidence * 100);
+
   return (
     <div className="camera-page">
       {state === 'loading' && (
@@ -251,56 +253,147 @@ export default function CameraPage({ onBack }: CameraPageProps) {
         </div>
       )}
 
-      {/* CameraView is always mounted so videoRef is available when startCamera fires.
-          Visibility is controlled via display style to avoid a race condition on mobile
-          where the video element wouldn't exist yet when the models finish loading. */}
-      <div style={{ display: state === 'permission' || state === 'active' ? undefined : 'none' }}>
-        <CameraView
-          videoRef={videoRef}
-          isLoading={cameraLoading}
-          facingMode={facingMode}
-          landmarks={normalizedLandmarks}
-        />
+      {/* Two-panel layout when camera is active/permission */}
+      {(state === 'permission' || state === 'active') && (
+        <>
+          {/* LEFT: dark camera panel */}
+          <div className="camera-page__left">
+            <div className="camera-page__stage">
+              <CameraView
+                videoRef={videoRef}
+                isLoading={cameraLoading}
+                facingMode={facingMode}
+                landmarks={normalizedLandmarks}
+              />
 
-        {!isHandDetected && spelledLetters.length === 0 && (
-          <HandGuide
-            isHandDetected={isHandDetected}
-            showGuide={true}
-          />
-        )}
+              {!isHandDetected && spelledLetters.length === 0 && (
+                <HandGuide
+                  isHandDetected={isHandDetected}
+                  showGuide={true}
+                />
+              )}
 
-        {signsRecognized > 0 && (
-          <SessionStats
-            signsRecognized={signsRecognized}
-            accuracy={0}
-          />
-        )}
+              {(isHandDetected || spelledLetters.length > 0) && (
+                <PredictionDisplay
+                  prediction={prediction}
+                  confidence={confidence}
+                  isHandDetected={isHandDetected}
+                  holdProgress={holdProgress}
+                />
+              )}
 
-        {(isHandDetected || spelledLetters.length > 0) && (
-          <PredictionDisplay
-            prediction={prediction}
-            confidence={confidence}
-            isHandDetected={isHandDetected}
-            holdProgress={holdProgress}
-          />
-        )}
+              {spelledLetters.length > 0 && (
+                <SpellingDisplay
+                  letters={spelledLetters}
+                  onClear={handleClearSpelling}
+                  onBackspace={handleBackspace}
+                />
+              )}
 
-        {(spelledLetters.length > 0 || isHandDetected) && (
-          <SpellingDisplay
-            letters={spelledLetters}
-            onClear={handleClearSpelling}
-            onBackspace={handleBackspace}
-          />
-        )}
+              <div className="camera-page__device-badge">
+                <span aria-hidden="true" />
+                On-device
+              </div>
 
-        <CameraControls
-          onBack={handleBack}
-          onFlipCamera={flipCamera}
-          facingMode={facingMode}
-          soundEnabled={soundEnabled}
-          onToggleSound={toggleSounds}
-        />
-      </div>
+              <CameraControls
+                onBack={handleBack}
+                onFlipCamera={flipCamera}
+                facingMode={facingMode}
+                soundEnabled={soundEnabled}
+                onToggleSound={toggleSounds}
+              />
+            </div>
+            <div className="camera-page__camera-footer" aria-hidden="true" />
+          </div>
+
+          {/* RIGHT: info panel */}
+          <div className="camera-page__right">
+            <div className="camera-page__right-top">
+              <div className="camera-page__your-turn">YOUR TURN</div>
+
+              {prediction ? (
+                <>
+                  <h2 className="camera-page__spell-heading">
+                    Reading: <strong>{prediction.toUpperCase()}</strong>
+                    {confidence > 0 && (
+                      <span style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--md-sys-color-on-surface-variant)', marginLeft: 8 }}>
+                        {confidencePct}% confident
+                      </span>
+                    )}
+                  </h2>
+                  <p className="camera-page__instruction">
+                    Hold the sign steady for 1 second to add it to your spelling.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="camera-page__spell-heading">
+                    {spelledLetters.length > 0
+                      ? `Spelled: "${spelledLetters.join('').toUpperCase()}"`
+                      : 'Show your hand'}
+                  </h2>
+                  <p className="camera-page__instruction">
+                    Position your hand in front of the camera. Sign letters to spell words.
+                  </p>
+                </>
+              )}
+
+              {/* Spelled letters as boxes */}
+              {spelledLetters.length > 0 && (
+                <div className="camera-page__letter-boxes" aria-label="Spelled letters">
+                  {spelledLetters.map((letter, i) => (
+                    <div key={i} className="camera-page__letter-box camera-page__letter-box--filled">
+                      {letter.toUpperCase()}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="camera-page__right-actions">
+                {spelledLetters.length > 0 && (
+                  <button className="camera-page__hint-btn" onClick={handleBackspace}>
+                    ← Backspace
+                  </button>
+                )}
+                {spelledLetters.length > 0 && (
+                  <button className="camera-page__skip-btn" onClick={handleClearSpelling}>
+                    Clear all
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Stats section */}
+            <div className="camera-page__stats-section">
+              <div className="camera-page__stats-label">THIS SESSION</div>
+              <div className="camera-page__stats-grid">
+                <div className="camera-page__stat-item">
+                  <span className="camera-page__stat-val">{signsRecognized}</span>
+                  <span className="camera-page__stat-lbl">Signs read</span>
+                </div>
+                <div className="camera-page__stat-item">
+                  <span className="camera-page__stat-val">{spelledLetters.length}</span>
+                  <span className="camera-page__stat-lbl">Letters spelled</span>
+                </div>
+                <div className="camera-page__stat-item">
+                  <span className="camera-page__stat-val">
+                    {confidence > 0 ? `${confidencePct}%` : '—'}
+                  </span>
+                  <span className="camera-page__stat-lbl">Avg confidence</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Privacy notice */}
+            <div className="camera-page__privacy">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Private by design — no video is stored or sent to any server.
+            </div>
+          </div>
+        </>
+      )}
 
       {!tutorialComplete && (
         <CameraTutorial onComplete={() => setTutorialComplete(true)} />

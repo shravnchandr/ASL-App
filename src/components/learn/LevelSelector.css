@@ -4,7 +4,7 @@
 
 .level-selector {
     width: 100%;
-    max-width: 1000px;
+    max-width: none;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -17,8 +17,9 @@
     gap: 20px;
     padding: 22px 24px;
     background: var(--md-sys-color-primary);
-    border-radius: var(--md-sys-shape-corner-extra-large);
+    border-radius: 14px;
     color: var(--md-sys-color-on-primary);
+    box-shadow: var(--shadow-primary);
 }
 
 .current-level-card__badge {
@@ -27,7 +28,7 @@
 
 .current-level-card__badge-num {
     font-size: 1.75rem;
-    font-weight: 900;
+    font-weight: 700;
     color: white;
     line-height: 1;
 }
@@ -48,7 +49,7 @@
 
 .current-level-card__name {
     font-size: 1.5rem;
-    font-weight: 900;
+    font-weight: 700;
     margin: 0 0 4px;
     line-height: 1.2;
 }
@@ -86,7 +87,14 @@
     margin-left: 2px;
 }
 
-/* Resume button */
+/* Resume / Preview button(s) */
+.current-level-card__btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
 .current-level-card__resume-btn {
     display: inline-flex;
     align-items: center;
@@ -95,9 +103,9 @@
     background: var(--md-sys-color-on-primary);
     color: var(--md-sys-color-primary);
     border: none;
-    border-radius: var(--md-sys-shape-corner-pill);
+    border-radius: 10px;
     font-size: 0.875rem;
-    font-weight: 800;
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
     flex-shrink: 0;
@@ -109,10 +117,30 @@
     box-shadow: var(--md-sys-elevation-3);
 }
 
+.current-level-card__resume-btn--primary {
+    background: var(--md-sys-color-on-primary);
+    color: var(--md-sys-color-primary);
+}
+
+.current-level-card__resume-btn--ghost {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 500;
+    padding: 8px 20px;
+    font-size: 0.8rem;
+    justify-content: center;
+}
+
+.current-level-card__resume-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
 /* ── Section title ────────────────────────── */
 .level-selector__section-title {
     font-size: 1rem;
-    font-weight: 900;
+    font-weight: 700;
     color: var(--md-sys-color-on-surface);
 }
 
@@ -128,6 +156,10 @@
     .current-level-card {
         flex-wrap: wrap;
         gap: 14px;
+    }
+
+    .current-level-card__btn-group {
+        width: 100%;
     }
 
     .current-level-card__resume-btn {
