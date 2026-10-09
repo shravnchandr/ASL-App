@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import type { SignData, Exercise, SignProgress } from '../types';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
+import type { SignData, Exercise, ExerciseResult, SignProgress } from '../types';
 import { storage } from '../utils/storage';
 import {
     loadSignData,
@@ -8,13 +8,17 @@ import {
     getDistractors,
     preloadSigns,
     shuffle,
+    toSignKey,
 } from '../utils/signDataLoader';
 import { LEVELS, MASTERY_THRESHOLD, getLevelById, type LevelInfo } from '../constants/levels';
+import { isCameraRecognizable } from '../utils/cameraSigns';
 
-interface LearnState {
+export interface LearnState {
     exercises: Exercise[];
     currentIndex: number;
     sessionScore: number;
+    /** Answered exercises this session (one per exercise id), persisted for resume. */
+    results: ExerciseResult[];
     isSessionActive: boolean;
     signProgress: Record<string, SignProgress>;
     totalXP: number;
@@ -28,7 +32,6 @@ interface LearnState {
     difficulty: 'beginner' | 'intermediate' | 'all';
     isLoading: boolean;
     error: string | null;
-    loadedSigns: Record<string, SignData>;
     activeSessionLevelId: number | null;
 }
 
@@ -39,10 +42,7 @@ type LearnAction =
     | { type: 'END_SESSION' }
     | { type: 'NEXT_EXERCISE' }
     | { type: 'SKIP_EXERCISE' }
-    | { type: 'ANSWER_EXERCISE'; payload: { isCorrect: boolean; xp: number } }
-    | { type: 'LOAD_SIGN'; payload: { sign: string; data: SignData } }
-    | { type: 'UPDATE_PROGRESS'; payload: { sign: string; progress: SignProgress } }
-    | { type: 'UPDATE_STATS'; payload: { totalXP: number; level: number; streak: number } }
+    | { type: 'ANSWER_EXERCISE'; payload: { result: ExerciseResult; progress: SignProgress | null; stats: { totalXP: number; level: number; streak: number } | null } }
     | { type: 'SET_SETTING'; payload: Partial<{ animationSpeed: number; difficulty: 'beginner' | 'intermediate' | 'all' }> }
     | { type: 'RESTORE_STATE'; payload: Partial<LearnState> }
     | { type: 'SET_CURRENT_LEVEL'; payload: number }
@@ -50,12 +50,13 @@ type LearnAction =
     | { type: 'UNLOCK_LEVEL'; payload: number }
     | { type: 'CLEAR_JUST_UNLOCKED' }
     | { type: 'SET_ACTIVE_SESSION_LEVEL'; payload: number | null }
-    | { type: 'RESTORE_SESSION'; payload: { exercises: Exercise[]; currentIndex: number; sessionScore: number; levelId: number } };
+    | { type: 'RESTORE_SESSION'; payload: { exercises: Exercise[]; currentIndex: number; sessionScore: number; levelId: number; results: ExerciseResult[] } };
 
-const initialState: LearnState = {
+export const initialState: LearnState = {
     exercises: [],
     currentIndex: 0,
     sessionScore: 0,
+    results: [],
     isSessionActive: false,
     signProgress: {},
     totalXP: 0,
@@ -69,11 +70,10 @@ const initialState: LearnState = {
     difficulty: 'beginner',
     isLoading: false,
     error: null,
-    loadedSigns: {},
     activeSessionLevelId: null,
 };
 
-function learnReducer(state: LearnState, action: LearnAction): LearnState {
+export function learnReducer(state: LearnState, action: LearnAction): LearnState {
     switch (action.type) {
         case 'SET_LOADING':
             return { ...state, isLoading: action.payload };
@@ -87,6 +87,7 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
                 exercises: action.payload,
                 currentIndex: 0,
                 sessionScore: 0,
+                results: [],
                 isSessionActive: true,
                 error: null,
             };
@@ -109,38 +110,19 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
                 currentIndex: Math.min(state.currentIndex + 1, state.exercises.length - 1),
             };
 
-        case 'ANSWER_EXERCISE':
+        case 'ANSWER_EXERCISE': {
+            // Lifetime XP comes from storage (already incremented there); only the
+            // session score is accumulated here, so XP is never counted twice.
+            const { result, progress, stats } = action.payload;
+            if (state.results.some(r => r.exerciseId === result.exerciseId)) return state;
             return {
                 ...state,
-                sessionScore: state.sessionScore + action.payload.xp,
-                totalXP: state.totalXP + action.payload.xp,
+                sessionScore: state.sessionScore + result.xp,
+                results: [...state.results, result],
+                signProgress: progress ? { ...state.signProgress, [result.sign]: progress } : state.signProgress,
+                ...(stats ? { totalXP: stats.totalXP, level: stats.level, streak: stats.streak } : {}),
             };
-
-        case 'LOAD_SIGN':
-            return {
-                ...state,
-                loadedSigns: {
-                    ...state.loadedSigns,
-                    [action.payload.sign]: action.payload.data,
-                },
-            };
-
-        case 'UPDATE_PROGRESS':
-            return {
-                ...state,
-                signProgress: {
-                    ...state.signProgress,
-                    [action.payload.sign]: action.payload.progress,
-                },
-            };
-
-        case 'UPDATE_STATS':
-            return {
-                ...state,
-                totalXP: action.payload.totalXP,
-                level: action.payload.level,
-                streak: action.payload.streak,
-            };
+        }
 
         case 'SET_SETTING':
             return {
@@ -194,6 +176,7 @@ function learnReducer(state: LearnState, action: LearnAction): LearnState {
                 exercises: action.payload.exercises,
                 currentIndex: action.payload.currentIndex,
                 sessionScore: action.payload.sessionScore,
+                results: action.payload.results,
                 isSessionActive: true,
                 selectedLevel: action.payload.levelId,
                 currentLevel: action.payload.levelId,
@@ -213,7 +196,8 @@ interface LearnContextType {
     startPracticeSession: (signWords: string[]) => Promise<void>;
     resumeSession: () => Promise<void>;
     endSession: () => void;
-    answerExercise: (answer: string, isCorrect: boolean) => void;
+    /** Records the answer once per exercise; returns XP awarded, or null if already answered. */
+    answerExercise: (answer: string, isCorrect: boolean) => number | null;
     skipExercise: () => void;
     nextExercise: () => void;
     loadSign: (sign: string) => Promise<SignData | null>;
@@ -237,6 +221,10 @@ const XP_RECALL_CORRECT = 20;
 
 export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [state, dispatch] = useReducer(learnReducer, initialState);
+    // Exercise ids already answered, updated synchronously. state.results lags until
+    // React commits, so two calls in the same tick would both pass a state-based check
+    // and write progress/XP to storage twice. Ids are unique per session (timestamped).
+    const answeredIdsRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         const progress = storage.getLearningProgress();
@@ -261,17 +249,9 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
     }, []);
 
-    const loadSign = useCallback(async (sign: string): Promise<SignData | null> => {
-        if (state.loadedSigns[sign]) {
-            return state.loadedSigns[sign];
-        }
-
-        const data = await loadSignData(sign);
-        if (data) {
-            dispatch({ type: 'LOAD_SIGN', payload: { sign, data } });
-        }
-        return data;
-    }, [state.loadedSigns]);
+    // The loader owns the (bounded, deduplicated) cache; keeping a second copy in
+    // state would defeat its cap and change this callback's identity on every load.
+    const loadSign = useCallback((sign: string): Promise<SignData | null> => loadSignData(sign), []);
 
     const generateExercises = useCallback(async (count: number): Promise<Exercise[]> => {
         const metadata = await loadMetadata();
@@ -359,7 +339,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const available = new Set(Object.keys(metadata.signs));
 
             const validSigns = signWords
-                .map(w => w.toLowerCase().replace(/[\s-]+/g, '_'))
+                .map(toSignKey)
                 .filter((s, i, arr) => available.has(s) && arr.indexOf(s) === i);
 
             if (validSigns.length === 0) {
@@ -481,17 +461,33 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [state.currentLevel, state.unlockedLevels, calculateLevelMastery]);
 
-    // Sync currentIndex and sessionScore to localStorage so resume picks up at the right spot
+    // Runs after each answer is committed, so it sees the updated progress
+    // (a timer-delayed call would still close over the pre-answer progress).
+    useEffect(() => {
+        if (state.results.length > 0) checkLevelUnlock();
+    }, [state.results, checkLevelUnlock]);
+
+    // Sync currentIndex to localStorage so resume picks up at the right spot
     useEffect(() => {
         if (!state.isSessionActive || state.exercises.length === 0) return;
         const saved = storage.getActiveSession();
         if (!saved) return;
-        storage.saveActiveSession({ ...saved, currentIndex: state.currentIndex, sessionScore: state.sessionScore });
-    }, [state.currentIndex, state.sessionScore, state.isSessionActive, state.exercises.length]);
+        storage.saveActiveSession({ ...saved, currentIndex: state.currentIndex });
+    }, [state.currentIndex, state.isSessionActive, state.exercises.length]);
 
     const resumeSession = useCallback(async () => {
         const saved = storage.getActiveSession();
         if (!saved) return;
+
+        // Resume at the first exercise that has not been answered (and rewarded) yet
+        const results = saved.results ?? [];
+        const answered = new Set(results.map(r => r.exerciseId));
+        const nextIndex = saved.exercises.findIndex((e, i) => i >= saved.currentIndex && !answered.has(e.id));
+        if (nextIndex === -1) {
+            storage.clearActiveSession();
+            dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
+            return;
+        }
 
         dispatch({ type: 'SET_LOADING', payload: true });
         try {
@@ -500,7 +496,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             for (const sign of signsToLoad) {
                 await loadSign(sign);
             }
-            dispatch({ type: 'RESTORE_SESSION', payload: saved });
+            dispatch({ type: 'RESTORE_SESSION', payload: { ...saved, currentIndex: nextIndex, results } });
         } catch (error) {
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to resume session' });
         } finally {
@@ -522,13 +518,18 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const exercises: Exercise[] = [];
 
         if (cameraPractice) {
+            // Only targets the classifier can detect (e.g. no "ten")
+            const practiceSigns = levelSigns.filter(isCameraRecognizable);
+            if (practiceSigns.length === 0) {
+                throw new Error('Camera practice is not available for this level');
+            }
             const usedSigns = new Set<string>();
             for (let i = 0; i < count; i++) {
                 let sign: string;
-                if (usedSigns.size >= levelSigns.length) {
-                    sign = levelSigns[Math.floor(Math.random() * levelSigns.length)];
+                if (usedSigns.size >= practiceSigns.length) {
+                    sign = practiceSigns[Math.floor(Math.random() * practiceSigns.length)];
                 } else {
-                    const available = levelSigns.filter(s => !usedSigns.has(s));
+                    const available = practiceSigns.filter(s => !usedSigns.has(s));
                     sign = available[Math.floor(Math.random() * available.length)];
                     usedSigns.add(sign);
                 }
@@ -605,7 +606,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 await loadSign(sign);
             }
 
-            storage.saveActiveSession({ exercises, currentIndex: 0, levelId, sessionScore: 0 });
+            storage.saveActiveSession({ exercises, currentIndex: 0, levelId, sessionScore: 0, results: [] });
             dispatch({ type: 'START_SESSION', payload: exercises });
         } catch (error) {
             dispatch({
@@ -632,46 +633,48 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dispatch({ type: 'CLEAR_JUST_UNLOCKED' });
     }, []);
 
-    const answerExerciseWithLevelCheck = useCallback((_answer: string, isCorrect: boolean) => {
+    const answerExercise = useCallback((_answer: string, isCorrect: boolean): number | null => {
         const currentExercise = state.exercises[state.currentIndex];
-        if (!currentExercise) return;
+        if (!currentExercise) return null;
+        if (answeredIdsRef.current.has(currentExercise.id)
+            || state.results.some(r => r.exerciseId === currentExercise.id)) return null;
+        answeredIdsRef.current.add(currentExercise.id);
 
         let xp = 0;
         if (isCorrect) {
+            const previous = state.results[state.results.length - 1];
             if (currentExercise.type === 'recall') {
                 xp = XP_RECALL_CORRECT;
             } else {
-                xp = state.sessionScore > 0 ? XP_CORRECT_STREAK : XP_CORRECT;
+                // Streak bonus only for consecutive correct answers
+                xp = previous?.isCorrect ? XP_CORRECT_STREAK : XP_CORRECT;
             }
         }
 
         storage.updateSignProgress(currentExercise.sign, isCorrect);
-        const updatedProgress = storage.getSignProgress(currentExercise.sign);
-        if (updatedProgress) {
-            dispatch({
-                type: 'UPDATE_PROGRESS',
-                payload: { sign: currentExercise.sign, progress: updatedProgress },
-            });
-        }
+        const progress = storage.getSignProgress(currentExercise.sign);
+        const stats = xp > 0 ? storage.addXP(xp) : null;
+        const result: ExerciseResult = { exerciseId: currentExercise.id, sign: currentExercise.sign, isCorrect, xp };
 
-        if (xp > 0) {
-            const stats = storage.addXP(xp);
-            dispatch({
-                type: 'UPDATE_STATS',
-                payload: stats,
-            });
-        }
+        dispatch({ type: 'ANSWER_EXERCISE', payload: { result, progress, stats } });
 
-        dispatch({ type: 'ANSWER_EXERCISE', payload: { isCorrect, xp } });
-
-        // Clear the saved session when the last exercise is answered (session complete)
+        // Persist the outcome immediately so a reload during feedback can't re-award it
+        const saved = storage.getActiveSession();
         if (state.currentIndex >= state.exercises.length - 1) {
+            // Session complete
             storage.clearActiveSession();
             dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
+        } else if (saved) {
+            storage.saveActiveSession({
+                ...saved,
+                currentIndex: state.currentIndex,
+                sessionScore: state.sessionScore + xp,
+                results: [...state.results, result],
+            });
         }
 
-        setTimeout(() => checkLevelUnlock(), 100); // let progress state flush before unlock check
-    }, [state.exercises, state.currentIndex, state.sessionScore, checkLevelUnlock]);
+        return xp;
+    }, [state.exercises, state.currentIndex, state.sessionScore, state.results]);
 
     const value: LearnContextType = {
         state,
@@ -680,7 +683,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         startPracticeSession,
         resumeSession,
         endSession,
-        answerExercise: answerExerciseWithLevelCheck,
+        answerExercise,
         skipExercise,
         nextExercise,
         loadSign,

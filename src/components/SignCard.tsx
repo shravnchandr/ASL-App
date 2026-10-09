@@ -34,6 +34,16 @@ const LETTER_SHAPES: Record<string, string> = {
     X: 'Index finger bent into a hook',
     Y: 'Thumb and pinky extended outward, other fingers curled',
     Z: 'Index finger extended; trace a Z shape in the air',
+    '0': 'All fingers and thumb curved to meet, forming an O',
+    '1': 'Index finger pointing up, palm facing you',
+    '2': 'Index and middle fingers up and spread, palm facing you',
+    '3': 'Thumb, index, and middle fingers extended',
+    '4': 'Four fingers up and spread, thumb folded into the palm',
+    '5': 'All five fingers spread open',
+    '6': 'Pinky touches the thumb tip; other three fingers extended',
+    '7': 'Ring finger touches the thumb tip; other fingers extended',
+    '8': 'Middle finger touches the thumb tip; other fingers extended',
+    '9': 'Index finger touches the thumb tip; other fingers extended',
 };
 
 const StickFigurePlaceholder: React.FC = () => (
@@ -111,7 +121,10 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index, totalCount }) =
                 {/* Badge row + counter */}
                 <div className="sign-card__meta-row">
                     {sign.kb_verified
-                        ? <span className="sign-card__badge sign-card__badge--verified">verified</span>
+                        ? <span
+                            className="sign-card__badge sign-card__badge--verified"
+                            title="Hand shape, location, movement and facial expression come from the verified sign reference. The short description is AI-written."
+                        >verified</span>
                         : !sign.is_fingerspelled && <span className="sign-card__badge sign-card__badge--ai">AI generated</span>
                     }
                     {sign.is_fingerspelled && (

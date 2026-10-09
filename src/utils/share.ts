@@ -21,7 +21,7 @@ export const share = {
                 return false;
             }
         } else {
-            return this.copyToClipboard(data.text);
+            return this.copyToClipboard(data.url ? `${data.text}\n\n${data.url}` : data.text);
         }
     },
 
@@ -48,10 +48,10 @@ export const share = {
         }
     },
 
+    /** Link that opens the translation page with this query (the only route that reads ?q=). */
     generateShareUrl(query: string): string {
-        const baseUrl = window.location.origin;
         const params = new URLSearchParams({ q: query });
-        return `${baseUrl}?${params.toString()}`;
+        return `${window.location.origin}/translate?${params.toString()}`;
     },
 
     formatTranslationForSharing(query: string, signsCount: number): string {

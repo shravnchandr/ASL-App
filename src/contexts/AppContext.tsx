@@ -4,7 +4,7 @@
  * Manages global application state (search history, favorites, API key)
  */
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { storage } from '../utils/storage';
 
 interface AppContextType {
@@ -26,53 +26,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const [favorites, setFavorites] = useState(() => storage.getFavorites());
     const [customApiKey, setCustomApiKeyState] = useState<string | null>(() => storage.getCustomApiKey());
 
-    const addToHistory = (query: string) => {
+    // Callbacks and the context value are memoized so consumers can safely list
+    // them in effect dependency arrays without re-running on every provider render.
+    const addToHistory = useCallback((query: string) => {
         storage.addToSearchHistory(query);
         setSearchHistory(storage.getSearchHistory());
-    };
+    }, []);
 
-    const clearHistory = () => {
+    const clearHistory = useCallback(() => {
         storage.clearSearchHistory();
         setSearchHistory([]);
-    };
+    }, []);
 
-    const addFavorite = (query: string) => {
+    const addFavorite = useCallback((query: string) => {
         storage.addFavorite(query);
         setFavorites(storage.getFavorites());
-    };
+    }, []);
 
-    const removeFavorite = (query: string) => {
+    const removeFavorite = useCallback((query: string) => {
         storage.removeFavorite(query);
         setFavorites(storage.getFavorites());
-    };
+    }, []);
 
-    const isFavorite = (query: string): boolean => {
-        return storage.isFavorite(query);
-    };
+    // Depends on `favorites` so its identity changes when the answer can change
+    const isFavorite = useCallback(
+        (query: string): boolean => favorites.some(f => f.query === query),
+        [favorites],
+    );
 
-    const setCustomApiKey = (key: string | null) => {
+    const setCustomApiKey = useCallback((key: string | null) => {
         if (key) {
             storage.setCustomApiKey(key);
         } else {
             storage.removeCustomApiKey();
         }
         setCustomApiKeyState(key);
-    };
+    }, []);
+
+    const value = useMemo(
+        () => ({
+            searchHistory,
+            favorites,
+            customApiKey,
+            addToHistory,
+            clearHistory,
+            addFavorite,
+            removeFavorite,
+            isFavorite,
+            setCustomApiKey,
+        }),
+        [searchHistory, favorites, customApiKey, addToHistory, clearHistory, addFavorite, removeFavorite, isFavorite, setCustomApiKey],
+    );
 
     return (
-        <AppContext.Provider
-            value={{
-                searchHistory,
-                favorites,
-                customApiKey,
-                addToHistory,
-                clearHistory,
-                addFavorite,
-                removeFavorite,
-                isFavorite,
-                setCustomApiKey,
-            }}
-        >
+        <AppContext.Provider value={value}>
             {children}
         </AppContext.Provider>
     );

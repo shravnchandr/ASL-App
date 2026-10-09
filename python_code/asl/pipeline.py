@@ -14,16 +14,31 @@ Public API:
 
 import os
 import re
+import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterator, Optional
 
 from google import genai
 from google.genai import types
 from google.genai.types import GenerateContentResponseUsageMetadata
 from colorama import Fore, Style
 
-from .schemas import GrammarPlanSchema, SentenceDescriptionSchema
+from .schemas import (
+    DescriptionSchema,
+    GeneratedSentenceSchema,
+    GrammarPlanSchema,
+    SentenceDescriptionSchema,
+)
+from .knowledge_base import (
+    _build_knowledge_context,
+    _extract_fs_glosses,
+    _get_kb_exact_entries,
+)
+
+# Fields copied verbatim from an exact KB match; simple_description stays model-written.
+_KB_FIELDS = ("hand_shape", "location", "movement", "non_manual_markers")
 
 
 def _strip_json_fences(text: str) -> str:
@@ -31,13 +46,13 @@ def _strip_json_fences(text: str) -> str:
     stripped = text.strip()
     match = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", stripped)
     return match.group(1) if match else stripped
-from .knowledge_base import (
-    _build_knowledge_context,
-    _extract_fs_glosses,
-    _get_kb_matched_words,
-)
 
-MODEL_NAME = "gemini-2.5-flash"
+
+MODEL_NAME = "gemini-2.5-flash"  # default; ASLPipeline(model_name=...) overrides (Settings.model_name)
+
+# Per-HTTP-call deadline. _gemini_with_retry may retry, so total worst case is
+# bounded by attempts × this + backoff; the route also enforces its own budget.
+_HTTP_TIMEOUT_MS = 25_000
 
 
 @dataclass
@@ -194,7 +209,19 @@ _GRAMMAR_SYSTEM_PROMPT = (
 
 def _make_client(api_key: Optional[str] = None) -> genai.Client:
     """Create a Gemini client using the provided key, or fall back to env."""
-    return genai.Client(api_key=api_key or os.environ.get("GOOGLE_API_KEY"))
+    return genai.Client(
+        api_key=api_key or os.environ.get("GOOGLE_API_KEY"),
+        http_options=types.HttpOptions(timeout=_HTTP_TIMEOUT_MS),
+    )
+
+
+def _close_client(client) -> None:
+    close = getattr(client, "close", None)
+    if callable(close):
+        try:
+            close()
+        except Exception:
+            pass
 
 
 def _log_usage(agent: str, usage: Optional[GenerateContentResponseUsageMetadata]) -> None:
@@ -212,11 +239,16 @@ def _log_usage(agent: str, usage: Optional[GenerateContentResponseUsageMetadata]
 
 
 def _run_instructor_agent(
-    input_text: str, original_input: str, api_key: Optional[str] = None
+    input_text: str,
+    original_input: str,
+    api_key: Optional[str] = None,
+    *,
+    client=None,
+    model: str = MODEL_NAME,
 ) -> tuple[SentenceDescriptionSchema, Optional[GenerateContentResponseUsageMetadata]]:
     """Call the Translation Agent and return a SentenceDescriptionSchema."""
     print(
-        f"{Fore.MAGENTA}🤖 Instructor Agent: Generating signs for '{input_text}'...{Style.RESET_ALL}"
+        f"{Fore.MAGENTA}🤖 Instructor Agent: Generating signs for {len(input_text.split())} glosses...{Style.RESET_ALL}"
     )
 
     knowledge_context = _build_knowledge_context(input_text)
@@ -262,26 +294,54 @@ def _run_instructor_agent(
         f"ASL Gloss Order: '{input_text}'"
     )
 
-    client = _make_client(api_key)
-    response = _gemini_with_retry(
-        client.models.generate_content,
-        model=MODEL_NAME,
-        contents="Generate detailed ASL sign descriptions for the gloss sequence.",
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            temperature=0.0,
-            response_mime_type="application/json",
-            response_schema=SentenceDescriptionSchema,
-        ),
-    )
+    owns_client = client is None
+    if owns_client:
+        client = _make_client(api_key)
+    try:
+        response = _gemini_with_retry(
+            client.models.generate_content,
+            model=model,
+            contents="Generate detailed ASL sign descriptions for the gloss sequence.",
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.0,
+                response_mime_type="application/json",
+                response_schema=GeneratedSentenceSchema,
+            ),
+        )
+    finally:
+        if owns_client:
+            _close_client(client)
     usage = response.usage_metadata
     _log_usage("translation", usage)
-    result = SentenceDescriptionSchema.model_validate_json(_strip_json_fences(response.text))
+    generated = GeneratedSentenceSchema.model_validate_json(_strip_json_fences(response.text))
+    return _postprocess_signs(generated, input_text), usage
+
+
+def _norm_word(word: str) -> str:
+    """Strip separators so THANK-YOU, "Thank you" and thank_you compare equal."""
+    return re.sub(r"[-_\s]", "", word.upper())
+
+
+def _postprocess_signs(
+    generated: GeneratedSentenceSchema, input_text: str
+) -> SentenceDescriptionSchema:
+    """
+    Apply deterministic server-side corrections to the model output:
+    force fingerspelling for fs- glosses, and for exact KB matches overwrite the
+    detailed fields with the verified entry and set kb_verified. kb_verified is
+    never taken from the model.
+    """
+    result = SentenceDescriptionSchema(
+        signs=[DescriptionSchema(**s.model_dump(), kb_verified=False) for s in generated.signs],
+        note=generated.note,
+    )
 
     fs_map = _extract_fs_glosses(input_text)
-    kb_matched = _get_kb_matched_words(input_text)
-    # normalize: strip hyphens so "New York City" matches "NEW-YORK-CITY"
-    fs_map_norm = {"".join(k.split("-")): k for k in fs_map}
+    kb_entries = _get_kb_exact_entries(input_text)
+    kb_entries_norm = {_norm_word(k): v for k, v in kb_entries.items()}
+    # normalize separators so "New York City" matches "NEW-YORK-CITY"
+    fs_map_norm = {_norm_word(k): k for k in fs_map}
 
     for sign in result.signs:
         clean_word = sign.word.upper()
@@ -290,7 +350,7 @@ def _run_instructor_agent(
             sign.word = (
                 sign.word[3:] if sign.word.upper().startswith("FS-") else sign.word
             )
-        norm_key = clean_word.replace("-", "").replace(" ", "")
+        norm_key = _norm_word(clean_word)
         if clean_word in fs_map:
             fs_key: str | None = clean_word
         elif norm_key in fs_map_norm:
@@ -300,16 +360,21 @@ def _run_instructor_agent(
         if fs_key:
             sign.is_fingerspelled = True
             sign.fingerspell_letters = fs_map[fs_key]
-            if "-" in fs_key and sign.word == clean_word:  # readable display: replace hyphens with spaces
+            if fs_map[fs_key] and all(c.isdigit() for c in fs_map[fs_key]):
+                sign.word = "".join(fs_map[fs_key])  # numeric: 6-1-7 → 617
+            elif "-" in fs_key and sign.word == clean_word:  # readable display: replace hyphens with spaces
                 sign.word = fs_key.replace("-", " ").title()
             print(
-                f"{Fore.CYAN}   -> Fingerspell forced: {fs_key} → "
-                f"{fs_map[fs_key]}{Style.RESET_ALL}"
+                f"{Fore.CYAN}   -> Fingerspell forced: {len(fs_map[fs_key])} characters{Style.RESET_ALL}"
             )
-        if clean_word in kb_matched or norm_key in {k.replace("-", "").replace(" ", "") for k in kb_matched}:
+            continue
+        entry = kb_entries.get(clean_word) or kb_entries_norm.get(norm_key)
+        if entry:
+            for field in _KB_FIELDS:
+                setattr(sign, field, entry[field])
             sign.kb_verified = True
 
-    return result, usage
+    return result
 
 
 class ASLPipeline:
@@ -317,20 +382,50 @@ class ASLPipeline:
     Two-agent ASL translation pipeline (Grammar Agent → Translation Agent).
     """
 
-    def __init__(self) -> None:
-        # Store the startup API key so cache is skipped for custom user keys (different key)
-        self._init_api_key: Optional[str] = os.environ.get("GOOGLE_API_KEY")
+    def __init__(self, default_api_key: Optional[str] = None, model_name: str = MODEL_NAME) -> None:
+        # Store the startup API key so cache is skipped for custom user keys (different key).
+        # Callers pass it explicitly (app.py reads it from Settings, which loads .env);
+        # the env var is a fallback for the CLI and tests.
+        self._init_api_key: Optional[str] = default_api_key or os.environ.get("GOOGLE_API_KEY")
+        self._model = model_name
+        self._server_client = None  # created lazily, reused across requests, closed in close()
+        self._client_lock = threading.Lock()
+        self._cache_lock = threading.Lock()
         self._grammar_cache_name: Optional[str] = (
             self._try_create_grammar_cache() if self._init_api_key else None
         )
         self._stats = _PipelineStats()
 
+    def _get_server_client(self):
+        with self._client_lock:
+            if self._server_client is None:
+                self._server_client = _make_client(self._init_api_key)
+            return self._server_client
+
+    @contextmanager
+    def _client_for(self, api_key: Optional[str]) -> Iterator:
+        """Shared client for the server key; a short-lived, closed client for custom keys."""
+        if not api_key or api_key == self._init_api_key:
+            yield self._get_server_client()
+            return
+        client = _make_client(api_key)
+        try:
+            yield client
+        finally:
+            _close_client(client)
+
+    def close(self) -> None:
+        with self._client_lock:
+            if self._server_client is not None:
+                _close_client(self._server_client)
+                self._server_client = None
+
     def _try_create_grammar_cache(self) -> Optional[str]:
         """Upload _GRAMMAR_SYSTEM_PROMPT to Gemini's cache. Returns the cache name or None."""
         try:
-            client = genai.Client(api_key=self._init_api_key)
+            client = self._get_server_client()
             cache = client.caches.create(
-                model=MODEL_NAME,
+                model=self._model,
                 config=types.CreateCachedContentConfig(
                     system_instruction=_GRAMMAR_SYSTEM_PROMPT,
                     ttl="86400s",  # 24 hours — covers a full Render deployment cycle
@@ -348,20 +443,30 @@ class ASLPipeline:
 
     def _can_use_grammar_cache(self, api_key: Optional[str] = None) -> bool:
         """True only when the server's own key is being used (cache was built with it)."""
-        effective_key = api_key or os.environ.get("GOOGLE_API_KEY")
+        effective_key = api_key or self._init_api_key
         return (
             self._grammar_cache_name is not None
             and effective_key == self._init_api_key
         )
 
-    def _run_grammar_agent(self, english_input: str, api_key: Optional[str] = None) -> tuple[GrammarPlanSchema, Optional[GenerateContentResponseUsageMetadata]]:
+    def _refresh_grammar_cache(self, stale_name: str) -> Optional[str]:
+        """Recreate an expired cache once; concurrent callers reuse the replacement."""
+        with self._cache_lock:
+            if self._grammar_cache_name == stale_name:
+                print(f"{Fore.YELLOW}  Grammar cache stale, recreating...{Style.RESET_ALL}")
+                self._grammar_cache_name = self._try_create_grammar_cache()
+            return self._grammar_cache_name
+
+    def _run_grammar_agent(self, english_input: str, api_key: Optional[str] = None, client=None) -> tuple[GrammarPlanSchema, Optional[GenerateContentResponseUsageMetadata]]:
         """Call the Grammar Agent. Uses context cache when the server key is active."""
         print(f"{Fore.MAGENTA}🧠 Grammar Agent: Planning ASL structure...{Style.RESET_ALL}")
-        client = _make_client(api_key)
+        if client is None:
+            with self._client_for(api_key) as owned:
+                return self._run_grammar_agent(english_input, api_key, owned)
         cache_name = self._grammar_cache_name if self._can_use_grammar_cache(api_key) else None
 
-        def _make_config(with_cache: bool) -> types.GenerateContentConfig:
-            if with_cache:
+        def _make_config(cache_name: Optional[str]) -> types.GenerateContentConfig:
+            if cache_name:
                 return types.GenerateContentConfig(
                     cached_content=cache_name,
                     temperature=0.0,
@@ -383,22 +488,20 @@ class ASLPipeline:
         try:
             response = _gemini_with_retry(
                 client.models.generate_content,
-                model=MODEL_NAME, contents=contents, config=_make_config(bool(cache_name))
+                model=self._model, contents=contents, config=_make_config(cache_name)
             )
         except Exception as e:
-            # Cache expired or was evicted — attempt recreation, then retry.
+            # Cache expired or was evicted — attempt recreation, then retry with the
+            # *new* cache name (or the inline prompt if recreation failed).
             if cache_name and any(
                 kw in str(e).lower() for kw in ("not found", "invalid", "expired")
             ):
-                print(
-                    f"{Fore.YELLOW}  Grammar cache stale, recreating...{Style.RESET_ALL}"
-                )
-                self._grammar_cache_name = self._try_create_grammar_cache()
+                new_cache_name = self._refresh_grammar_cache(cache_name)
                 response = _gemini_with_retry(
                     client.models.generate_content,
-                    model=MODEL_NAME,
+                    model=self._model,
                     contents=contents,
-                    config=_make_config(bool(self._grammar_cache_name)),
+                    config=_make_config(new_cache_name),
                 )
             else:
                 raise
@@ -412,9 +515,13 @@ class ASLPipeline:
     def invoke(self, state: dict, api_key: Optional[str] = None) -> dict:
         """Run Grammar Agent → Translation Agent. Pass api_key to override the env-var key."""
         english_input = state["english_input"]
+        api_key = api_key or self._init_api_key
+        with self._client_for(api_key) as client:
+            return self._invoke(english_input, api_key, client)
 
+    def _invoke(self, english_input: str, api_key: Optional[str], client) -> dict:
         try:
-            plan, grammar_usage = self._run_grammar_agent(english_input, api_key)
+            plan, grammar_usage = self._run_grammar_agent(english_input, api_key, client)
         except Exception as e:
             print(f"{Fore.RED}Grammar Agent Error: {e}{Style.RESET_ALL}")
             return {"english_input": english_input, "error": str(e)}
@@ -422,11 +529,13 @@ class ASLPipeline:
         input_text = plan.asl_gloss_order if plan.asl_gloss_order else english_input
         if plan.should_reorder:
             print(
-                f"{Fore.CYAN}✨ Reorder Node: Using ASL order: '{input_text}'{Style.RESET_ALL}"
+                f"{Fore.CYAN}✨ Reorder Node: Using ASL order ({len(input_text.split())} glosses){Style.RESET_ALL}"
             )
 
         try:
-            result, translation_usage = _run_instructor_agent(input_text, english_input, api_key)
+            result, translation_usage = _run_instructor_agent(
+                input_text, english_input, api_key, client=client, model=self._model
+            )
         except Exception as e:
             print(f"{Fore.RED}Instructor Agent Error: {e}{Style.RESET_ALL}")
             return {
@@ -483,6 +592,6 @@ class ASLPipeline:
         }
 
 
-def build_asl_graph() -> ASLPipeline:
+def build_asl_graph(default_api_key: Optional[str] = None, model_name: str = MODEL_NAME) -> ASLPipeline:
     """Return a new ASLPipeline instance."""
-    return ASLPipeline()
+    return ASLPipeline(default_api_key, model_name)

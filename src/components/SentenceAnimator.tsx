@@ -3,22 +3,19 @@ import { SignAnimator } from './learn/SignAnimator';
 import { loadSignData } from '../utils/signDataLoader';
 import { formatSignName } from '../utils/format';
 import type { SignData } from '../types';
+import type { AnimationStep } from '../utils/animationSteps';
 import './SentenceAnimator.css';
 
-interface WordEntry {
-    word: string;
-    isFingerspelled: boolean;
-}
-
 interface SentenceAnimatorProps {
-    words: WordEntry[];
+    /** Memoize this (see buildAnimationSteps): a new array reloads every animation. */
+    words: AnimationStep[];
 }
 
 type PlayState = 'idle' | 'loading' | 'playing' | 'paused';
 
 /** Skip single-letter non-fingerspelled words (e.g. pronoun "I") — no matching animation file. */
-function shouldLoadAnimation(entry: WordEntry): boolean {
-    if (entry.word.length === 1 && /^[a-z]$/i.test(entry.word) && !entry.isFingerspelled) {
+function shouldLoadAnimation(entry: AnimationStep): boolean {
+    if (entry.key.length === 1 && /^[a-z]$/.test(entry.key) && !entry.isFingerspelled) {
         return false;
     }
     return true;
@@ -31,7 +28,7 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
     const [isPlaying, setIsPlaying] = useState(false);
     const isMountedRef = useRef(true);
 
-    const wordKeys = useMemo(() => words.map(w => w.word), [words]);
+    const wordKeys = useMemo(() => words.map(w => w.key), [words]);
     const availableWords = wordKeys.filter(w => signDataMap.has(w));
 
     useEffect(() => {
@@ -46,9 +43,9 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
             await Promise.all(
                 words.map(async (entry) => {
                     if (!shouldLoadAnimation(entry)) return;
-                    const data = await loadSignData(entry.word);
+                    const data = await loadSignData(entry.key);
                     if (data && !cancelled) {
-                        map.set(entry.word, data);
+                        map.set(entry.key, data);
                     }
                 })
             );
@@ -142,7 +139,7 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
 
             <div className="sentence-animator__words">
                 {words.map((entry, idx) => {
-                    const hasData = signDataMap.has(entry.word);
+                    const hasData = signDataMap.has(entry.key);
                     let chipClass = 'sentence-animator__word-chip';
                     if (!hasData) chipClass += ' sentence-animator__word-chip--skipped';
                     else if (playState !== 'idle' && idx === currentIndex) chipClass += ' sentence-animator__word-chip--active';
@@ -150,13 +147,13 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
 
                     return (
                         <button
-                            key={`${entry.word}-${idx}`}
+                            key={`${entry.key}-${idx}`}
                             className={chipClass}
                             onClick={() => handleWordClick(idx)}
                             disabled={!hasData}
-                            title={hasData ? `Play "${formatSignName(entry.word)}"` : `No animation for "${formatSignName(entry.word)}"`}
+                            title={hasData ? `Play "${formatSignName(entry.label)}"` : `No animation for "${formatSignName(entry.label)}"`}
                         >
-                            {formatSignName(entry.word)}
+                            {entry.isFingerspelled ? entry.label : formatSignName(entry.label)}
                         </button>
                     );
                 })}

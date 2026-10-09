@@ -14,9 +14,13 @@ export async function translateToASL(text: string, signal?: AbortSignal): Promis
             const axiosError = error as AxiosError<APIError>;
             const status = axiosError.response?.status;
             if (status === 429) {
-                const retryAfter = axiosError.response?.headers?.['retry-after'];
-                const seconds = retryAfter ? parseInt(retryAfter, 10) : 60;
-                throw new Error(`rate_limit:${seconds}: You've made too many requests. Please wait before trying again.`);
+                const retryAfter = parseInt(axiosError.response?.headers?.['retry-after'] ?? '', 10);
+                const seconds = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
+                const detail = axiosError.response?.data?.detail;
+                const message = typeof detail === 'string'
+                    ? detail
+                    : "You've made too many requests. Please wait before trying again.";
+                throw new Error(`rate_limit:${seconds}: ${message}`);
             }
             if (status === 503) {
                 throw new Error('ai_busy: The AI service is experiencing high demand. Please try again in a few seconds.');

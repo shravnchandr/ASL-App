@@ -1,44 +1,40 @@
 /**
  * Print Styles
- * Optimized for printing ASL sign descriptions
+ * Optimized for printing translation results (DictionaryPage). Selectors track
+ * the current markup; "Save PDF" builds its document from data instead.
  */
 
 @media print {
 
-    /* Hide non-essential elements */
-    .app-header,
-    .search-section,
+    /* Hide app chrome and interactive-only elements */
+    .layout__topbar,
+    .layout__mobile-nav,
+    .skip-link,
+    .rate-limit-banner,
+    .results-phrase-card__actions-col,
+    .gloss-bar__copy,
+    .results-right,
+    .results-footer,
     .feedback-widget,
-    .app-footer,
-    .action-buttons,
-    .theme-switcher,
-    .session-warning,
-    .skip-link {
+    .follow-up,
+    .sign-card__anim-panel,
+    .sign-card__details-toggle,
+    .sign-card__practice,
+    .sign-card__links {
         display: none !important;
     }
 
-    /* Optimize layout for print */
-    body {
+    body,
+    .layout,
+    .layout__main {
         background: white !important;
         color: black !important;
-    }
-
-    .app {
-        background: white !important;
-    }
-
-    .app-main {
-        padding: 0 !important;
-    }
-
-    .container {
-        max-width: 100% !important;
         padding: 0 !important;
     }
 
     /* Print header */
-    .results-section::before {
-        content: "ASL Dictionary - Printed on " attr(data-print-date);
+    .dictionary-page__results::before {
+        content: "ASL Guide - Printed on " attr(data-print-date);
         display: block;
         font-size: 12pt;
         color: #666;
@@ -47,60 +43,47 @@
         border-bottom: 1pt solid #ccc;
     }
 
-    /* Optimize sign cards for print */
-    .signs-grid {
+    /* Single column: the animator column is hidden */
+    .results-columns {
         display: block !important;
     }
 
-    .sign-card {
-        page-break-inside: avoid;
+    .results-phrase-card,
+    .gloss-bar,
+    .grammar-note {
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        border: 1pt solid #ccc !important;
         break-inside: avoid;
-        margin-bottom: 20pt;
+    }
+
+    .sign-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-bottom: 14pt;
         border: 1pt solid #ccc !important;
         box-shadow: none !important;
         background: white !important;
         color: black !important;
     }
 
-    .sign-word {
+    .sign-card__word {
         color: #000 !important;
-        font-size: 18pt;
+        font-size: 16pt;
     }
 
-    .sign-number {
-        background: #000 !important;
-        color: #fff !important;
-    }
-
-    .detail-icon {
-        background: #f0f0f0 !important;
-        color: #000 !important;
-    }
-
-    .detail-label {
-        color: #666 !important;
-        font-size: 10pt;
-    }
-
-    .detail-value {
-        color: #000 !important;
+    .sign-card__desc,
+    .sign-card__expanded,
+    .grammar-note__text {
+        color: #222 !important;
         font-size: 11pt;
     }
 
-    /* ASL Note */
-    .asl-note {
-        page-break-inside: avoid;
-        background: #f9f9f9 !important;
-        color: #000 !important;
-        border: 1pt solid #ccc !important;
-    }
-
-    .note-title {
-        color: #000 !important;
-    }
-
-    .note-text {
+    .sign-card__badge {
+        background: none !important;
         color: #333 !important;
+        border: 1pt solid #999 !important;
     }
 
     /* Remove animations and transitions */

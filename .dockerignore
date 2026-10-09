@@ -14,6 +14,10 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
+python_code/.venv-extraction/
+htmlcov/
+.coverage
 ENV/
 *.egg-info/
 .pytest_cache/
@@ -66,3 +70,9 @@ docker-compose.yml
 # Development files
 .gemini/
 *.md
+
+# Training data and artifacts (not used by the runtime image)
+data/
+mediapipe_models/
+saved_models/
+alphabet_translate/

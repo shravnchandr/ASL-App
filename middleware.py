@@ -15,6 +15,10 @@ from db import AsyncSessionLocal, create_analytics_event
 
 settings = get_settings()
 
+# Strong refs to in-flight analytics writes — the event loop only keeps weak refs,
+# so an unreferenced task can be garbage-collected before it runs.
+_background_tasks: set[asyncio.Task] = set()
+
 
 async def add_security_headers(request: Request, call_next):
     """Add security headers to every response."""
@@ -41,18 +45,34 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+# Prefixes that are never page views: API calls (translate logs its own events),
+# health checks, and static/data downloads fetched in the background.
+_UNTRACKED_PREFIXES = ("/api/", "/health", "/assets", "/sign-data", "/models")
+# Drop events instead of queueing unbounded SQLite writes under load
+_MAX_PENDING_ANALYTICS = 50
+
+
+def _is_page_view(request: Request, status_code: int) -> bool:
+    path = request.url.path
+    if request.method != "GET" or status_code != 200:
+        return False
+    if path.startswith(_UNTRACKED_PREFIXES):
+        return False
+    # Files (sw.js, manifest.json, favicon.ico, robots.txt, …) aren't navigations
+    return "." not in path.rsplit("/", 1)[-1]
+
+
 async def analytics_tracking_middleware(request: Request, call_next):
-    """Track page views and API requests for the analytics dashboard."""
-    # Skip /api/ entirely — translate.py already logs its own analytics for translations.
-    # Double-logging every API call floods SQLite under concurrent load.
-    skip_paths = ["/api/", "/health", "/assets"]
-    should_track = not any(request.url.path.startswith(p) for p in skip_paths)
-
-    if not should_track:
-        return await call_next(request)
-
+    """Record successful SPA page navigations for the analytics dashboard."""
     start_time = time.time()
     response = await call_next(request)
+
+    if not _is_page_view(request, response.status_code):
+        return response
+    if len(_background_tasks) >= _MAX_PENDING_ANALYTICS:
+        app_logger.debug("Analytics backlog full; dropping page view")
+        return response
+
     response_time_ms = int((time.time() - start_time) * 1000)
 
     async def _log():
@@ -69,5 +89,7 @@ async def analytics_tracking_middleware(request: Request, call_next):
         except Exception as e:
             app_logger.error(f"Failed to log analytics: {e}")
 
-    asyncio.create_task(_log())
+    task = asyncio.create_task(_log())
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
     return response

@@ -243,6 +243,13 @@
     text-align: left;
 }
 
+.translate-recent__empty {
+    margin: 0;
+    padding: 16px 20px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px;
+}
+
 .translate-recent__rows strong {
     font-size: 16px;
     font-weight: 700;
@@ -1214,6 +1221,16 @@
 /* ═══════════════════════════════════════════════════════════
    TRANSLATE LOADING VIEW  (pipeline progress state)
    ═══════════════════════════════════════════════════════════ */
+
+/* Spinners rotate in CSS (no per-frame React renders); global reduced-motion rule stops them */
+@keyframes tlSpin {
+    to { transform: rotate(360deg); }
+}
+
+.tl-spin {
+    animation: tlSpin 1.4s linear infinite;
+    transform-origin: 50% 50%;
+}
 
 @keyframes tlShimmer {
     0%   { background-position: 200% 0; }

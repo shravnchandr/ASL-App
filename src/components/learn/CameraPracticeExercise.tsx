@@ -5,22 +5,8 @@ import { useASLClassifier } from '../../hooks/useASLClassifier';
 import { PredictionBuffer } from '../../utils/predictionBuffer';
 import { formatSignName } from '../../utils/format';
 import { announceToScreenReader } from '../../utils/accessibility';
+import { DIGIT_TO_WORD } from '../../utils/cameraSigns';
 import './CameraPracticeExercise.css';
-
-// Map classifier digit labels (0-9) to word labels used in Level 2
-const DIGIT_TO_WORD: Record<string, string> = {
-  '0': 'zero',
-  '1': 'one',
-  '2': 'two',
-  '3': 'three',
-  '4': 'four',
-  '5': 'five',
-  '6': 'six',
-  '7': 'seven',
-  '8': 'eight',
-  '9': 'nine',
-  '10': 'ten',
-};
 
 const TARGET_FPS = 15;
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
@@ -42,8 +28,8 @@ export function CameraPracticeExercise({
   disabled = false,
 }: CameraPracticeExerciseProps) {
   const { videoRef, isReady: cameraReady, isLoading: cameraLoading, error: cameraError, startCamera, stopCamera } = useCamera();
-  const { landmarks, isHandDetected, isLoading: handLoading, processFrame } = useHandDetection();
-  const { predict, isLoading: modelLoading } = useASLClassifier();
+  const { landmarks, isHandDetected, isLoading: handLoading, error: handError, processFrame } = useHandDetection();
+  const { predict, isLoading: modelLoading, error: modelError } = useASLClassifier();
 
   const [prediction, setPrediction] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<number>(0);
@@ -58,11 +44,12 @@ export function CameraPracticeExercise({
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoading = handLoading || modelLoading;
+  const loadError = cameraError || handError || modelError;
 
   const status: 'loading' | 'ready' | 'matched' | 'error' = (() => {
     if (isMatched) return 'matched';
+    if (loadError) return 'error';
     if (isLoading || cameraLoading) return 'loading';
-    if (cameraError) return 'error';
     if (cameraReady) return 'ready';
     return 'loading';
   })();
@@ -83,10 +70,12 @@ export function CameraPracticeExercise({
   }, [normalizeSign, targetSign]);
 
   useEffect(() => {
-    if (!isLoading && !cameraError) {
-      startCamera();
+    // Don't open the camera if recognition can't run; startCamera is stable, so
+    // a camera error doesn't loop (Try again calls it explicitly).
+    if (!isLoading && !handError && !modelError) {
+      void startCamera();
     }
-  }, [isLoading, cameraError, startCamera]);
+  }, [isLoading, handError, modelError, startCamera]);
 
   useEffect(() => {
     if (!cameraReady || isLoading || status === 'matched' || disabled) return;
@@ -186,7 +175,12 @@ export function CameraPracticeExercise({
 
       {status === 'error' && (
         <div className="camera-practice__error">
-          <p>Camera error: {cameraError}</p>
+          <p>{cameraError ? `Camera error: ${cameraError}` : `Couldn't load sign recognition: ${handError || modelError}`}</p>
+          {cameraError && (
+            <button onClick={() => void startCamera()} className="camera-practice__skip-btn">
+              Try again
+            </button>
+          )}
           <button onClick={onSkip} className="camera-practice__skip-btn">
             Skip to next exercise
           </button>

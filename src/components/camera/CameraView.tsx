@@ -6,7 +6,7 @@ import { HAND_CONNECTIONS } from '../../utils/handLandmarks';
 import './CameraView.css';
 
 interface CameraViewProps {
-  videoRef: RefObject<HTMLVideoElement | null>;
+  videoRef: RefObject<HTMLVideoElement>;
   isLoading: boolean;
   facingMode: FacingMode;
   landmarks: NormalizedLandmark[] | null;

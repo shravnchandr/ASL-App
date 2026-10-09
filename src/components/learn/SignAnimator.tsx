@@ -9,6 +9,8 @@ interface SignAnimatorProps {
     size: 'xs' | 'card' | 'small' | 'medium' | 'large';
     onAnimationEnd?: () => void;
     onFrameChange?: (frame: number) => void;
+    /** Change this value to restart from frame 0 (e.g. a Replay button). */
+    resetToken?: number;
 }
 
 const POSE_CONNECTIONS: [number, number][] = [
@@ -69,12 +71,17 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
     size = 'medium',
     onAnimationEnd,
     onFrameChange,
+    resetToken = 0,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const handCanvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number | null>(null);
     const lastFrameTimeRef = useRef<number>(0);
     const [currentFrame, setCurrentFrame] = useState(0);
+    // Authoritative playback position; state mirrors it only to trigger re-rendering
+    const frameRef = useRef(0);
+    const onAnimationEndRef = useRef(onAnimationEnd);
+    const onFrameChangeRef = useRef(onFrameChange);
     const [isDarkMode, setIsDarkMode] = useState(false);
 
     const config = SIZE_CONFIG[size];
@@ -437,6 +444,18 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
         }
     }, [config.width, config.height, isDarkMode, computeTransform, drawPose, drawFace, drawHand, renderHandZoom]);
 
+    useEffect(() => {
+        onAnimationEndRef.current = onAnimationEnd;
+        onFrameChangeRef.current = onFrameChange;
+    });
+
+    const seek = useCallback((frame: number) => {
+        frameRef.current = frame;
+        setCurrentFrame(frame);
+    }, []);
+
+    // Frame advancement happens in the rAF callback, not inside a state updater:
+    // updaters must be pure, and parent callbacks set state in other components.
     const animate = useCallback((timestamp: number) => {
         if (!signData || !isPlaying) return;
 
@@ -445,20 +464,18 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
 
         if (elapsed >= frameInterval) {
             lastFrameTimeRef.current = timestamp;
-
-            setCurrentFrame(prevFrame => {
-                const nextFrame = prevFrame + 1;
-                if (nextFrame >= signData.frame_count) {
-                    onAnimationEnd?.();
-                    return 0;
-                }
-                onFrameChange?.(nextFrame);
-                return nextFrame;
-            });
+            const nextFrame = frameRef.current + 1;
+            if (nextFrame >= signData.frame_count) {
+                seek(0);
+                onAnimationEndRef.current?.();
+            } else {
+                seek(nextFrame);
+                onFrameChangeRef.current?.(nextFrame);
+            }
         }
 
         animationRef.current = requestAnimationFrame(animate);
-    }, [signData, isPlaying, playbackSpeed, onAnimationEnd, onFrameChange]);
+    }, [signData, isPlaying, playbackSpeed, seek]);
 
     useEffect(() => {
         if (isPlaying && signData) {
@@ -486,8 +503,10 @@ export const SignAnimator: React.FC<SignAnimatorProps> = ({
     }, [signData, renderFrame]);
 
     useEffect(() => {
-        setCurrentFrame(0);
-    }, [signData?.sign]);
+        seek(0);
+        lastFrameTimeRef.current = performance.now();
+        onFrameChangeRef.current?.(0);
+    }, [signData?.sign, resetToken, seek]);
 
     const showZoom = config.handZoomSize > 0;
     const showInfo = size === 'large';

@@ -25,19 +25,20 @@ export const SignToWordExercise: React.FC<SignToWordExerciseProps> = ({
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [currentFrame, setCurrentFrame] = useState(0);
+    const [replayToken, setReplayToken] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [hasAnswered, setHasAnswered] = useState(false);
 
     const handlePlayPause = useCallback(() => setIsPlaying(p => !p), []);
 
     const handleReplay = useCallback(() => {
-        setCurrentFrame(0);
+        setReplayToken(t => t + 1);
         setIsPlaying(true);
     }, []);
 
     const handleReplaySlow = useCallback(() => {
         setPlaybackSpeed(0.5);
-        setCurrentFrame(0);
+        setReplayToken(t => t + 1);
         setIsPlaying(true);
     }, []);
 
@@ -87,6 +88,7 @@ export const SignToWordExercise: React.FC<SignToWordExerciseProps> = ({
                             playbackSpeed={playbackSpeed}
                             size="medium"
                             onFrameChange={handleFrameChange}
+                            resetToken={replayToken}
                         />
                     </div>
 

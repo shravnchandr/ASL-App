@@ -49,13 +49,24 @@ services:
       - key: GOOGLE_API_KEY
         sync: false  # This must be set manually in Render Dashboard
 
+      # Free translations per IP per UTC day for visitors without their own key
+      - key: SHARED_KEY_DAILY_LIMIT
+        value: 10
+
       - key: ADMIN_PASSWORD
         sync: false  # This must be set manually in Render Dashboard
 
-      # CORS - Render provides a URL like: https://asl-dictionary.onrender.com
-      # You can update this after deployment with your actual URL
+      # CORS - current URL plus the old one (kept live for shared links)
       - key: CORS_ORIGINS
-        value: '["https://asl-dictionary.onrender.com"]'
+        value: '["https://asl-guide.onrender.com", "https://asl-dictionary.onrender.com"]'
+
+      # Secret salt for IP hashing (Render generates a random value once)
+      - key: IP_HASH_SALT
+        generateValue: true
+
+      # Proxies in front of the app that append to X-Forwarded-For (Render's edge = 1)
+      - key: TRUSTED_PROXY_HOPS
+        value: 1
 
     # Auto-deploy on push to main branch
     autoDeploy: true

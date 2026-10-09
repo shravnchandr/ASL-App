@@ -3,6 +3,7 @@ import { SignAnimator } from './SignAnimator';
 import { PlaybackControls } from './PlaybackControls';
 import { formatSignName } from '../../utils/format';
 import type { SignData } from '../../types';
+import { toSignKey } from '../../utils/signDataLoader';
 import './RecallExercise.css';
 
 interface RecallExerciseProps {
@@ -21,6 +22,7 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [currentFrame, setCurrentFrame] = useState(0);
+    const [replayToken, setReplayToken] = useState(0);
     const [inputValue, setInputValue] = useState('');
     const [hasAnswered, setHasAnswered] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
@@ -37,7 +39,7 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
     }, []);
 
     const handleReplay = useCallback(() => {
-        setCurrentFrame(0);
+        setReplayToken(t => t + 1);
         setIsPlaying(true);
     }, []);
 
@@ -55,7 +57,8 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
         if (hasAnswered || disabled || !inputValue.trim()) return;
 
         const answer = inputValue.trim();
-        const correct = answer.toLowerCase() === correctAnswer.toLowerCase();
+        // "thank you", "Thank-You" and "3" match library keys thank_you / three
+        const correct = toSignKey(answer) === toSignKey(correctAnswer);
 
         setHasAnswered(true);
         setIsCorrect(correct);
@@ -91,6 +94,7 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
                     playbackSpeed={playbackSpeed}
                     size="medium"
                     onFrameChange={handleFrameChange}
+                    resetToken={replayToken}
                 />
             </div>
 

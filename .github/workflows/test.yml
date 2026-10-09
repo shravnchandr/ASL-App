@@ -21,10 +21,20 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      # pyproject.toml is the source of truth; uv.lock and the pip files are generated
+      - name: Check dependency files are in sync
+        run: |
+          python -m pip install uv
+          uv lock --check
+          uv export --no-dev --no-emit-project --format requirements-txt | diff -u requirements.txt - \
+            || { echo "requirements.txt is stale: re-export it from uv.lock (see pyproject.toml)"; exit 1; }
+          uv export --no-emit-project --format requirements-txt | diff -u requirements-dev.txt - \
+            || { echo "requirements-dev.txt is stale: re-export it from uv.lock (see pyproject.toml)"; exit 1; }
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Run pytest
         env:
@@ -60,14 +70,13 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      # tsconfig.json is a solution file ("files": [] + references), so a plain
+      # `tsc --noEmit` checks nothing — build mode follows the references.
       - name: Run TypeScript compiler check
-        run: npx tsc --noEmit
+        run: npx tsc -b
 
-      - name: Run Jest tests (when implemented)
-        run: |
-          echo "Jest tests will run here once implemented"
-          # npm test -- --coverage
-        continue-on-error: true
+      - name: Run Vitest
+        run: npm test
 
   build-test:
     name: Production Build Test

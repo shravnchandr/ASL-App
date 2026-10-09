@@ -3,7 +3,7 @@
  */
 
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { DictionaryPage } from './components/DictionaryPage';
 import HomePage from './components/HomePage';
@@ -13,6 +13,15 @@ const LearnPage = lazy(() => import('./components/learn/LearnPage').then(m => ({
 const CameraPage = lazy(() => import('./components/camera/CameraPage'));
 const Admin = lazy(() => import('./components/Admin').then(m => ({ default: m.Admin })));
 const SignBrowserPage = lazy(() => import('./components/SignBrowserPage'));
+
+/** Older share links pointed at /?q=…; send them to the translation page. */
+function HomeOrLegacyShare() {
+    const [searchParams] = useSearchParams();
+    if (searchParams.get('q')) {
+        return <Navigate to={`/translate?${searchParams.toString()}`} replace />;
+    }
+    return <HomePage />;
+}
 
 function App() {
     return (
@@ -24,7 +33,7 @@ function App() {
                     </Suspense>
                 } />
                 <Route element={<Layout />}>
-                    <Route index element={<HomePage />} />
+                    <Route index element={<HomeOrLegacyShare />} />
                     <Route path="translate" element={<DictionaryPage />} />
                     <Route path="dictionary" element={<SignBrowserPage />} />
                     <Route path="signs" element={<SignBrowserPage />} />

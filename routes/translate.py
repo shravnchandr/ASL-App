@@ -3,8 +3,8 @@ Translation routes: POST /translate and GET /rate-limit.
 """
 
 import asyncio
-import os
 import time
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
@@ -21,12 +21,117 @@ from db import (
     hash_ip,
     check_shared_key_rate_limit,
     try_consume_shared_key_quota,
+    release_shared_key_quota,
 )
+from cache import generate_cache_key
 from python_code.asl import SentenceDescriptionSchema
 from .models import TranslateRequest, TranslateResponse, SignResponse
 
 settings = get_settings()
 router = APIRouter()
+
+
+def _server_api_key() -> str:
+    """Key used for anonymous requests. Either way it is server-funded, so the daily quota applies."""
+    return settings.shared_api_key or settings.google_api_key
+
+
+def _seconds_until_utc_midnight() -> int:
+    now = datetime.now(timezone.utc)
+    midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return max(1, int((midnight - now).total_seconds()))
+
+
+_slots: tuple[asyncio.AbstractEventLoop, asyncio.Semaphore] | None = None
+
+
+class _Job:
+    """One pipeline run, possibly shared by several identical requests."""
+
+    def __init__(self) -> None:
+        self.waiters = 0
+        self.started = False  # True once it holds a slot and has been handed to a thread
+        self.task: asyncio.Task | None = None
+
+
+_inflight: dict[str, _Job] = {}
+_queued: set[_Job] = set()  # created but not yet started
+
+
+def _translation_slots() -> asyncio.Semaphore:
+    """Semaphore bound to the running loop (created lazily so import has no loop)."""
+    global _slots
+    loop = asyncio.get_running_loop()
+    if _slots is None or _slots[0] is not loop:
+        _slots = (loop, asyncio.Semaphore(settings.max_concurrent_translations))
+    return _slots[1]
+
+
+def _too_busy() -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail="The AI service is taking too long right now. Please try again in a few seconds.",
+    )
+
+
+async def _run_pipeline(asl_graph, text: str, api_key: str | None, dedupe: bool) -> dict:
+    """
+    Run the pipeline in a worker thread with a concurrency cap, a bounded queue and
+    a total deadline. Identical concurrent server-key requests share one run.
+
+    A job only starts if someone is still waiting for it: when the last caller
+    times out, a job still queued for a slot is cancelled, so abandoned requests
+    (already answered 503 and refunded) never reach Gemini. A job already running
+    in a thread can't be interrupted and finishes in the background.
+    """
+    key = generate_cache_key(text) if dedupe else None
+    job = _inflight.get(key) if key else None
+    if job is None:
+        if len(_queued) >= settings.max_queued_translations:
+            app_logger.warning("Translation queue full; rejecting request")
+            raise _too_busy()
+        job = _Job()
+
+        async def _work() -> dict:
+            async with _translation_slots():
+                _queued.discard(job)
+                if job.waiters == 0:
+                    raise asyncio.CancelledError()
+                job.started = True
+                return await asyncio.to_thread(asl_graph.invoke, {"english_input": text}, api_key)
+
+        job.task = asyncio.ensure_future(_work())
+        _queued.add(job)
+
+        def _done(_t, k=key, j=job) -> None:
+            _queued.discard(j)
+            if k and _inflight.get(k) is j:
+                del _inflight[k]
+
+        job.task.add_done_callback(_done)
+        if key:
+            _inflight[key] = job
+
+    job.waiters += 1
+    try:
+        return await asyncio.wait_for(asyncio.shield(job.task), settings.translate_timeout_seconds)
+    except asyncio.TimeoutError:
+        app_logger.warning("Translation exceeded the server time budget")
+        raise _too_busy()
+    finally:
+        job.waiters -= 1
+        if job.waiters == 0 and not job.started and not job.task.done():
+            job.task.cancel()
+            if key and _inflight.get(key) is job:
+                del _inflight[key]  # don't let a new identical request join a cancelled job
+
+
+def _quota_headers(info: dict) -> dict:
+    return {
+        "X-RateLimit-Limit": str(info["limit"]),
+        "X-RateLimit-Remaining": str(info["remaining"]),
+        "X-RateLimit-Reset": "midnight UTC",
+    }
 
 
 @router.post("/translate", response_model=TranslateResponse)
@@ -39,14 +144,15 @@ async def translate_to_asl(
 ):
     """
     Translate an English phrase to ASL sign descriptions.
-    Rate limited; supports shared API key with per-IP daily limits.
+    Rate limited per minute; requests on the server's key also have a per-IP daily
+    allowance that counts successful translations (failed ones are refunded).
     """
     start_time = time.time()
-    using_shared_key = False
     rate_limit_info = None
+    quota_reservation: tuple[str, str] | None = None  # (ip_hash, date) of the reserved slot
 
     try:
-        app_logger.info(f"Translation request: '{translate_req.text}'")
+        app_logger.info(f"Translation request ({len(translate_req.text)} chars)")
 
         from cache import get_cached_translation, cache_translation
 
@@ -71,53 +177,55 @@ async def translate_to_asl(
                     app_logger.error(f"Failed to log cache hit analytics: {e}")
 
             background_tasks.add_task(_log_cache_hit)
-            app_logger.info(f"Returning cached translation for: '{translate_req.text}'")
-            return TranslateResponse(**cached_result)
+            app_logger.info("Returning cached translation")
+            # Echo the caller's phrasing, not whichever variant populated the cache
+            return TranslateResponse(**{**cached_result, "query": translate_req.text})
 
         asl_graph = request.app.state.asl_graph
         custom_api_key = request.headers.get("X-Custom-API-Key")
         api_key_to_use = None
         key_type = "server"
+        server_key = _server_api_key()
 
         if custom_api_key:
             api_key_to_use = custom_api_key
             key_type = "custom"
             app_logger.info("Using custom API key from request header")
-        elif settings.shared_api_key:
-            using_shared_key = True
-            key_type = "shared"
+        elif server_key:
+            key_type = "shared" if settings.shared_api_key else "server"
             ip_hash = hash_ip(get_real_ip(request))
             rate_limit_info = await try_consume_shared_key_quota(
                 db, ip_hash, settings.shared_key_daily_limit
             )
             if not rate_limit_info["allowed"]:
                 app_logger.warning(
-                    f"Shared key rate limit exceeded for IP hash: {ip_hash[:8]}..."
+                    f"Daily translation limit exceeded for IP hash: {ip_hash[:8]}..."
                 )
                 raise HTTPException(
                     status_code=429,
-                    detail=f"Daily limit of {settings.shared_key_daily_limit} translations reached. Add your own API key for unlimited access.",
+                    detail=(
+                        f"You've used all {settings.shared_key_daily_limit} free translations for today. "
+                        "The limit resets at midnight UTC, or add your own API key for unlimited access."
+                    ),
                     headers={
-                        "X-RateLimit-Limit": str(settings.shared_key_daily_limit),
-                        "X-RateLimit-Remaining": "0",
-                        "X-RateLimit-Reset": "midnight UTC",
+                        **_quota_headers(rate_limit_info),
+                        "Retry-After": str(_seconds_until_utc_midnight()),
+                        "X-RateLimit-Scope": "daily",
                     },
                 )
-            api_key_to_use = settings.shared_api_key
+            quota_reservation = (ip_hash, rate_limit_info["date"])
+            api_key_to_use = server_key
             app_logger.info(
-                f"Using shared API key (remaining: {rate_limit_info['remaining']})"
+                f"Using {key_type} API key (remaining today: {rate_limit_info['remaining']})"
             )
-        elif os.environ.get("GOOGLE_API_KEY"):
-            api_key_to_use = os.environ.get("GOOGLE_API_KEY")
-            app_logger.info("Using server's main API key")
         else:
             raise HTTPException(
                 status_code=503,
                 detail="Translation service unavailable. Please add your own API key.",
             )
 
-        final_state = await asyncio.to_thread(
-            asl_graph.invoke, {"english_input": translate_req.text}, api_key_to_use
+        final_state = await _run_pipeline(
+            asl_graph, translate_req.text, api_key_to_use, dedupe=key_type != "custom"
         )
 
         if final_state.get("error"):
@@ -129,7 +237,15 @@ async def translate_to_asl(
                     status_code=503,
                     detail="The AI service is experiencing high demand. Please try again in a few seconds.",
                 )
-            raise HTTPException(status_code=500, detail=f"Translation failed: {err}")
+            if key_type == "custom" and any(
+                p in err_lower for p in ("api key not valid", "api_key_invalid", "permission denied", "401", "403")
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Your API key was rejected by Google. Check it in Settings and try again.",
+                )
+            # Don't echo raw upstream errors to the client; they're logged above.
+            raise HTTPException(status_code=500, detail="Translation failed. Please try again.")
 
         final_output: SentenceDescriptionSchema = final_state.get("final_output")
         if not final_output:
@@ -185,34 +301,41 @@ async def translate_to_asl(
         background_tasks.add_task(_log_translation)
         app_logger.info(f"Translation successful: {len(signs)} signs returned")
 
-        if using_shared_key and rate_limit_info:
+        if rate_limit_info:
             return JSONResponse(
                 content=response.model_dump(),
-                headers={
-                    "X-RateLimit-Limit": str(settings.shared_key_daily_limit),
-                    "X-RateLimit-Remaining": str(rate_limit_info["remaining"]),
-                    "X-RateLimit-Reset": "midnight UTC",
-                    "X-Using-Shared-Key": "true",
-                },
+                headers={**_quota_headers(rate_limit_info), "X-Using-Shared-Key": "true"},
             )
 
         return response
 
     except HTTPException:
+        await _refund_quota(db, quota_reservation)
         raise
     except Exception as e:
+        await _refund_quota(db, quota_reservation)
         app_logger.exception(f"Unexpected error in translation: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+async def _refund_quota(db: AsyncSession, reservation: tuple[str, str] | None) -> None:
+    """Give back a reserved daily slot when the translation did not succeed."""
+    if not reservation:
+        return
+    try:
+        await release_shared_key_quota(db, *reservation)
+    except Exception as e:
+        app_logger.error(f"Failed to refund translation quota: {e}")
+
+
 @router.get("/rate-limit")
 async def get_rate_limit_status(request: Request, db: AsyncSession = Depends(get_db)):
-    """Return shared API key rate limit status for the calling IP."""
+    """Return the daily free-translation allowance for the calling IP."""
     try:
-        if not settings.shared_api_key:
+        if not _server_api_key():
             return {
                 "shared_key_available": False,
-                "message": "Shared API key not configured",
+                "message": "No server API key configured",
             }
 
         ip_hash = hash_ip(get_real_ip(request))

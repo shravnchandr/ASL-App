@@ -3,12 +3,11 @@ Feedback routes: POST /feedback, POST /feedback/general, GET /feedback/stats.
 """
 
 from fastapi import APIRouter, HTTPException, Request, Depends
-from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import get_settings
 from logger import app_logger
-from deps import limiter
+from deps import get_real_ip, limiter
 from db import get_db, create_feedback, get_feedback_stats
 from .models import FeedbackRequest, FeedbackResponse, GeneralFeedbackRequest
 
@@ -33,7 +32,7 @@ async def submit_feedback(
             query=feedback_req.query,
             rating=feedback_req.rating,
             feedback_text=feedback_req.feedback_text,
-            ip_address=get_remote_address(request),
+            ip_address=get_real_ip(request),
         )
         return FeedbackResponse(success=True, message="Thank you for your feedback!")
     except Exception as e:
@@ -54,7 +53,7 @@ async def submit_general_feedback(
         await create_feedback(
             session=db,
             feedback_text=feedback_req.feedback_text,
-            ip_address=get_remote_address(request),
+            ip_address=get_real_ip(request),
             feedback_type="general",
             category=feedback_req.category,
             email=feedback_req.email,

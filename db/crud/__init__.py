@@ -14,6 +14,9 @@ from .analytics import (
     get_shared_key_usage_today,
     check_shared_key_rate_limit,
     try_consume_shared_key_quota,
+    release_shared_key_quota,
+    prune_old_records,
+    retention_loop,
 )
 
 __all__ = [
@@ -30,4 +33,7 @@ __all__ = [
     "get_shared_key_usage_today",
     "check_shared_key_rate_limit",
     "try_consume_shared_key_quota",
+    "release_shared_key_quota",
+    "prune_old_records",
+    "retention_loop",
 ]

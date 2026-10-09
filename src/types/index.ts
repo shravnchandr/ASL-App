@@ -155,3 +155,11 @@ export interface Exercise {
     correctAnswer: string;
 }
 
+/** Outcome of one answered exercise; at most one per exercise id per session. */
+export interface ExerciseResult {
+    exerciseId: string;
+    sign: string;
+    isCorrect: boolean;
+    xp: number;
+}
+

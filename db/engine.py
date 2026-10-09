@@ -3,7 +3,8 @@ Database engine, session factory, and core utilities.
 """
 
 import hashlib
-from sqlalchemy import text
+import hmac
+from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -38,6 +39,23 @@ AsyncSessionLocal = async_sessionmaker(
 Base = declarative_base()
 
 
+# Columns added to existing tables after their first release: (table, column, DDL type).
+# Must be nullable (or have a server default) so ALTER TABLE succeeds on populated tables.
+_ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    ("analytics", "key_type", "VARCHAR(20)"),
+)
+
+
+def _missing_columns(sync_conn) -> list[tuple[str, str, str]]:
+    inspector = inspect(sync_conn)
+    existing = {
+        table: {c["name"] for c in inspector.get_columns(table)}
+        for table in {t for t, _, _ in _ADDED_COLUMNS}
+        if inspector.has_table(table)
+    }
+    return [(t, c, ddl) for t, c, ddl in _ADDED_COLUMNS if t in existing and c not in existing[t]]
+
+
 async def init_db():
     """Initialize database tables. Models are imported here to ensure they are
     registered with Base before create_all runs."""
@@ -50,12 +68,20 @@ async def init_db():
             await conn.execute(text("PRAGMA journal_mode=WAL"))
             await conn.execute(text("PRAGMA synchronous=NORMAL"))
         await conn.run_sync(Base.metadata.create_all)
-        # Migration: create_all adds missing tables but not columns to existing tables.
-        try:
-            await conn.execute(text("ALTER TABLE analytics ADD COLUMN key_type VARCHAR(20)"))
-            app_logger.info("Migration: added key_type column to analytics")
-        except Exception:
-            pass  # Column already exists
+        # create_all adds missing tables but not columns to existing ones. Inspect
+        # first instead of attempting the ALTER and swallowing the error: on
+        # PostgreSQL a failed statement aborts the whole startup transaction.
+        missing = await conn.run_sync(_missing_columns)
+        for table, column, ddl_type in missing:
+            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
+            app_logger.info(f"Migration: added {table}.{column}")
+    if settings.environment == "production" and _is_sqlite:
+        app_logger.warning(
+            "DATABASE_URL is SQLite: feedback, analytics and daily quotas are lost whenever "
+            "the container filesystem resets (every deploy on Render without a disk)"
+        )
+    if settings.environment == "production" and not settings.ip_hash_salt:
+        app_logger.warning("IP_HASH_SALT is not set — stored IP hashes are reversible")
     app_logger.info("Database initialized successfully")
 
 
@@ -69,5 +95,12 @@ async def get_db():
 
 
 def hash_ip(ip: str) -> str:
-    """Hash an IP address with SHA-256 for privacy-preserving storage."""
+    """Hash an IP address for privacy-preserving storage.
+
+    With IP_HASH_SALT set this is HMAC-SHA256 keyed by the salt, which can't be
+    reversed by enumerating the IPv4 space. Without it, falls back to plain SHA-256
+    (reversible — set the salt in production).
+    """
+    if settings.ip_hash_salt:
+        return hmac.new(settings.ip_hash_salt.encode(), ip.encode(), hashlib.sha256).hexdigest()
     return hashlib.sha256(ip.encode()).hexdigest()

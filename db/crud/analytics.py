@@ -2,17 +2,19 @@
 CRUD operations for the Analytics model.
 """
 
+import asyncio
+
 from datetime import datetime, timedelta, timezone
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from logger import app_logger
-from ..models import Analytics
-from ..engine import hash_ip
+from ..models import Analytics, SharedKeyUsage
+from ..engine import AsyncSessionLocal, hash_ip
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def create_analytics_event(
@@ -212,7 +214,7 @@ async def try_consume_shared_key_quota(
         )
         cur_row = cur.fetchone()
         used = cur_row[0] if cur_row is not None else daily_limit
-        return {"allowed": False, "used": used, "limit": daily_limit, "remaining": 0}
+        return {"allowed": False, "used": used, "limit": daily_limit, "remaining": 0, "date": today}
 
     used = row[0]
     return {
@@ -220,7 +222,27 @@ async def try_consume_shared_key_quota(
         "used": used,
         "limit": daily_limit,
         "remaining": max(0, daily_limit - used),
+        "date": today,  # pass to release_shared_key_quota so a refund hits the same day
     }
+
+
+async def release_shared_key_quota(session: AsyncSession, ip_hash: str, date: str) -> None:
+    """
+    Refund one slot consumed by try_consume_shared_key_quota (e.g. the upstream
+    translation failed), so the daily allowance counts successful translations only.
+    `date` is the reservation's date, not today's: a request that straddles UTC
+    midnight must not decrement the new day's count.
+    """
+    from sqlalchemy import text
+
+    await session.execute(
+        text(
+            "UPDATE shared_key_usage SET count = count - 1"
+            " WHERE ip_hash = :ip AND date = :date AND count > 0"
+        ),
+        {"ip": ip_hash, "date": date},
+    )
+    await session.commit()
 
 
 async def check_shared_key_rate_limit(
@@ -238,3 +260,37 @@ async def check_shared_key_rate_limit(
         "limit": daily_limit,
         "remaining": remaining,
     }
+
+
+async def prune_old_records(session: AsyncSession, analytics_retention_days: int) -> dict:
+    """
+    Retention: delete analytics events older than the retention window and daily
+    quota counters from before yesterday (they are never read again).
+    """
+    from sqlalchemy import delete
+
+    now = _utcnow()
+    analytics_cutoff = now - timedelta(days=analytics_retention_days)
+    quota_cutoff = (now - timedelta(days=1)).date().isoformat()
+
+    analytics_deleted = await session.execute(
+        delete(Analytics).where(Analytics.timestamp < analytics_cutoff)
+    )
+    quota_deleted = await session.execute(
+        delete(SharedKeyUsage).where(SharedKeyUsage.date < quota_cutoff)
+    )
+    await session.commit()
+    return {"analytics": analytics_deleted.rowcount, "quota_rows": quota_deleted.rowcount}
+
+
+async def retention_loop(analytics_retention_days: int, interval_seconds: float = 24 * 3600) -> None:
+    """Prune old analytics/quota rows at startup and then once per interval."""
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                deleted = await prune_old_records(session, analytics_retention_days)
+            if any(deleted.values()):
+                app_logger.info(f"Retention: pruned {deleted}")
+        except Exception as e:
+            app_logger.error(f"Retention pruning failed: {e}")
+        await asyncio.sleep(interval_seconds)

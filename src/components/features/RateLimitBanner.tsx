@@ -5,9 +5,11 @@ import './RateLimitBanner.css';
 
 interface RateLimitBannerProps {
     customApiKey: string | null;
+    /** Bump after each translation attempt so the remaining count stays current. */
+    refreshKey?: number;
 }
 
-export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
+export function RateLimitBanner({ customApiKey, refreshKey = 0 }: RateLimitBannerProps) {
     const [rateLimitStatus, setRateLimitStatus] = useState<RateLimitStatus | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -18,7 +20,7 @@ export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
             setIsLoading(false);
             setRateLimitStatus(null);
         }
-    }, [customApiKey]);
+    }, [customApiKey, refreshKey]);
 
     const fetchRateLimit = async () => {
         try {
@@ -55,7 +57,7 @@ export function RateLimitBanner({ customApiKey }: RateLimitBannerProps) {
                     </svg>
                 </div>
                 <div className="banner-text">
-                    <strong>Using shared API key</strong>
+                    <strong>Free translations</strong>
                     {remaining > 0 ? (
                         <span> — {remaining} of {limit} free translations remaining today</span>
                     ) : (

@@ -1,174 +1,135 @@
-import jsPDF from 'jspdf';
+import type { ASLSign, TranslateResponse } from '../types';
+
+type JsPDF = import('jspdf').jsPDF;
+
+const PAGE_WIDTH = 210;
+const PAGE_HEIGHT = 297;
+const MARGIN = 20;
+const CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN;
+const LINE = 5;
+
+/** Provenance label for a sign, matching the badges on the sign card. */
+export function signProvenance(sign: ASLSign): string {
+    if (sign.is_fingerspelled) return 'Fingerspelled';
+    return sign.kb_verified ? 'Verified reference (summary AI-written)' : 'AI generated';
+}
+
+/** Ordered label/value sections exported for one sign. Empty values are skipped. */
+export function signSections(sign: ASLSign): [string, string][] {
+    const sections: [string, string][] = [
+        ['HOW TO DO IT', sign.simple_description ?? ''],
+        ['HAND SHAPE', sign.hand_shape],
+        ['LOCATION', sign.location],
+        ['MOVEMENT', sign.movement],
+        ['FACIAL EXPRESSION', sign.non_manual_markers],
+    ];
+    if (sign.is_fingerspelled && sign.fingerspell_letters?.length) {
+        sections.splice(1, 0, ['FINGERSPELL', sign.fingerspell_letters.join(' - ')]);
+    }
+    return sections.filter(([, value]) => value.trim().length > 0);
+}
 
 export const pdf = {
-    async exportToPDF(query: string): Promise<void> {
+    /** Build the PDF from the typed translation response (never from page markup). */
+    async exportToPDF(result: TranslateResponse): Promise<void> {
+        if (result.signs.length === 0) {
+            throw new Error('No signs found to export');
+        }
         try {
-            const resultsSection = document.querySelector('.results-section') as HTMLElement;
-            if (!resultsSection) {
-                throw new Error('Results section not found');
-            }
-
-            const titleEl = resultsSection.querySelector('.results-title');
-            const title = titleEl ? titleEl.textContent || 'Translation Results' : 'Translation Results';
-
-            const signCards = resultsSection.querySelectorAll('.sign-card');
-            if (signCards.length === 0) {
-                throw new Error('No signs found to export');
-            }
-
+            // Loaded on demand so jsPDF stays out of the main bundle
+            const { jsPDF } = await import('jspdf');
             const doc = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = 210;
-            const pageHeight = 297;
-            const margin = 20;
-            const contentWidth = pageWidth - (2 * margin);
-            let yPos = margin;
+            let yPos = MARGIN;
 
-            const checkPageBreak = (needed: number) => {
-                if (yPos + needed > pageHeight - margin) {
+            const ensureSpace = (needed: number) => {
+                if (yPos + needed > PAGE_HEIGHT - MARGIN) {
                     doc.addPage();
-                    yPos = margin;
-                    return true;
+                    yPos = MARGIN;
                 }
-                return false;
             };
 
-            doc.setFontSize(24);
+            doc.setFontSize(22);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
-            doc.text('ASL Dictionary Translation', margin, yPos);
-            yPos += 10;
+            doc.text('ASL Translation', MARGIN, yPos);
+            yPos += 9;
 
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(100, 100, 100);
-            doc.text(`Generated on ${this.getFormattedDate()}`, margin, yPos);
+            doc.text(`Generated on ${this.getFormattedDate()}`, MARGIN, yPos);
             yPos += 5;
-
             doc.setDrawColor(51, 51, 51);
             doc.setLineWidth(0.5);
-            doc.line(margin, yPos, pageWidth - margin, yPos);
-            yPos += 15;
+            doc.line(MARGIN, yPos, PAGE_WIDTH - MARGIN, yPos);
+            yPos += 10;
 
-            doc.setFontSize(18);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(200, 200, 200);
-            const wrappedTitle = doc.splitTextToSize(title, contentWidth);
-            doc.text(wrappedTitle, margin, yPos);
-            yPos += (wrappedTitle.length * 8) + 10;
+            yPos = writeLabelled(doc, 'ENGLISH', result.query, yPos);
+            if (result.asl_gloss_order) {
+                yPos = writeLabelled(doc, 'ASL ORDER', result.asl_gloss_order, yPos);
+            }
+            yPos += 4;
 
-            signCards.forEach((card, index) => {
-                const signWord = card.querySelector('.sign-word')?.textContent || '';
-                const handShape = card.querySelector('.detail-value')?.textContent || '';
-                const details = card.querySelectorAll('.sign-detail-item');
-
-                let location = '';
-                let movement = '';
-
-                details.forEach((detail) => {
-                    const label = detail.querySelector('.detail-label')?.textContent?.toLowerCase() || '';
-                    const value = detail.querySelector('.detail-value')?.textContent || '';
-
-                    if (label.includes('location')) location = value;
-                    else if (label.includes('movement')) movement = value;
-                });
-
-                const wrappedHandShape = doc.splitTextToSize(handShape, contentWidth - 10);
-                const wrappedLocation = doc.splitTextToSize(location, contentWidth - 10);
-                const wrappedMovement = doc.splitTextToSize(movement, contentWidth - 10);
-
-                const cardHeight = 20 + // header space
-                    (wrappedHandShape.length * 5 + 12) + // Hand shape section
-                    (wrappedLocation.length * 5 + 12) +  // Location section
-                    (wrappedMovement.length * 5 + 12);   // Movement section
-
-                checkPageBreak(cardHeight + 10);
+            result.signs.forEach((sign, index) => {
+                const sections = signSections(sign).map(
+                    ([label, value]) => [label, doc.splitTextToSize(value, CONTENT_WIDTH - 10) as string[]] as const
+                );
+                const bodyHeight = sections.reduce((h, [, lines]) => h + 4 + lines.length * LINE + 4, 0);
+                ensureSpace(Math.min(24 + bodyHeight, PAGE_HEIGHT - 2 * MARGIN));
 
                 const cardStartY = yPos;
-
-                doc.setFillColor(51, 51, 51);
-                doc.roundedRect(pageWidth - margin - 20, yPos + 5, 15, 8, 2, 2, 'F');
-                doc.setFontSize(10);
-                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(15);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`#${index + 1}`, pageWidth - margin - 17.5, yPos + 10.5);
-
-                doc.setFontSize(16);
                 doc.setTextColor(0, 0, 0);
-                doc.setFont('helvetica', 'bold');
-                doc.text(signWord.toUpperCase(), margin + 5, yPos + 12);
-
-                let detailY = yPos + 22;
-
+                doc.text(`${index + 1}. ${sign.word.toUpperCase()}`, MARGIN + 5, yPos + 10);
                 doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(102, 102, 102);
-                doc.text('HAND SHAPE', margin + 5, detailY);
-                detailY += 4;
                 doc.setFont('helvetica', 'normal');
-                doc.setTextColor(0, 0, 0);
-                doc.setFontSize(10);
-                doc.text(wrappedHandShape, margin + 5, detailY);
-                detailY += (wrappedHandShape.length * 5) + 8;
-
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
                 doc.setTextColor(102, 102, 102);
-                doc.text('LOCATION', margin + 5, detailY);
-                detailY += 4;
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(0, 0, 0);
-                doc.setFontSize(10);
-                doc.text(wrappedLocation, margin + 5, detailY);
-                detailY += (wrappedLocation.length * 5) + 8;
+                doc.text(signProvenance(sign), PAGE_WIDTH - MARGIN - 5, yPos + 10, { align: 'right' });
 
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(102, 102, 102);
-                doc.text('MOVEMENT', margin + 5, detailY);
-                detailY += 4;
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(0, 0, 0);
-                doc.setFontSize(10);
-                doc.text(wrappedMovement, margin + 5, detailY);
-                detailY += (wrappedMovement.length * 5) + 4;
+                let detailY = yPos + 18;
+                let spansPages = false;
+                for (const [label, lines] of sections) {
+                    if (detailY + 4 + lines.length * LINE > PAGE_HEIGHT - MARGIN) {
+                        doc.addPage();
+                        detailY = MARGIN;
+                        spansPages = true;
+                    }
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(102, 102, 102);
+                    doc.text(label, MARGIN + 5, detailY);
+                    detailY += 4;
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(lines, MARGIN + 5, detailY);
+                    detailY += lines.length * LINE + 4;
+                }
 
-                doc.setDrawColor(204, 204, 204);
-                doc.setLineWidth(0.3);
-                doc.roundedRect(margin, cardStartY, contentWidth, detailY - cardStartY, 2, 2);
-
-                yPos = detailY + 10;
+                // Only box cards that fit on a single page
+                if (!spansPages) {
+                    doc.setDrawColor(204, 204, 204);
+                    doc.setLineWidth(0.3);
+                    doc.roundedRect(MARGIN, cardStartY, CONTENT_WIDTH, detailY - cardStartY, 2, 2);
+                }
+                yPos = detailY + 8;
             });
 
-            const noteEl = resultsSection.querySelector('.asl-note');
-            if (noteEl) {
-                const noteText = noteEl.querySelector('.note-text')?.textContent || '';
-                const wrappedNote = doc.splitTextToSize(noteText, contentWidth - 10);
-                const noteHeight = 10 + (wrappedNote.length * 5) + 10;
-
-                checkPageBreak(noteHeight);
-
-                const noteStartY = yPos;
-                const noteBoxHeight = 8 + 5 + (wrappedNote.length * 5) + 5;
-
-                doc.setFillColor(249, 249, 249);
-                doc.setDrawColor(204, 204, 204);
-                doc.roundedRect(margin, noteStartY, contentWidth, noteBoxHeight, 2, 2, 'FD');
-
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(0, 0, 0);
-                doc.text('ASL Grammar Note', margin + 5, yPos + 8);
-                yPos += 13;
-
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                doc.text(wrappedNote, margin + 5, yPos);
-                yPos += (wrappedNote.length * 5) + 5;
+            if (result.note) {
+                yPos = writeLabelled(doc, 'ASL GRAMMAR NOTE', result.note, yPos);
             }
 
-            const fileName = `ASL_Translation_${this.sanitizeFileName(query)}_${Date.now()}.pdf`;
-            doc.save(fileName);
+            ensureSpace(12);
+            doc.setFontSize(8);
+            doc.setTextColor(120, 120, 120);
+            doc.text(
+                doc.splitTextToSize('AI-generated descriptions may contain errors. Verify with a native signer or an ASL resource.', CONTENT_WIDTH),
+                MARGIN,
+                yPos + 4,
+            );
 
+            doc.save(`ASL_Translation_${this.sanitizeFileName(result.query)}_${Date.now()}.pdf`);
         } catch (error) {
             console.error('Error generating PDF:', error);
             throw new Error('Failed to generate PDF. Please try again.');
@@ -192,3 +153,20 @@ export const pdf = {
         });
     },
 };
+
+function writeLabelled(doc: JsPDF, label: string, value: string, yPos: number): number {
+    const lines = doc.splitTextToSize(value, CONTENT_WIDTH) as string[];
+    if (yPos + 8 + lines.length * LINE > PAGE_HEIGHT - MARGIN) {
+        doc.addPage();
+        yPos = MARGIN;
+    }
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(102, 102, 102);
+    doc.text(label, MARGIN, yPos);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(lines, MARGIN, yPos + 5);
+    return yPos + 5 + lines.length * LINE + 4;
+}

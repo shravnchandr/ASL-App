@@ -103,30 +103,30 @@ export default function CameraPage({ onBack }: CameraPageProps) {
 
           const now = Date.now();
 
-          if (stablePrediction === lastAddedLetterRef.current) {
-            setHoldProgress(0);
-            letterHoldStartRef.current = null;
-          } else if (stablePrediction === lastStablePredictionRef.current) {
-            if (letterHoldStartRef.current !== null && result.confidence > 0.8) {
-              const elapsed = now - letterHoldStartRef.current;
-              setHoldProgress(Math.min(elapsed / LETTER_HOLD_THRESHOLD, 1));
-
-              if (elapsed >= LETTER_HOLD_THRESHOLD) {
-                setSpelledLetters(prev => [...prev, stablePrediction]);
-                setSignsRecognized(prev => prev + 1);
-                lastAddedLetterRef.current = stablePrediction;
-                letterHoldStartRef.current = null;
-                setHoldProgress(0);
-                announceToScreenReader(`Added ${stablePrediction.toUpperCase()} to spelling`);
-                playLetterAdded();
-              }
-            } else if (result.confidence <= 0.8) {
-              setHoldProgress(0);
-            }
-          } else {
+          if (stablePrediction !== lastStablePredictionRef.current) {
             lastStablePredictionRef.current = stablePrediction;
-            letterHoldStartRef.current = result.confidence > 0.8 ? now : null;
+            letterHoldStartRef.current = null;
+          }
+
+          if (stablePrediction === lastAddedLetterRef.current || result.confidence <= 0.8) {
+            // Already added, or a low-confidence frame: the hold must restart from scratch
+            letterHoldStartRef.current = null;
             setHoldProgress(0);
+          } else {
+            // Measure one continuous high-confidence interval for this label
+            if (letterHoldStartRef.current === null) letterHoldStartRef.current = now;
+            const elapsed = now - letterHoldStartRef.current;
+            setHoldProgress(Math.min(elapsed / LETTER_HOLD_THRESHOLD, 1));
+
+            if (elapsed >= LETTER_HOLD_THRESHOLD) {
+              setSpelledLetters(prev => [...prev, stablePrediction]);
+              setSignsRecognized(prev => prev + 1);
+              lastAddedLetterRef.current = stablePrediction;
+              letterHoldStartRef.current = null;
+              setHoldProgress(0);
+              announceToScreenReader(`Added ${stablePrediction.toUpperCase()} to spelling`);
+              playLetterAdded();
+            }
           }
         } else {
           lastStablePredictionRef.current = null;

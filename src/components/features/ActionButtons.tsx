@@ -3,15 +3,17 @@ import { share } from '../../utils/share';
 import { print } from '../../utils/print';
 import { pdf } from '../../utils/pdf';
 import { useApp } from '../../contexts/AppContext';
+import type { TranslateResponse } from '../../types';
 import { announceToScreenReader } from '../../utils/accessibility';
 import './ActionButtons.css';
 
 interface ActionButtonsProps {
-    query: string;
-    signsCount: number;
+    result: TranslateResponse;
 }
 
-export const ActionButtons: React.FC<ActionButtonsProps> = ({ query, signsCount }) => {
+export const ActionButtons: React.FC<ActionButtonsProps> = ({ result }) => {
+    const query = result.query;
+    const signsCount = result.signs.length;
     const { isFavorite, addFavorite, removeFavorite } = useApp();
     const [showCopySuccess, setShowCopySuccess] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -51,7 +53,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ query, signsCount 
         setIsGeneratingPDF(true);
         announceToScreenReader('Generating PDF...', 'polite');
         try {
-            await pdf.exportToPDF(query);
+            await pdf.exportToPDF(result);
             announceToScreenReader('PDF downloaded successfully', 'polite');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { SignCard } from './SignCard';
 import { FeedbackWidget } from './FeedbackWidget';
@@ -13,6 +13,8 @@ import { announceToScreenReader } from '../utils/accessibility';
 import { print } from '../utils/print';
 import { useApp } from '../contexts/AppContext';
 import { formatSignName } from '../utils/format';
+import { buildAnimationSteps } from '../utils/animationSteps';
+import { toSignKey } from '../utils/signDataLoader';
 import { LEVELS } from '../constants/levels';
 import type { TranslateResponse } from '../types';
 import './DictionaryPage.css';
@@ -100,17 +102,14 @@ const QUICK_TRIES = [
     'Can you sign slower, please?',
 ];
 
-const RECENT_TRANSLATIONS = [
-    { phrase: "What's your favorite food?", signs: 5, date: '3 days ago' },
-    { phrase: 'I am learning sign language.', signs: 5, date: '1 week ago' },
-    { phrase: 'Where do you work?', signs: 4, date: '1 week ago' },
-];
-
 const TranslateLanding: React.FC<{
     isLoading: boolean;
     onSearch: (query: string) => void;
 }> = ({ isLoading, onSearch }) => {
+    const { searchHistory, favorites } = useApp();
     const [draft, setDraft] = useState('');
+    const [showSaved, setShowSaved] = useState(false);
+    const recent = searchHistory.slice(0, 3);
     const charCount = draft.length;
     const canSubmit = draft.trim().length > 0 && !isLoading;
 
@@ -164,7 +163,13 @@ const TranslateLanding: React.FC<{
                         <span aria-hidden="true">+</span>
                         Paste
                     </button>
-                    <button type="button" onClick={() => setDraft('Good morning, how are you?')}>
+                    <button
+                        type="button"
+                        onClick={() => setShowSaved(open => !open)}
+                        disabled={favorites.length === 0}
+                        aria-expanded={showSaved}
+                        title={favorites.length === 0 ? 'Save a translation with the Save button to reuse it here' : undefined}
+                    >
                         <span aria-hidden="true">▣</span>
                         From a saved phrase
                     </button>
@@ -181,6 +186,19 @@ const TranslateLanding: React.FC<{
                     </button>
                 </div>
             </div>
+
+            {showSaved && favorites.length > 0 && (
+                <div className="translate-tries" aria-label="Saved phrases">
+                    <div className="translate-tries__label">SAVED</div>
+                    <div className="translate-tries__chips">
+                        {favorites.map(f => (
+                            <button key={f.query} onClick={() => { setDraft(f.query.slice(0, 300)); setShowSaved(false); }}>
+                                {f.query}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="translate-tries" aria-label="Try one">
                 <div className="translate-tries__label">TRY ONE</div>
@@ -199,14 +217,16 @@ const TranslateLanding: React.FC<{
                 <section className="translate-card translate-recent" aria-label="Recent translations">
                     <header>
                         <h2>Recent translations</h2>
-                        <Link to="/translate">Open library</Link>
+                        <Link to="/dictionary">Browse signs</Link>
                     </header>
                     <div className="translate-recent__rows">
-                        {RECENT_TRANSLATIONS.map(row => (
-                            <button key={row.phrase} onClick={() => onSearch(row.phrase)} disabled={isLoading}>
-                                <strong>"{row.phrase}"</strong>
-                                <span>{row.signs} signs</span>
-                                <span>{row.date}</span>
+                        {recent.length === 0 ? (
+                            <p className="translate-recent__empty">Your recent phrases will appear here.</p>
+                        ) : recent.map(phrase => (
+                            <button key={phrase} onClick={() => onSearch(phrase)} disabled={isLoading}>
+                                <strong>"{phrase}"</strong>
+                                <span />
+                                <span>Translate again</span>
                             </button>
                         ))}
                     </div>
@@ -233,18 +253,59 @@ const TranslateLanding: React.FC<{
             <section className="translate-privacy" aria-label="Privacy">
                 <div className="translate-privacy__icon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.2" />
+                        <path d="M12 11v5M12 8h.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                     </svg>
                 </div>
                 <div>
-                    <h2>Everything stays on your device.</h2>
-                    <p>Translations are processed locally. Phrases you save sync only if you turn on sync in settings.</p>
+                    <h2>Phrases you translate are sent to our server and Google Gemini.</h2>
+                    <p>We keep the phrase text with a hashed IP for usage stats and cache results for up to an hour. Avoid entering personal or sensitive information. Camera recognition runs entirely on your device.</p>
                 </div>
-                <Link to="/onboarding">Learn more →</Link>
+                <Link to="/camera">Try the camera →</Link>
             </section>
         </section>
     );
 };
+
+/** 45 → "45s", 125 → "2m 5s", 7260 → "2h 1m" (daily limits can be hours away). */
+function formatWait(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+}
+
+// sessionStorage cache of translation results (tab-scoped). Versioned so a shape
+// or pipeline change never revives stale results; expires like the server cache.
+const RESULT_CACHE_PREFIX = 'asl_result:v2:';
+const RESULT_CACHE_TTL_MS = 60 * 60 * 1000;
+
+function resultCacheKey(query: string): string {
+    return RESULT_CACHE_PREFIX + query.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function readCachedResult(query: string): TranslateResponse | null {
+    try {
+        const raw = sessionStorage.getItem(resultCacheKey(query));
+        if (!raw) return null;
+        const entry = JSON.parse(raw) as { savedAt?: number; response?: TranslateResponse };
+        const r = entry.response;
+        const fresh = typeof entry.savedAt === 'number' && Date.now() - entry.savedAt < RESULT_CACHE_TTL_MS;
+        const valid = !!r && typeof r.query === 'string' && typeof r.note === 'string'
+            && Array.isArray(r.signs) && r.signs.every(s => s && typeof s.word === 'string');
+        return fresh && valid ? { ...r!, query } : null;
+    } catch {
+        return null;  // storage blocked or corrupt entry
+    }
+}
+
+function writeCachedResult(query: string, response: TranslateResponse): void {
+    try {
+        sessionStorage.setItem(resultCacheKey(query), JSON.stringify({ savedAt: Date.now(), response }));
+    } catch { /* storage blocked or full */ }
+}
 
 const PIPELINE_STEPS = [
     { label: 'Parsing English',      desc: 'Tokenizing and tagging parts of speech' },
@@ -262,21 +323,6 @@ const TranslateLoadingView: React.FC<{
     hint: string | null;
 }> = ({ phrase, onCancel, hint }) => {
     const [activeStep, setActiveStep] = React.useState(0);
-    const [tick, setTick] = React.useState(0);
-
-    // Spinner rotation
-    React.useEffect(() => {
-        let raf: number;
-        let start: number | null = null;
-        const loop = (ts: number) => {
-            if (!start) start = ts;
-            setTick(((ts - start) % 1400) / 1400);
-            raf = requestAnimationFrame(loop);
-        };
-        raf = requestAnimationFrame(loop);
-        return () => cancelAnimationFrame(raf);
-    }, []);
-
     // Advance pipeline steps
     React.useEffect(() => {
         const timers = STEP_TIMINGS.slice(1).map((delay, i) =>
@@ -286,7 +332,6 @@ const TranslateLoadingView: React.FC<{
     }, []);
 
     const tokenCount = Math.max(3, Math.min(6, phrase.trim().split(/\s+/).length));
-    const spinAngle = Math.round(tick * 360);
     const spR = 5.5, spC = 2 * Math.PI * spR, spDash = spC * 0.3;
 
     return (
@@ -300,7 +345,7 @@ const TranslateLoadingView: React.FC<{
                     </div>
                     <div className="tl-translating-pill" aria-live="polite">
                         <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"
-                            style={{ transform: `rotate(${spinAngle}deg)` }}>
+                            className="tl-spin">
                             <circle cx="8" cy="8" r={spR} fill="none"
                                 stroke="var(--md-sys-color-primary-container)" strokeWidth="2"/>
                             <circle cx="8" cy="8" r={spR} fill="none"
@@ -373,7 +418,7 @@ const TranslateLoadingView: React.FC<{
                                                 </svg>
                                             ) : running ? (
                                                 <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"
-                                                    style={{ transform: `rotate(${spinAngle}deg)` }}>
+                                                    className="tl-spin">
                                                     <circle cx="8" cy="8" r="4.5" fill="none"
                                                         stroke="var(--md-sys-color-primary-container)" strokeWidth="2"/>
                                                     <circle cx="8" cy="8" r="4.5" fill="none"
@@ -422,13 +467,15 @@ export const DictionaryPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [errorReported, setErrorReported] = useState(false);
     const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+    const [quotaVersion, setQuotaVersion] = useState(0);
     const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [selectedRating, setSelectedRating] = useState<'up' | 'down' | null>(null);
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
-    // Capture initial ?q= once so the effect dep array stays stable across re-renders
-    const initialQueryRef = useRef(searchParams.get('q'));
+    // Query most recently handled; lets the URL-sync effect tell user navigation
+    // (Back/Forward, links) apart from our own setSearchParams calls.
+    const lastQueryRef = useRef<string | null>(null);
 
     useEffect(() => {
         setCustomApiKey(customApiKey);
@@ -449,16 +496,15 @@ export const DictionaryPage: React.FC = () => {
         abortControllerRef.current?.abort();
         const controller = new AbortController();
         abortControllerRef.current = controller;
+        lastQueryRef.current = query;
 
-        const cacheKey = `asl_result:${query.toLowerCase().trim()}`;
-        const cached = sessionStorage.getItem(cacheKey);
+        const cached = readCachedResult(query);
         if (cached) {
-            try {
-                setResult(JSON.parse(cached));
-                setError(null);
-                setSearchParams({ q: query }, { replace: true });
-                return;
-            } catch { /* corrupt cache entry — fall through to API */ }
+            setResult(cached);
+            setError(null);
+            setIsLoading(false);
+            setSearchParams({ q: query }, { replace: true });
+            return;
         }
 
         setIsLoading(true);
@@ -479,10 +525,12 @@ export const DictionaryPage: React.FC = () => {
         try {
             const response = await translateToASL(query, controller.signal);
             setResult(response);
-            try { sessionStorage.setItem(cacheKey, JSON.stringify(response)); } catch { /* ignore storage quota errors */ }
+            writeCachedResult(query, response);
             announceToScreenReader(`Found ${response.signs.length} signs for ${query}`, 'polite');
         } catch (err) {
             if (err instanceof Error && err.message === 'cancelled') return;
+            // A newer search superseded this one — don't surface its error
+            if (abortControllerRef.current !== controller) return;
             const errorMessage = err instanceof Error ? err.message : 'An error occurred';
             setError(errorMessage);
             setErrorReported(false);
@@ -500,23 +548,43 @@ export const DictionaryPage: React.FC = () => {
             }
             announceToScreenReader(`Error: ${errorMessage}`, 'assertive');
         } finally {
-            setIsLoading(false);
-            clearLoadingTimers();
+            // Only the latest request owns the loading state. When search B aborts
+            // search A, A settles after B has started and must not clear B's
+            // spinner or hint timers.
+            if (abortControllerRef.current === controller) {
+                setIsLoading(false);
+                clearLoadingTimers();
+                setQuotaVersion(v => v + 1);
+            }
         }
     }, [addToHistory, setSearchParams]);
 
+    // Follow ?q= on mount and on Back/Forward or link navigation. handleSearch writes
+    // the same q itself, which lastQueryRef recognises, so this can't loop.
+    const urlQuery = searchParams.get('q');
     useEffect(() => {
-        const q = initialQueryRef.current;
-        if (!q) return;
-        const cached = sessionStorage.getItem(`asl_result:${q.toLowerCase().trim()}`);
-        if (cached) {
-            try {
-                setResult(JSON.parse(cached));
-                return;
-            } catch { /* fall through to API call */ }
+        if (urlQuery === lastQueryRef.current) return;
+        if (urlQuery) {
+            void handleSearch(urlQuery);
+        } else {
+            // Navigated back to the bare page: show the landing state
+            lastQueryRef.current = null;
+            abortControllerRef.current?.abort();
+            setResult(null);
+            setError(null);
+            setIsLoading(false);
         }
-        handleSearch(q);
-    }, [handleSearch]);
+    }, [urlQuery, handleSearch]);
+
+    // Abort the request and stop timers when leaving the page. Forget the handled
+    // query too: StrictMode (and any remount) re-runs the URL effect, which must
+    // restart the search this cleanup just aborted.
+    useEffect(() => () => {
+        lastQueryRef.current = null;
+        abortControllerRef.current?.abort();
+        loadingTimersRef.current.forEach(clearTimeout);
+        if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    }, []);
 
     const handleFeedbackClick = (rating: 'up' | 'down') => {
         setSelectedRating(rating);
@@ -545,6 +613,7 @@ export const DictionaryPage: React.FC = () => {
     };
 
     const showLanding = !result && !isLoading && !error;
+    const animationSteps = useMemo(() => (result ? buildAnimationSteps(result.signs) : []), [result]);
 
     const followUps = result
         ? getFollowUpSuggestions(result.query, result.signs.map(s => s.word))
@@ -552,7 +621,7 @@ export const DictionaryPage: React.FC = () => {
 
     return (
         <div className="dictionary-page">
-            <RateLimitBanner customApiKey={customApiKey} />
+            <RateLimitBanner customApiKey={customApiKey} refreshKey={quotaVersion} />
 
             {showLanding && (
                 <TranslateLanding isLoading={isLoading} onSearch={handleSearch} />
@@ -575,13 +644,16 @@ export const DictionaryPage: React.FC = () => {
                 const isRateLimit = error.startsWith('rate_limit:');
                 const isNetwork = error.startsWith('network:');
                 const displayMessage = error.replace(/^[a-z_]+:\d*:\s*/, '').replace(/^[a-z_]+:\s*/, '');
+                // Per-minute throttles retry within a minute; the daily allowance resets at midnight UTC
+                const isDailyLimit = isRateLimit && parseInt(error.split(':')[1] ?? '0', 10) > 120;
                 const title = isAiBusy ? 'AI service is busy'
+                    : isDailyLimit ? 'Daily limit reached'
                     : isRateLimit ? 'Too many requests'
                     : isNetwork ? 'Connection problem'
                     : 'Something went wrong';
 
                 const currentQuery = searchParams.get('q') || '';
-                const canRetry = isAiBusy || isNetwork;
+                const canRetry = isAiBusy || isNetwork || isRateLimit;
                 const retryDisabled = isRateLimit && rateLimitCountdown > 0;
 
                 const handleReportError = async () => {
@@ -603,7 +675,7 @@ export const DictionaryPage: React.FC = () => {
                             <p className="error-card__text">{displayMessage}</p>
                             {isRateLimit && rateLimitCountdown > 0 && (
                                 <p className="error-card__hint">
-                                    You can try again in <strong>{rateLimitCountdown}s</strong>.
+                                    You can try again in <strong>{formatWait(rateLimitCountdown)}</strong>.
                                 </p>
                             )}
                             {!customApiKey && !isAiBusy && !isRateLimit && !isNetwork && (
@@ -620,7 +692,7 @@ export const DictionaryPage: React.FC = () => {
                                         if (canRetry && currentQuery) handleSearch(currentQuery);
                                     }}
                                 >
-                                    {retryDisabled ? `Try again in ${rateLimitCountdown}s` : 'Try Again'}
+                                    {retryDisabled ? `Try again in ${formatWait(rateLimitCountdown)}` : 'Try Again'}
                                 </button>
                                 {!isAiBusy && !isRateLimit && !isNetwork && (
                                     errorReported
@@ -648,7 +720,7 @@ export const DictionaryPage: React.FC = () => {
                                 <h2 className="results-phrase-card__query">&ldquo;{result.query}&rdquo;</h2>
                             </div>
                             <div className="results-phrase-card__actions-col">
-                                <ActionButtons query={result.query} signsCount={result.signs.length} />
+                                <ActionButtons result={result} />
                                 <button
                                     className="results-new-search"
                                     onClick={() => { setResult(null); setError(null); setSearchParams({}); }}
@@ -677,10 +749,7 @@ export const DictionaryPage: React.FC = () => {
                         </div>
 
                         <div className="results-right">
-                            <SentenceAnimator words={result.signs.map(s => ({
-                                word: s.word.toLowerCase().replace(/\s+/g, '_'),
-                                isFingerspelled: !!s.is_fingerspelled,
-                            }))} />
+                            <SentenceAnimator words={animationSteps} />
                         </div>
                     </div>
 
@@ -715,9 +784,7 @@ export const DictionaryPage: React.FC = () => {
                         <button
                             className="practice-cta"
                             onClick={() => {
-                                const words = result.signs.map(s =>
-                                    s.word.toLowerCase().replace(/[\s-]+/g, '_')
-                                );
+                                const words = result.signs.map(s => toSignKey(s.word));
                                 try { sessionStorage.setItem('asl_practice_words', JSON.stringify(words)); } catch { /* ignore */ }
                                 navigate('/learn?practice=1');
                             }}

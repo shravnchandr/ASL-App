@@ -12,6 +12,27 @@ export function shuffle<T>(arr: readonly T[]): T[] {
 
 const SIGN_CACHE_MAX = 50; // cap to prevent unbounded memory growth
 const signDataCache = new Map<string, SignData>();
+const pendingLoads = new Map<string, Promise<SignData | null>>();
+
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+/**
+ * Canonical library key for a word or gloss: THANK-YOU / "Thank you" / thank_you →
+ * thank_you, fs-BOSTON → boston, "3" → three. Single source of truth for file names.
+ */
+export function toSignKey(word: string): string {
+    const key = word
+        .trim()
+        .toLowerCase()
+        .replace(/^fs-/, '')
+        .replace(/[\s-]+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
+    if (/^\d+$/.test(key) && Number(key) < NUMBER_WORDS.length) {
+        return NUMBER_WORDS[Number(key)];
+    }
+    return key;
+}
+
 let metadataCache: SignMetadata | null = null;
 
 const BASE_PATH = '/sign-data';
@@ -30,14 +51,29 @@ export async function loadMetadata(): Promise<SignMetadata> {
 }
 
 export async function loadSignData(sign: string): Promise<SignData | null> {
-    const signLower = sign.toLowerCase();
+    const key = toSignKey(sign);
+    if (!key) return null;
 
-    if (signDataCache.has(signLower)) {
-        return signDataCache.get(signLower)!;
+    const cached = signDataCache.get(key);
+    if (cached) {
+        // LRU: re-insert so frequently used signs are evicted last
+        signDataCache.delete(key);
+        signDataCache.set(key, cached);
+        return cached;
     }
 
+    // Share one fetch between concurrent callers
+    const pending = pendingLoads.get(key);
+    if (pending) return pending;
+
+    const load = fetchSignData(key, sign).finally(() => pendingLoads.delete(key));
+    pendingLoads.set(key, load);
+    return load;
+}
+
+async function fetchSignData(key: string, sign: string): Promise<SignData | null> {
     try {
-        const response = await fetch(`${BASE_PATH}/signs/${signLower}.json`);
+        const response = await fetch(`${BASE_PATH}/signs/${key}.json`);
         if (!response.ok) {
             if (response.status === 404) {
                 console.warn(`Sign data not found: ${sign}`);
@@ -51,7 +87,7 @@ export async function loadSignData(sign: string): Promise<SignData | null> {
             const firstKey = signDataCache.keys().next().value; // Maps preserve insertion order
             if (firstKey !== undefined) signDataCache.delete(firstKey);
         }
-        signDataCache.set(signLower, data);
+        signDataCache.set(key, data);
         return data;
     } catch (error) {
         console.error(`Error loading sign data for "${sign}":`, error);

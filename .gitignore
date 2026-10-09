@@ -99,3 +99,6 @@ python_code/download_signing_savvy.py
 *.h5
 *.keras
 checkpoint/
+
+# Playwright output
+test-results/

@@ -35,15 +35,7 @@ class TestTranslationEndpoint:
         response = await client.post("/api/translate", json={"text": ""})
         assert response.status_code == 422  # Validation error
 
-    @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="Translation test requires mocking app.state.asl_graph which is complex - tested manually"
-    )
-    async def test_translate_success(
-        self, client: AsyncClient, mock_translation_result
-    ):
-        """Test successful translation - skipped as requires complex mocking"""
-        pass
+    # Successful translation is covered in tests/test_security.py::TestTranslate
 
 
 class TestFeedbackEndpoint:

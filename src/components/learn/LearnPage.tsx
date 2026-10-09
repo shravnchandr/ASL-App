@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LearnProvider, useLearn } from '../../contexts/LearnContext';
 import { ExerciseCard } from './ExerciseCard';
 import { SignToWordExercise } from './SignToWordExercise';
 import { WordToSignExercise } from './WordToSignExercise';
 import { RecallExercise } from './RecallExercise';
-import { CameraPracticeExercise } from './CameraPracticeExercise';
 import { SignBrowser } from './SignBrowser';
 import { LevelSelector } from './LevelSelector';
 import { GemShape } from '../GemShape';
@@ -15,6 +14,11 @@ import { useSoundEffects } from '../../hooks/useSoundEffects';
 import { storage } from '../../utils/storage';
 import type { SignData } from '../../types';
 import './LearnPage.css';
+
+// Camera practice pulls in TensorFlow.js + MediaPipe; load it only when needed
+const CameraPracticeExercise = lazy(() =>
+    import('./CameraPracticeExercise').then(m => ({ default: m.CameraPracticeExercise }))
+);
 
 const LearnPageContent: React.FC = () => {
     const {
@@ -44,7 +48,6 @@ const LearnPageContent: React.FC = () => {
     const [signData, setSignData] = useState<SignData | null>(null);
     const [optionSignData, setOptionSignData] = useState<Array<{ sign: string; data: SignData | null }>>([]);
     const [showSignBrowser, setShowSignBrowser] = useState(false);
-    const [exerciseResults, setExerciseResults] = useState<Array<{ sign: string; isCorrect: boolean }>>([]);
     const { playSuccess, playError: playSoundError } = useSoundEffects();
 
     const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,24 +115,26 @@ const LearnPageContent: React.FC = () => {
     }, [state.justUnlockedLevel, clearJustUnlocked]);
 
     useEffect(() => {
+        if (!currentExercise) return;
+        // Ignore loads that finish after the user has moved to another exercise,
+        // and don't show the previous exercise's animation while loading.
+        let cancelled = false;
+        setSignData(null);
+        setOptionSignData([]);
+
         const loadCurrentSignData = async () => {
-            if (!currentExercise) return;
-
-            const data = await loadSign(currentExercise.sign);
+            const options = currentExercise.type === 'word-to-sign' ? currentExercise.options ?? [] : [];
+            const [data, optionData] = await Promise.all([
+                loadSign(currentExercise.sign),
+                Promise.all(options.map(async sign => ({ sign, data: await loadSign(sign) }))),
+            ]);
+            if (cancelled) return;
             setSignData(data);
-
-            if (currentExercise.type === 'word-to-sign' && currentExercise.options) {
-                const optionData = await Promise.all(
-                    currentExercise.options.map(async (sign) => ({
-                        sign,
-                        data: await loadSign(sign),
-                    }))
-                );
-                setOptionSignData(optionData);
-            }
+            setOptionSignData(optionData);
         };
 
-        loadCurrentSignData();
+        void loadCurrentSignData();
+        return () => { cancelled = true; };
     }, [currentExercise, loadSign]);
 
     const handleAnswer = useCallback((answer: string, isCorrect: boolean) => {
@@ -137,17 +142,12 @@ const LearnPageContent: React.FC = () => {
             clearTimeout(autoAdvanceTimerRef.current);
         }
 
-        const exerciseType = currentExercise?.type;
         const correctAnswer = currentExercise?.correctAnswer || '';
 
-        if (correctAnswer) {
-            setExerciseResults(prev => [...prev, { sign: correctAnswer, isCorrect }]);
-        }
-
-        answerExercise(answer, isCorrect);
+        const xp = answerExercise(answer, isCorrect);
+        if (xp === null) return;  // already answered (e.g. double submit)
 
         if (isCorrect) {
-            const xp = exerciseType === 'recall' ? 20 : 10;
             setLastXp(xp);
             setShowXp(true);
             setFeedback({ isCorrect: true, message: 'Correct! Great job!' });
@@ -173,6 +173,8 @@ const LearnPageContent: React.FC = () => {
         }, 2000);
     }, [answerExercise, currentExercise, isLastExercise, nextExercise, playSuccess, playSoundError]);
 
+    const exerciseResults = state.results;
+
     const handleSkip = useCallback(() => {
         setFeedback(null);
         if (isLastExercise()) {
@@ -189,7 +191,6 @@ const LearnPageContent: React.FC = () => {
         const levelToStart = state.selectedLevel || state.currentLevel;
         if (levelToStart) {
             setFeedback(null);
-            setExerciseResults([]);
             sessionStartTimeRef.current = Date.now();
             startLevelSession(levelToStart, 10);
         }
@@ -313,7 +314,6 @@ const LearnPageContent: React.FC = () => {
                 <div className="sc-actions">
                     {nextLevelInfo && nextLevelUnlocked ? (
                         <button className="sc-actions__primary" onClick={() => {
-                            setExerciseResults([]);
                             sessionStartTimeRef.current = Date.now();
                             startLevelSession(state.currentLevel + 1, 10);
                         }}>
@@ -406,14 +406,16 @@ const LearnPageContent: React.FC = () => {
                         )}
 
                         {currentExercise.type === 'camera-practice' && (
-                            <CameraPracticeExercise
-                                key={`${currentExercise.correctAnswer}-${state.currentIndex}`}
-                                targetSign={currentExercise.correctAnswer}
-                                levelId={state.currentLevel}
-                                onComplete={(isCorrect) => handleAnswer(currentExercise.correctAnswer, isCorrect)}
-                                onSkip={handleSkip}
-                                disabled={feedback !== null}
-                            />
+                            <Suspense fallback={<div className="learn-page__loading">Loading camera…</div>}>
+                                <CameraPracticeExercise
+                                    key={`${currentExercise.correctAnswer}-${state.currentIndex}`}
+                                    targetSign={currentExercise.correctAnswer}
+                                    levelId={state.currentLevel}
+                                    onComplete={(isCorrect) => handleAnswer(currentExercise.correctAnswer, isCorrect)}
+                                    onSkip={handleSkip}
+                                    disabled={feedback !== null}
+                                />
+                            </Suspense>
                         )}
                     </ExerciseCard>
                 </main>

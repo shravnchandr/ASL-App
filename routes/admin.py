@@ -7,10 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,22 +26,23 @@ from db import (
 )
 from db.models import Feedback
 
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 router = APIRouter()
 
 
 @router.get("/admin/feedback")
 async def get_admin_feedback(
-    page: int = 1,
-    limit: int = 50,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
     feedback_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     _: bool = Depends(verify_admin_password),
 ):
     """Get paginated feedback for admin review."""
     try:
-        if limit > 100:
-            limit = 100
-
         items, total = await get_paginated_feedback(db, page, limit, feedback_type)
         feedback_list = [
             {
@@ -175,7 +173,7 @@ async def get_analytics_overview(
 
 @router.get("/admin/analytics/users")
 async def get_user_analytics(
-    days: int = 30,
+    days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
     _: bool = Depends(verify_admin_password),
 ):
@@ -195,8 +193,8 @@ async def get_user_analytics(
 
 @router.get("/admin/analytics/searches")
 async def get_search_analytics(
-    limit: int = 20,
-    days: int = 30,
+    limit: int = Query(20, ge=1, le=100),
+    days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
     _: bool = Depends(verify_admin_password),
 ):

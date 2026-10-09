@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
 
 
+from .engine import Base
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
-
-from .engine import Base
 
 
 class Feedback(Base):

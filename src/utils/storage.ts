@@ -1,4 +1,5 @@
-import type { SignProgress, Exercise } from '../types';
+import type { SignProgress, Exercise, ExerciseResult } from '../types';
+import { getLevelById } from '../constants/levels';
 
 const STORAGE_KEYS = {
     SEARCH_HISTORY: 'asl_search_history',
@@ -19,6 +20,25 @@ export interface ActiveSessionData {
     currentIndex: number;
     levelId: number;
     sessionScore: number;
+    /** Answered exercises; lets resume skip already-rewarded exercises. Absent in older saves. */
+    results?: ExerciseResult[];
+}
+
+const EXERCISE_TYPES: ReadonlySet<string> = new Set(['sign-to-word', 'word-to-sign', 'recall', 'camera-practice']);
+const SIGN_KEY = /^[a-z0-9_]+$/i;
+
+function isValidExercise(e: Exercise): boolean {
+    if (!e || typeof e.id !== 'string' || typeof e.sign !== 'string' || !SIGN_KEY.test(e.sign)) return false;
+    if (!EXERCISE_TYPES.has(e.type) || typeof e.correctAnswer !== 'string') return false;
+    if (e.options === undefined) return e.type === 'recall' || e.type === 'camera-practice';
+    return Array.isArray(e.options)
+        && e.options.every(o => typeof o === 'string' && SIGN_KEY.test(o))
+        && e.options.includes(e.correctAnswer);
+}
+
+function isValidResult(r: ExerciseResult): boolean {
+    return !!r && typeof r.exerciseId === 'string' && typeof r.sign === 'string'
+        && typeof r.isCorrect === 'boolean' && typeof r.xp === 'number' && r.xp >= 0;
 }
 
 interface LearningStats {
@@ -318,6 +338,7 @@ export const storage = {
             localStorage.removeItem(STORAGE_KEYS.LEARNING_STATS);
             localStorage.removeItem(STORAGE_KEYS.LEARNING_SETTINGS);
             localStorage.removeItem(STORAGE_KEYS.LEVEL_PROGRESS);
+            localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
         } catch (error) {
             console.error('Failed to clear learning data:', error);
         }
@@ -399,13 +420,18 @@ export const storage = {
             const parsed = JSON.parse(data) as ActiveSessionData;
             // Structural validation — reject corrupted or tampered entries
             if (
+                !parsed ||
                 !Array.isArray(parsed.exercises) ||
-                typeof parsed.currentIndex !== 'number' ||
-                typeof parsed.levelId !== 'number' ||
+                parsed.exercises.length === 0 ||
+                !parsed.exercises.every(isValidExercise) ||
+                !Number.isInteger(parsed.currentIndex) ||
+                parsed.currentIndex < 0 ||
+                parsed.currentIndex >= parsed.exercises.length ||
+                !Number.isInteger(parsed.levelId) ||
+                !getLevelById(parsed.levelId) ||
                 typeof parsed.sessionScore !== 'number' ||
-                parsed.exercises.some(
-                    e => typeof e.sign !== 'string' || !/^[a-z0-9_]+$/i.test(e.sign)
-                )
+                parsed.sessionScore < 0 ||
+                (parsed.results !== undefined && (!Array.isArray(parsed.results) || !parsed.results.every(isValidResult)))
             ) {
                 localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
                 return null;

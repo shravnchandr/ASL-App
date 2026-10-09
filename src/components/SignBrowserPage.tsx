@@ -99,11 +99,24 @@ export const SignBrowserPage: React.FC = () => {
     const [playingSign, setPlayingSign] = useState<string | null>(null);
     const [filter, setFilter] = useState<CategoryFilter>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [sortDescending, setSortDescending] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
 
     const abortRef = useRef<AbortController | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // ⌘K / Ctrl+K focuses search here (Layout's handler only navigates to this page)
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                searchInputRef.current?.focus();
+                searchInputRef.current?.select();
+            }
+        };
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, []);
 
     useEffect(() => {
         abortRef.current = new AbortController();
@@ -149,13 +162,15 @@ export const SignBrowserPage: React.FC = () => {
     });
 
     // Group by first letter
-    const grouped = filteredSigns.reduce<Record<string, string[]>>((acc, sign) => {
+    const ordered = sortDescending ? [...filteredSigns].reverse() : filteredSigns;
+    const grouped = ordered.reduce<Record<string, string[]>>((acc, sign) => {
         const letter = sign[0].toUpperCase();
         if (!acc[letter]) acc[letter] = [];
         acc[letter].push(sign);
         return acc;
     }, {});
     const letters = Object.keys(grouped).sort();
+    if (sortDescending) letters.reverse();
 
     const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -235,7 +250,13 @@ export const SignBrowserPage: React.FC = () => {
                 {/* Sort row */}
                 <div className="sbp__sort-row">
                     <span className="sbp__result-count">{filteredSigns.length} signs</span>
-                    <button className="sbp__sort-btn">Sort: A–Z <span aria-hidden="true">→</span></button>
+                    <button
+                        className="sbp__sort-btn"
+                        onClick={() => setSortDescending(d => !d)}
+                        aria-label={`Sort ${sortDescending ? 'A to Z' : 'Z to A'}`}
+                    >
+                        Sort: {sortDescending ? 'Z–A' : 'A–Z'} <span aria-hidden="true">⇅</span>
+                    </button>
                 </div>
 
                 {/* Grid area */}

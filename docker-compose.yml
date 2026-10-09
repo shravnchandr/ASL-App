@@ -15,10 +15,16 @@ services:
       - PORT=8000
       - RATE_LIMIT=10/minute
     volumes:
+      # Bind-mount every backend module so --reload picks up edits
       - ./app.py:/app/app.py
+      - ./auth.py:/app/auth.py
+      - ./cache.py:/app/cache.py
       - ./config.py:/app/config.py
+      - ./deps.py:/app/deps.py
       - ./logger.py:/app/logger.py
-      - ./database.py:/app/database.py
+      - ./middleware.py:/app/middleware.py
+      - ./db:/app/db
+      - ./routes:/app/routes
       - ./python_code:/app/python_code
       - ./logs:/app/logs
       - ./asl_feedback.db:/app/asl_feedback.db

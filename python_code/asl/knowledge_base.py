@@ -40,7 +40,6 @@ _SIMILARITY_THRESHOLD = 0.60
 
 if os.getenv("ENABLE_SEMANTIC_LOOKUP", "false").lower() == "true":
     try:
-        import numpy as np  # imported lazily — only when semantic lookup is enabled
         from sentence_transformers import SentenceTransformer
 
         _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
@@ -88,46 +87,54 @@ def _semantic_lookup(gloss: str) -> Optional[Tuple[str, dict, float]]:
     return None
 
 
-def _get_kb_matched_words(gloss_sequence: str) -> set[str]:
+def _exact_kb_entry(gloss: str) -> Optional[dict]:
     """
-    Return the set of uppercase gloss words that have a KB match (exact or semantic).
-    Fast — only dict lookups and optional vector dot product, no LLM calls.
+    Exact (non-semantic) KB lookup for a bare gloss: case-insensitive, hyphenated
+    compounds map to underscore keys (THANK-YOU → thank_you).
 
-    Single-letter alphabet entries are skipped for bare glosses — they only
-    match via the fs- prefix path, preventing "I" (pronoun) from hitting the
-    letter "i" entry (and similar collisions for any letter).
+    Single-letter alphabet entries are skipped — letters only match via the fs-
+    prefix path, preventing "I" (pronoun) from hitting the letter "i" entry.
     """
-    matched: set[str] = set()
-    for gloss in gloss_sequence.split():
-        if gloss.lower().startswith("fs-") or gloss.startswith("#"):
-            continue
-        key = gloss.lower().replace("-", "_")
-        entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(
-            key.replace("_", "")
-        )
+    if gloss.lower().startswith("fs-"):
+        return None
+    key = gloss.lower().replace("-", "_").lstrip("#")
+    for candidate in (key, key.replace("_", "")):
+        entry = SIGN_KNOWLEDGE_BASE.get(candidate)
         if entry:
-            resolved_key = key if SIGN_KNOWLEDGE_BASE.get(key) else key.replace("_", "")
-            if resolved_key in _ALPHABET_KEYS:
-                continue
-            matched.add(gloss.upper())
-        else:
-            sem = _semantic_lookup(gloss)
-            if sem and sem[0] not in _ALPHABET_KEYS:
-                matched.add(gloss.upper())
-    return matched
+            return None if candidate in _ALPHABET_KEYS else entry
+    return None
+
+
+def _get_kb_exact_entries(gloss_sequence: str) -> dict[str, dict]:
+    """
+    Return {GLOSS_UPPER: kb_entry} for glosses with an exact KB match.
+    Semantic matches are intentionally excluded: they are prompt hints, not
+    verified descriptions, so they must never mark a sign as verified.
+    """
+    entries: dict[str, dict] = {}
+    for gloss in gloss_sequence.split():
+        entry = _exact_kb_entry(gloss)
+        if entry:
+            entries[gloss.upper()] = entry
+    return entries
+
+
+def _fs_characters(word: str) -> list[str]:
+    """Characters to fingerspell: letters and digits, dropping separators (fs-6-1-7 → 6,1,7)."""
+    return [c for c in word.upper() if c.isascii() and c.isalnum()]
 
 
 def _extract_fs_glosses(gloss_sequence: str) -> dict[str, list[str]]:
     """
     Find all fs-prefixed glosses in the sequence.
-    Returns {WORD_UPPER: [letters]}, e.g. {"NEW-YORK-CITY": ["N","E","W","Y","O","R","K","C","I","T","Y"]}.
-    Hyphens joining multi-word proper nouns (fs-NEW-YORK-CITY) are stripped from the letters list.
+    Returns {WORD_UPPER: [chars]}, e.g. {"NEW-YORK-CITY": ["N","E","W","Y","O","R","K","C","I","T","Y"]}
+    or {"6-1-7": ["6","1","7"]}. Hyphens joining multi-word tokens are dropped.
     """
     fs_map: dict[str, list[str]] = {}
     for gloss in gloss_sequence.split():
         if gloss.lower().startswith("fs-"):
             word = gloss[3:].upper()
-            fs_map[word] = [c for c in word if c.isalpha()]
+            fs_map[word] = _fs_characters(word)
     return fs_map
 
 
@@ -152,20 +159,17 @@ def _build_knowledge_context(gloss_sequence: str) -> str:
     for gloss in glosses:
         if gloss.lower().startswith("fs-"):
             word = gloss[3:].upper()
-            fs_glosses.append((word, list(word)))
+            fs_glosses.append((word, _fs_characters(word)))
             continue
 
         key = gloss.lower().replace("-", "_").lstrip("#")
-        entry = SIGN_KNOWLEDGE_BASE.get(key) or SIGN_KNOWLEDGE_BASE.get(
-            key.replace("_", "")
-        )
-        if entry:
-            # Bare glosses like "I" are pronouns, not alphabet letters; skip single-letter KB entries.
+        if key in _ALPHABET_KEYS or key.replace("_", "") in _ALPHABET_KEYS:
+            # Bare glosses like "I" are pronouns, not alphabet letters.
             # Letters only enter via fs- prefix (handled above).
-            resolved_key = key if SIGN_KNOWLEDGE_BASE.get(key) else key.replace("_", "")
-            if resolved_key in _ALPHABET_KEYS:
-                unmatched.append(gloss)
-                continue
+            unmatched.append(gloss)
+            continue
+        entry = _exact_kb_entry(gloss)
+        if entry:
             matched.append((gloss, entry, None, None))
         else:
             result = _semantic_lookup(gloss)

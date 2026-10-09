@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     app_name: str = "ASL Dictionary API"
     environment: str = "development"
     debug: bool = False
+    # Not really configurable: the frontend (API_PREFIX), service worker and analytics
+    # middleware all assume "/api". Change them together if this ever changes.
     api_prefix: str = "/api"
     rate_limit: str = "10/minute"
 
@@ -20,7 +22,9 @@ class Settings(BaseSettings):
         # Must extend CORS here — class-body runs before env vars are loaded
         if self.environment == "production":
             origins = list(self.cors_origins)
-            origins.extend(["https://asl-dictionary.onrender.com"])
+            for origin in ("https://asl-guide.onrender.com", "https://asl-dictionary.onrender.com"):
+                if origin not in origins:
+                    origins.append(origin)
             object.__setattr__(self, "cors_origins", origins)
 
     cors_origins: List[str] = [
@@ -45,7 +49,27 @@ class Settings(BaseSettings):
     model_name: str = "gemini-2.5-flash"
     shared_api_key: str = ""
     shared_key_daily_limit: int = 10  # translations per day per IP
+    # Pipeline runs allowed at once (each holds a worker thread for two Gemini calls)
+    max_concurrent_translations: int = 4
+    # Distinct translations allowed to wait for a slot; beyond this requests get 503
+    max_queued_translations: int = 16
+    # Total server-side budget for one translation; the browser gives up at 60s
+    translate_timeout_seconds: float = 55.0
     admin_password: str = ""
+    # Number of reverse proxies in front of the app that append to X-Forwarded-For.
+    # 0 = ignore the header and use the socket peer address.
+    trusted_proxy_hops: int = 1
+    # X-Forwarded-For is only trusted when the socket peer is in one of these
+    # networks (Render's load balancer connects from its private network).
+    # Set to ["0.0.0.0/0", "::/0"] only if every path to the app goes through a proxy.
+    trusted_proxy_networks: list[str] = [
+        "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8", "::1/128", "fc00::/7",
+    ]
+    # Secret salt for IP hashing. Unsalted SHA-256 of an IPv4 address is reversible
+    # by brute force (only 2^32 inputs), so set this in production.
+    ip_hash_salt: str = ""
+    # Analytics events older than this are deleted (daily quota rows after 1 day)
+    analytics_retention_days: int = 90
     redis_url: str = ""
     cache_ttl: int = 3600  # seconds
     log_level: str = "INFO"

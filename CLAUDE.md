@@ -8,6 +8,18 @@ ASL Dictionary is a full-stack web application that translates English phrases i
 
 ## Development Commands
 
+### Python Dependencies
+
+`pyproject.toml` is the single source of truth; `uv.lock` pins the full tree. `requirements.txt` (runtime, used by the Docker image) and `requirements-dev.txt` (runtime + test tools, used by CI) are **generated** from the lock: never edit them by hand. After changing dependencies:
+
+```bash
+uv lock
+uv export --no-dev --no-emit-project --format requirements-txt > requirements.txt
+uv export --no-emit-project --format requirements-txt > requirements-dev.txt
+```
+
+CI runs `uv lock --check` and diffs both exports, failing on drift. Optional sets: `uv sync --extra semantic` (sentence-transformers for `ENABLE_SEMANTIC_LOOKUP`), `uv sync --group training` (torch, scikit-learn, pandas for `alphabet_translate/` and `python_code/convert_*.py`). Landmark extraction keeps its own Python 3.11 venv (see "Extraction Environment Setup").
+
 ### Local Development (Requires TWO terminals)
 
 **Terminal 1 - Backend (FastAPI):**
@@ -75,15 +87,16 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 **Shared Dependencies:** `deps.py`
 - Single `Limiter` instance imported by both `app.py` and all route modules (avoids duplication)
+- `get_real_ip()` takes the client IP from the **right** end of `X-Forwarded-For` (`TRUSTED_PROXY_HOPS` entries from the end, default 1 for Render's edge). The leftmost entries are client-supplied and spoofable — never use them for rate limiting or quotas. The header is only honoured when the socket peer is in `TRUSTED_PROXY_NETWORKS` (private ranges by default); otherwise, or when the chain is shorter than the hop count or unparseable, the peer address is used. A one-time warning is logged when an untrusted peer sends the header — if that appears on Render, add the load balancer's range.
 
 **Middleware:** `middleware.py`
 - `add_security_headers` — CSP (production only), HSTS, X-Frame-Options, X-Content-Type-Options. **CSP must include `cdn.jsdelivr.net` in `script-src`, `connect-src`, and `worker-src` for MediaPipe WASM to load, plus `'wasm-unsafe-eval'` in `script-src` and `blob:` in `worker-src`.** Missing any of these directives silently breaks the camera page in production.
-- `analytics_tracking_middleware` — records page views to the Analytics table in the background
+- `analytics_tracking_middleware` — records **successful GET navigations only** (no `/api`, `/assets`, `/sign-data`, `/models`, or file paths like `sw.js`) to the Analytics table in the background; drops events when 50 writes are already pending. `retention_loop` (started in `app.py` lifespan) deletes analytics older than `ANALYTICS_RETENTION_DAYS` (90) and quota rows older than yesterday
 - Both are registered in `app.py` via `app.middleware("http")(fn)`
 
 **Routes:** `routes/` package
 - `routes/models.py` — Pydantic request/response models (TranslateRequest, SignResponse, FeedbackRequest, …)
-- `routes/translate.py` — `POST /translate` (pipeline invocation, caching, shared-key rate limiting), `GET /rate-limit`
+- `routes/translate.py` — `POST /translate` (pipeline invocation, caching, daily quota for server-funded requests), `GET /rate-limit`
 - `routes/feedback.py` — `POST /feedback`, `POST /feedback/general`, `GET /feedback/stats`
 - `routes/admin.py` — `GET/DELETE /admin/feedback`, `GET /admin/stats`, `GET /admin/analytics/*`
 - Included in `app.py` via `app.include_router(router, prefix=settings.api_prefix)`
@@ -99,7 +112,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `db/models.py` — `Feedback` and `Analytics` ORM models
 - `db/crud/feedback.py` — `create_feedback`, `get_feedback_stats`, `get_paginated_feedback`, `get_recent_feedback`
 - `db/crud/analytics.py` — `create_analytics_event`, `get_unique_users_count`, `check_shared_key_rate_limit`, and all aggregation queries
-- IP addresses are hashed (SHA-256) for privacy; two feedback types: "translation" and "general"
+- IP addresses are hashed for privacy via `hash_ip()` — HMAC-SHA256 keyed by `IP_HASH_SALT` (plain SHA-256 if unset, which is reversible; a warning is logged in production). Two feedback types: "translation" and "general"
 - **Currently using SQLite in production** (switched from PostgreSQL when Render trial expired)
 - SQLite file: `asl_feedback.db` — note Render's filesystem is **ephemeral**, so data resets on each deploy
 - All queries use `func.date()` and SQLite-compatible syntax — no code changes needed to switch back
@@ -120,7 +133,9 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
   2. **Translation Agent**: Generates a plain-English `simple_description` (shown upfront on the sign card) plus detailed sign descriptions using structured output (`response_mime_type="application/json"`, `response_schema=SentenceDescriptionSchema`), grounded by the verified sign knowledge base. Also identifies proper nouns and sets `is_fingerspelled=true` + `fingerspell_letters` on those signs
 - Uses Google Gemini 2.5 Flash model via `google-genai` SDK
 - `ASLPipeline` instance built at startup and stored in `app.state.asl_graph`; `__init__` also creates the Gemini context cache for `_GRAMMAR_SYSTEM_PROMPT`
-- Invoked via `await asyncio.to_thread(asl_graph.invoke, {"english_input": text})` — runs in a thread pool to avoid blocking the async event loop
+- Invoked via `_run_pipeline()` in `routes/translate.py`: `asyncio.to_thread(asl_graph.invoke, ...)` behind a semaphore (`MAX_CONCURRENT_TRANSLATIONS`, 4) with a total budget (`TRANSLATE_TIMEOUT_SECONDS`, 55 → 503). Identical concurrent server-key requests share one run (custom-key requests never do). At most `MAX_QUEUED_TRANSLATIONS` (16) distinct jobs may wait for a slot (else immediate 503); a job whose callers have all timed out is cancelled before it starts, so abandoned (refunded) requests never reach Gemini
+- The pipeline reuses one `genai.Client` for the server key (closed on shutdown); custom-key clients are created per request and closed. Each HTTP call has a 25s timeout. The model comes from `Settings.model_name` (`MODEL_NAME` env)
+- Expired grammar cache: `_refresh_grammar_cache()` recreates it once under a lock and the retry uses the **new** cache name
 - **Modifying prompts**: edit `_GRAMMAR_SYSTEM_PROMPT` and `_run_instructor_agent()` in `asl/pipeline.py`. **Note**: changing `_GRAMMAR_SYSTEM_PROMPT` requires restarting the app to recreate the context cache with the new content
 
 **Sign Knowledge Base:** `python_code/sign_knowledge_base.json`
@@ -132,23 +147,31 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
   - **Alphabet guard**: Single-letter KB keys (a-z) are collected into `_ALPHABET_KEYS` frozenset and **only match `fs-` prefixed glosses** (fingerspelling). Bare single-letter glosses like "I" (pronoun) or "A" (article) are routed to the "Signs to generate" section so the LLM describes the word sign, not the alphabet handshape. This prevents homograph collisions across all 26 letters.
   - **Translation Agent context-awareness**: The system prompt includes a `CRITICAL: CONTEXT-AWARE SIGN DESCRIPTIONS` section instructing the LLM that bare glosses are words/concepts, not alphabet letters. Includes explicit examples (e.g. "I" = pointing at chest, not pinky-up handshape).
   - **Semantic fallback** (opt-in): if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt. Semantic matches to alphabet keys are also guarded.
-  - **Disabled by default** — loading `sentence-transformers` + `numpy` uses ~200MB of RAM, which exceeds Render Starter (512MB total). Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with >700MB available. Both packages are excluded from `requirements.txt` by default; uncomment them to enable.
+  - **Disabled by default** — loading `sentence-transformers` + `numpy` uses ~200MB of RAM, which exceeds Render Starter (512MB total). Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with >700MB available. Both packages live in the `semantic` extra in `pyproject.toml` (not in the default image): add them with `uv sync --extra semantic` locally, or export with `--extra semantic` for a deploy that enables it.
   - When enabled, `numpy` is imported lazily (inside the `if ENABLE_SEMANTIC_LOOKUP` block), not at module level. Embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
 - Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs (exact or semantic) instruct the LLM to copy descriptions faithfully
+- **`kb_verified` is server-computed only.** Gemini receives `GeneratedSentenceSchema` (no provenance field). `_postprocess_signs()` sets `kb_verified=True` only for **exact** KB matches and overwrites `hand_shape`/`location`/`movement`/`non_manual_markers` with the KB entry; `simple_description` stays model-written. Semantic matches are prompt hints only and are never marked verified
 
 **Caching:** `cache.py`
 - Dual-layer caching: Redis (when available) + in-memory LRU fallback
 - `_MemoryCache` class: OrderedDict-based LRU with TTL expiry, max 256 entries
 - Always writes to memory cache; also writes to Redis if connected
-- Reads try Redis first, then memory cache
+- Reads try memory first, then Redis (with deadline + backoff, see "Caching notes")
 - Works without Redis configured (Render free tier has no Redis)
 - `init_redis()` imports `redis.asyncio` lazily — no import error if redis package isn't installed
+
+**Daily free-translation quota:**
+- Any request **without** `X-Custom-API-Key` runs on a server-funded key (`SHARED_API_KEY` if set, else `GOOGLE_API_KEY`) and reserves one slot of `SHARED_KEY_DAILY_LIMIT` per hashed IP per UTC day (`try_consume_shared_key_quota`, atomic). Failed translations are refunded (`release_shared_key_quota(ip_hash, date)` with the **reservation's** date, so a request straddling UTC midnight never decrements the new day), so only successes count. Cache hits are free
+- A daily-limit 429 carries `Retry-After` (seconds to UTC midnight) and `X-RateLimit-Scope: daily`; the frontend shows "Daily limit reached" with an h/m countdown. `RateLimitBanner` refetches `/rate-limit` after every translation via `refreshKey`
+
+**Caching notes:** Redis is optional and never blocks: reads hit memory first; every Redis command has a 0.5s deadline; any failure skips Redis for 30s, then it reconnects lazily. The Redis URL is only ever logged redacted (`_redact_url`).
 
 **Custom API Keys:**
 - Users can provide their own Google Gemini API key
 - Sent via `X-Custom-API-Key` header from frontend
 - Passed directly to `ASLPipeline.invoke(state, api_key=...)` — no `os.environ` mutation
-- `_make_client(api_key)` uses the provided key; falls back to env var when `None`
+- `_make_client(api_key)` uses the provided key; `ASLPipeline(default_api_key)` holds the server key (passed from `settings.google_api_key` in `app.py`, env var fallback for the CLI)
+- **Read secrets from `get_settings()`, not `os.environ`** — pydantic-settings loads `.env` into `Settings` but does not export it to `os.environ`
 - `_can_use_grammar_cache(api_key)` compares the provided key against `self._init_api_key` directly, so context cache is correctly bypassed for custom keys without reading env
 
 ### Frontend Architecture (React/TypeScript)
@@ -163,14 +186,14 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 **Key Components:**
 - `src/components/SearchBar.tsx`: Main search input with URL query param support
 - `src/components/SignCard.tsx`: Text-only sign card — word name + "HOW TO DO IT" plain-English description always visible; expandable "More details" shows hand shape tiles, practice links, fingerspell guide, and external links. No per-card animation (animation handled by SentenceAnimator). Hero strip shows a **"Verified"** badge (green, `sign-card__badge--verified`) when `kb_verified=true`, or an **"AI generated"** badge (muted outline, `sign-card__badge--ai`) when `kb_verified` is falsy and the sign is not fingerspelled; fingerspelled signs show neither
-- `src/components/SentenceAnimator.tsx`: Plays sign animations in sequence in a sticky right column alongside the sign cards. Always shown for any result (not just multi-sign). Word chips show progress, skips single-letter non-fingerspelled words
-- `src/components/DictionaryPage.tsx`: AI translation page at `/translate`. Landing state shows onboarding callout, quick-try chips, learn progress card, category cards. During a translation, shows `TranslateLoadingView` — a full-screen pipeline progress card (4 steps with shimmer skeleton sign cards and CSS `@keyframes tlShimmer` animation) that replaces the old simple spinner. Results use a two-column grid: sign cards on the left, SentenceAnimator sticky on the right; grammar notes + follow-up suggestions + feedback widget are full-width below the grid. Results cache to `sessionStorage` keyed by lowercased query (`asl_result:<query>`) — checked on every `handleSearch` call before hitting the API, and on page load. `?q=` param synced to URL for shareable links. Results header includes an **AI disclaimer**. The **GlossBar** shows two rows: "English: [original query]" and "ASL order: [gloss tokens]". The results footer includes a **"Practice these signs"** button. **Error handling**: errors are prefixed by type (`ai_busy:`, `rate_limit:N:`, `network:`, `server:`) so the error card can show a context-aware title, the right hint, and the right actions — auto-retry for transient errors, a live countdown for rate limits (parsed from `Retry-After` header), a "Report this error" button for unexpected failures (calls `submitGeneralFeedback` with the error pre-filled). A **Cancel** button aborts the in-flight request via `AbortController`. Progressive loading hints appear at 4s/8s/14s to reassure users during backend retries.
+- `src/components/SentenceAnimator.tsx`: Plays sign animations in sequence in a sticky right column alongside the sign cards. Always shown for any result (not just multi-sign). Word chips show progress, skips single-letter non-fingerspelled words. Input is `buildAnimationSteps(result.signs)` (`src/utils/animationSteps.ts`, memoized in DictionaryPage): glosses map to library files via `toSignKey()` (`THANK-YOU → thank_you`, `3 → three`), and fingerspelled words expand to one step per letter/digit
+- `src/components/DictionaryPage.tsx`: AI translation page at `/translate`. Landing state shows onboarding callout, quick-try chips, learn progress card, category cards. During a translation, shows `TranslateLoadingView` — a full-screen pipeline progress card (4 steps with shimmer skeleton sign cards and CSS `@keyframes tlShimmer` animation) that replaces the old simple spinner. Results use a two-column grid: sign cards on the left, SentenceAnimator sticky on the right; grammar notes + follow-up suggestions + feedback widget are full-width below the grid. Results cache to `sessionStorage` (`asl_result:v2:<normalized query>`, `{savedAt, response}`, 1h TTL, shape-validated, all access in try/catch) — checked on every `handleSearch` call before hitting the API. `?q=` is followed on mount **and** on later URL changes (Back/Forward, links) via `lastQueryRef`; share links point at `/translate?q=` (old `/?q=` links redirect). Save PDF builds the document from the typed `TranslateResponse` (`src/utils/pdf.ts`, jsPDF loaded on demand), never from page markup. Results header includes an **AI disclaimer**. The **GlossBar** shows two rows: "English: [original query]" and "ASL order: [gloss tokens]". The results footer includes a **"Practice these signs"** button. **Error handling**: errors are prefixed by type (`ai_busy:`, `rate_limit:N:`, `network:`, `server:`) so the error card can show a context-aware title, the right hint, and the right actions — auto-retry for transient errors, a live countdown for rate limits (parsed from `Retry-After` header), a "Report this error" button for unexpected failures (calls `submitGeneralFeedback` with the error pre-filled). A **Cancel** button aborts the in-flight request via `AbortController`. Progressive loading hints appear at 4s/8s/14s to reassure users during backend retries.
 - `src/components/SignBrowserPage.tsx`: Sign dictionary browser at `/dictionary` (alias `/signs`). Features: A–Z sidebar jump nav, search bar, category filter tabs (All, A–Z, Numbers, Months, Common, Greetings, Family, Verified only — last three are derived filters, not metadata categories). Cards are grouped by first letter, each with an IntersectionObserver lazy-load for sign data + `SignAnimator`. Only one card plays at a time (`playingSign` state). The "Verified only" filter shows signs where `source !== 'ai_generated'`; Greetings and Family are derived from hardcoded `GREETINGS_SIGNS` / `FAMILY_SIGNS` sets matching Level 3 & 4 sign lists.
 - `src/components/FeedbackWidget.tsx`: Rating system (thumbs up/down)
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
 **API Layer:** `src/services/api/` package
-- `api/client.ts` — shared axios instance (30s timeout), `setCustomApiKey()`
+- `api/client.ts` — shared axios instance (60s timeout), `setCustomApiKey()`
 - `api/translate.ts` — `translateToASL(text, signal?)`, `getRateLimitStatus`. Errors are thrown with a type prefix: `ai_busy:`, `rate_limit:N:` (N = Retry-After seconds), `network:`, `server:`. Non-string FastAPI `detail` values (e.g. 422 validation arrays) are coerced to a generic message rather than `[object Object]`.
 - `api/feedback.ts` — `submitFeedback`, `submitGeneralFeedback`
 - `api/admin.ts` — `getAdminFeedback`, `deleteAdminFeedback`, `getAdminStats`, `getAnalyticsOverview`
@@ -198,6 +221,8 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 3. FastAPI serves `dist/index.html` for root route `/`
 4. **Catch-all route** `/{full_path:path}` handles SPA client-side routing
    - Explicitly checks for `api/` and `assets/` prefixes to avoid interception
+   - Path resolution is in `resolve_spa_path()`: the resolved path must stay inside `dist/` (the path param is percent-decoded, so `..%2f` arrives as `../`). Covered by `tests/test_security.py`
+   - Missing `sign-data/*` and `models/*` files return 404, not `index.html` (the service worker would cache HTML as data)
    - Returns `index.html` for all other routes (SPA routing)
 
 **Route Priority:**
@@ -216,6 +241,14 @@ PORT=8000
 RATE_LIMIT=10/minute                  # 100/minute in production
 DATABASE_URL=sqlite+aiosqlite:///./asl_feedback.db
 ADMIN_PASSWORD=your_secure_password   # For admin dashboard access
+IP_HASH_SALT=random_secret            # Salt for IP hashing (Render generates one via render.yaml)
+TRUSTED_PROXY_HOPS=1                  # Proxies appending to X-Forwarded-For (0 = ignore header)
+TRUSTED_PROXY_NETWORKS='["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","127.0.0.0/8","::1/128","fc00::/7"]'  # peers allowed to set X-Forwarded-For (default shown)
+SHARED_KEY_DAILY_LIMIT=10             # Free translations per IP per UTC day without a user key
+MODEL_NAME=gemini-2.5-flash           # Gemini model used by the pipeline
+MAX_CONCURRENT_TRANSLATIONS=4
+TRANSLATE_TIMEOUT_SECONDS=55
+ANALYTICS_RETENTION_DAYS=90
 ```
 
 Frontend env (optional):
@@ -269,13 +302,13 @@ The pipeline lives in `python_code/asl/pipeline.py`:
 **How fingerspelling is detected (three layers):**
 1. **Grammar Agent** — GLOSS CONVENTIONS require `fs-` prefix for all proper nouns (e.g. `fs-SHRAVAN`, `fs-BOSTON`). Multi-word proper nouns are hyphenated into a single token: `fs-NEW-YORK-CITY` (not `fs-NEW YORK CITY`). Examples are included in the prompt.
 2. **`_build_knowledge_context`** — `fs-` prefixed glosses get a dedicated `FINGERSPELLING REQUIRED` section injected into the Translation Agent's context, with pre-computed letters and field values. The LLM copies these rather than reasoning about them.
-3. **Post-processing in `_run_instructor_agent`** — after the LLM responds, `_extract_fs_glosses()` scans the gloss sequence and force-sets `is_fingerspelled=True` and `fingerspell_letters` on matching signs in Python. Hyphens in multi-word tokens (e.g. `NEW-YORK-CITY`) are stripped from the letters list. Matching normalises hyphens/spaces so `sign.word="New York City"` correctly matches fs_map key `"NEW-YORK-CITY"`. This is deterministic and immune to LLM omission.
+3. **Post-processing in `_postprocess_signs`** — after the LLM responds, `_extract_fs_glosses()` scans the gloss sequence and force-sets `is_fingerspelled=True` and `fingerspell_letters` on matching signs in Python. Letters **and digits** are kept (`fs-6-1-7 → ['6','1','7']`, displayed as `617`); hyphens in multi-word tokens (e.g. `NEW-YORK-CITY`) are dropped. Matching normalises hyphens/spaces/underscores so `sign.word="New York City"` correctly matches fs_map key `"NEW-YORK-CITY"`. This is deterministic and immune to LLM omission.
 
 **Fingerspelling frontend rendering** (`src/components/SignCard.tsx`):
 - When `is_fingerspelled` is true, a collapsible "Fingerspell" section appears in the expandable "More details" area
 - Letter chips display the full sequence at a glance (always visible)
 - "Show letter guide" expands a `<dl>` list with each letter and its hand shape description
-- Descriptions come from a static `LETTER_SHAPES` lookup table (A-Z) hardcoded in `SignCard.tsx` — no API call needed
+- Descriptions come from a static `LETTER_SHAPES` lookup table (A-Z, 0-9) hardcoded in `SignCard.tsx` — no API call needed
 
 ### Updating the Sign Knowledge Base
 
@@ -312,6 +345,7 @@ Or set `CORS_ORIGINS` environment variable as JSON array.
 - Development: 10 requests/minute per IP
 - Production: 100 requests/minute per IP
 - Uses SlowAPI with in-memory storage
+- Admin endpoints: 5 failed passwords from one IP within 15 minutes → 429 until the window clears (`auth.py`, in-memory, at most 10k tracked IPs)
 - For scaling, migrate to Redis-backed rate limiting
 
 ### Security Headers
@@ -359,7 +393,7 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 **Render service name (render.yaml):** `asl-dictionary` ← not yet updated to match new URL
 **Old URL (still live, kept for shared professor links):** `https://asl-dictionary.onrender.com`
 
-Frontend SEO files were updated in April 2026 (`public/sitemap.xml`, `public/robots.txt`, `public/og-image.svg`, `index.html` canonical/og tags all reference `asl-guide.onrender.com`). However, **`render.yaml` and `config.py` still reference `asl-dictionary.onrender.com`** — these must be updated (or the `CORS_ORIGINS` env var overridden in the Render Dashboard) for the new URL to work correctly.
+Frontend SEO files were updated in April 2026 (`public/sitemap.xml`, `public/robots.txt`, `public/og-image.svg`, `index.html` canonical/og tags all reference `asl-guide.onrender.com`). `render.yaml` (`CORS_ORIGINS`) and `config.py` now list both `asl-guide.onrender.com` and `asl-dictionary.onrender.com`. The Render service name in `render.yaml` is still `asl-dictionary` (renaming it would create a new service).
 
 ```bash
 # What was run for SEO files:
@@ -368,7 +402,6 @@ sed -i '' 's|asl-dictionary\.onrender\.com|asl-guide.onrender.com|g' \
   public/robots.txt \
   public/og-image.svg \
   index.html
-# render.yaml and config.py still need updating to complete the migration
 ```
 
 ### To migrate to a custom domain in the future:
@@ -433,7 +466,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/learn/LevelCard.tsx`: Level card component with FlowerShape badge, status indicators (Complete/Continue/Locked)
 - `src/components/learn/LevelSelector.tsx`: Level selection grid with a current-level hero card above the grid. Accepts `hasResumeSession` and `onResume` props — when a saved incomplete session exists for the current level, shows **"Resume session"** (primary) + **"New session"** (ghost) buttons; otherwise shows **"Preview session"** alone.
 - `src/components/learn/CameraPracticeExercise.tsx`: Camera practice integration
-- `src/contexts/LearnContext.tsx`: Exercise generation — sign-to-word and word-to-sign are mixed from the first session (50/50 random); recall only appears when mastery ≥ 70% and timesStudied ≥ 3. Exposes `startPracticeSession(signWords: string[])` which filters a caller-supplied word list to signs available in the animation library, deduplicates, and starts a mixed SM-2-aware session — used by the "Practice these signs" flow from the dictionary. Also exposes `resumeSession()` which loads a persisted incomplete session from localStorage and resumes at the saved `currentIndex`. `state.activeSessionLevelId` is non-null when an incomplete saved session exists for that level (drives the "Resume session" button). Session state is synced to localStorage after every index/score change via a `useEffect`, and cleared on `endSession()` or when the last exercise is answered.
+- `src/contexts/LearnContext.tsx`: Exercise generation — sign-to-word and word-to-sign are mixed from the first session (50/50 random); recall only appears when mastery ≥ 70% and timesStudied ≥ 3. Exposes `startPracticeSession(signWords: string[])` which filters a caller-supplied word list to signs available in the animation library, deduplicates, and starts a mixed SM-2-aware session — used by the "Practice these signs" flow from the dictionary. Also exposes `resumeSession()` which loads a persisted incomplete session from localStorage and resumes at the first **unanswered** exercise at or after the saved `currentIndex`. `state.activeSessionLevelId` is non-null when an incomplete saved session exists for that level (drives the "Resume session" button). `answerExercise()` is idempotent per exercise id (a synchronous `answeredIdsRef` guard runs before any storage write, so two calls in one tick can't double-award) and returns the XP actually awarded (`null` if already answered); one `ANSWER_EXERCISE` action appends to `state.results`, adds to `sessionScore`, and takes lifetime XP from `storage.addXP()` (never adds it again). The streak bonus needs the *previous* answer to be correct. Results are saved to localStorage immediately on answer; the level-unlock check runs in an effect on `state.results`. `loadSign` is a stable wrapper around the loader's bounded, deduplicated cache (no second copy in state). Camera-practice sessions only target signs the classifier can detect (`isCameraRecognizable`, no "ten"); `CameraPracticeExercise` is lazy-loaded.
 - `src/constants/levels.ts`: Level definitions
 
 **Camera Feature:**
@@ -445,7 +478,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/components/camera/HandGuide.tsx`: Hand positioning guide
 - `src/components/camera/SessionStats.tsx`: Session statistics
 - `src/components/camera/CameraTutorial.tsx`: Onboarding tutorial
-- `src/hooks/useCamera.ts`: Camera stream management
+- `src/hooks/useCamera.ts`: Camera stream management. Every start/stop bumps a generation counter; a start that resolves after a newer start, a stop, or unmount stops its own tracks. `startCamera` is stable, and the hook alone restarts on facing-mode flips (callers must not)
 - `src/hooks/useHandDetection.ts`: MediaPipe Hands integration — module-level singleton (`_singleton.landmarker`); `getOrLoadHandLandmarker()` coalesces concurrent mounts onto one load promise, resets on failure for retryability; no `close()` on unmount so the landmarker persists for the session. **`MEDIAPIPE_VERSION` constant must match the installed `@mediapipe/tasks-vision` package version** (currently `0.10.32`) — mismatch causes silent WASM init failure in production
 - `src/hooks/useASLClassifier.ts`: TensorFlow.js inference — module-level singleton (`_singleton.model/scaler/labels`); same coalescing pattern as useHandDetection; `predict()` is async (uses `await probabilities.data()` instead of `dataSync()` to avoid blocking the main thread); no `dispose()` on unmount
 - `src/hooks/useSoundEffects.ts`: Web Audio API sounds
@@ -465,13 +498,16 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `src/utils/__tests__/signOfTheDay.test.ts`: Sign of the Day tests (4 tests)
 - `src/utils/__tests__/storage.test.ts`: SM-2 spaced repetition tests (7 tests)
 - Run: `npm test` (single run) or `npm run test:watch` (watch mode)
+- Backend: `pytest` (install with `uv sync`, or `pip install -r requirements-dev.txt`). `tests/test_security.py` covers static path confinement, client-IP extraction, admin lockout, IP hashing, and `/translate` with a fake pipeline. `tests/test_pipeline.py` runs the real pipeline against a fake Gemini client (verification provenance, KB grounding, numeric fingerspelling)
+- CI type check uses `tsc -b` — `tsconfig.json` is a solution file, so plain `tsc --noEmit` checks nothing
 
 **PWA:**
 - `public/manifest.json`: Web App Manifest (name, icons, theme color, display mode)
-- `public/sw.js`: Service Worker with three cache strategies:
-  - App shell (stale-while-revalidate)
-  - Sign data `/sign-data/*` (cache-first)
-  - ML models `/models/*` (cache-first)
+- `public/sw.js`: Service Worker (bump the `-vN` cache names when changing strategy):
+  - Navigations (network-first, falls back to cached `/` offline — so a deploy's new chunk hashes are always picked up)
+  - Hashed `/assets/*` (cache-first, oldest trimmed beyond 80 entries)
+  - Sign data `/sign-data/*` (stale-while-revalidate; HTML responses never cached)
+  - Classifier files (`MODEL_FILES` under `/models/asl-classifier/`, keep in sync with `useASLClassifier`): atomic versioned bundles. A refresh (shared by requests within 60s) downloads all four; only if all succeed are they written to a new `asl-model-bundle-<ts>` cache and the pointer in `asl-model-pointer-v1` switched. Offline or on partial failure the last complete bundle is used. Each page (SW client) is **pinned** to the bundle chosen on its first model request (in memory and in the pointer cache under `/__model-pin/<clientId>`, so it survives a worker restart), so a later request from that page never switches version even if a retry succeeds. Bundles are deleted only when no open page is pinned to them. If no complete bundle exists (empty cache and the download failed), model requests fail with `Response.error()` rather than falling back to per-file network requests that could straddle a deploy; the page's failed decision isn't remembered, so the classifier's retry downloads a complete bundle. Covered by `src/utils/__tests__/swModelBundle.test.ts`
   - API calls `/api/*` (network-only)
 - `index.html`: SW registration script, Open Graph + Twitter Card meta tags
 
@@ -642,14 +678,17 @@ LEVEL_PROGRESS: 'asl_level_progress',     // Unlocked levels, current level
 ONBOARDING_DISMISSED: 'asl_onboarding_dismissed',  // First-visit callout
 ACTIVE_SESSION: 'asl_active_session',     // Incomplete session queue + index for mid-session resume
                                           // Cleared on endSession() or when last exercise is answered
-                                          // Structure: ActiveSessionData { exercises, currentIndex, levelId, sessionScore }
+                                          // Structure: ActiveSessionData { exercises, currentIndex, levelId, sessionScore, results? }
+                                          // results = ExerciseResult[] saved on every answer; resume skips answered
+                                          // exercises so XP is never awarded twice. getActiveSession() validates
+                                          // exercise shapes, index bounds, and level id
 
 // Camera feature keys
 SOUND_EFFECTS_KEY: 'asl_sound_effects_enabled',  // Sound toggle
 TUTORIAL_KEY: 'asl_camera_tutorial_seen',        // Tutorial completed
 
 // sessionStorage (tab-scoped, not persisted)
-asl_result:<query>         // Cached TranslateResponse for a specific query (restores on refresh)
+asl_result:v2:<query>      // {savedAt, response} cached TranslateResponse (1h TTL; restores on refresh)
 asl_practice_words         // JSON string[] of normalized sign words set by DictionaryPage
                            // "Practice these signs" button; consumed and cleared by LearnPage on mount
                            // when navigating to /learn?practice=1
