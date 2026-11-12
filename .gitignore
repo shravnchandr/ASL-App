@@ -88,6 +88,8 @@ saved_models/
 *.pth
 *.pkl
 *.onnx
+# The phrase-mode model is served to the browser, so it ships with the app
+!public/models/sign-phrases/sign_ctc.onnx
 
 # Python training/experiment scripts (local development only)
 alphabet_translate/

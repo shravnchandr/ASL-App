@@ -1,0 +1,278 @@
+/**
+ * PhraseMode Styles — extends the CameraPage two-panel layout
+ */
+
+/* ── Letters / Phrases switch (rendered by CameraPage) ── */
+.camera-mode-switch {
+  display: flex;
+  justify-content: center;
+  padding: 20px 32px 0;
+  background: var(--md-sys-color-background);
+}
+
+.camera-mode-switch__group {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
+  background: var(--md-sys-color-surface);
+}
+
+.camera-mode-switch__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.camera-mode-switch__tab:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+.camera-mode-switch__tab--active {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.camera-mode-switch__beta {
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* The page's own min-height assumes it starts right under the top bar */
+.camera-mode-switch + .camera-page {
+  min-height: calc(100vh - 56px - 66px);
+}
+
+/* ── Camera panel ──
+   The model was trained on 3:4 portrait video, so landmarks are detected on a
+   3:4 centre crop of the camera frame. The stage has the same shape, so the
+   `object-fit: cover` video shows exactly what the model sees.
+   The right column grows as results arrive; the camera must not stretch with it. */
+.camera-page--phrases .camera-page__left {
+  align-self: start;
+  position: sticky;
+  top: 72px; /* below the 56px top bar */
+  min-height: 0;
+  background: #0f1c24;
+}
+
+.camera-page--phrases .camera-page__stage {
+  flex: none;
+  align-self: center;
+  min-height: 0;
+  height: min(calc(100vh - 190px), 760px);
+  max-width: 100%;
+  aspect-ratio: 3 / 4;
+}
+
+.camera-page--phrases .camera-page__camera-footer {
+  display: none;
+}
+
+.camera-page--phrases .camera-page__stats-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ── Hand slot indicators over the video ── */
+.phrase-mode__slots {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+}
+
+.phrase-mode__slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(15, 28, 36, 0.86);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.phrase-mode__slot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.phrase-mode__slot--on {
+  color: #ffffff;
+}
+
+.phrase-mode__slot--left.phrase-mode__slot--on::before {
+  background: #6aafc0;
+}
+
+.phrase-mode__slot--right.phrase-mode__slot--on::before {
+  background: #f2b05e;
+}
+
+.phrase-mode__warning {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  right: 20px;
+  z-index: 10;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(15, 28, 36, 0.86);
+  color: #ffffff;
+  font-size: 0.875rem;
+}
+
+/* ── Hands the model reads ── */
+.phrase-mode__hand-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.phrase-mode__hand-choice-label {
+  margin-right: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.phrase-mode__hand-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 999px;
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.phrase-mode__hand-btn--active {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.phrase-mode__note--tight {
+  margin: 8px 0 18px;
+}
+
+/* ── Result ── */
+.phrase-mode__result {
+  margin-top: 4px;
+}
+
+.phrase-mode__glosses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.phrase-mode__gloss {
+  padding: 10px 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 10px;
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.phrase-mode__empty {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.phrase-mode__note {
+  margin: 12px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ── Attempts ── */
+.phrase-mode__attempts {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.phrase-mode__attempt {
+  padding: 12px 0;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.phrase-mode__attempt-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.phrase-mode__attempt-save {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.phrase-mode__label-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 10px;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .camera-mode-switch {
+    padding: 12px 16px 0;
+  }
+
+  /* Single column: let the camera scroll away with the page */
+  .camera-page--phrases .camera-page__left {
+    position: relative;
+    top: auto;
+  }
+
+  .camera-page--phrases .camera-page__stage {
+    width: 100%;
+    height: auto;
+  }
+}

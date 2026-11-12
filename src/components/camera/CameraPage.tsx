@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useCallback, useRef, useState } from 'react';
 import { useCamera } from '../../hooks/useCamera';
 import { useHandDetection } from '../../hooks/useHandDetection';
 import { useASLClassifier } from '../../hooks/useASLClassifier';
@@ -12,19 +12,64 @@ import { SpellingDisplay } from './SpellingDisplay';
 import { HandGuide } from './HandGuide';
 import { CameraTutorial } from './CameraTutorial';
 import './CameraPage.css';
+import './PhraseMode.css';
+
+// Pulls in ONNX Runtime and three more MediaPipe models — only on demand
+const PhraseMode = lazy(() => import('./PhraseMode'));
 
 interface CameraPageProps {
   onBack?: () => void;
 }
 
 type CameraState = 'loading' | 'permission' | 'active' | 'error';
+type CameraMode = 'letters' | 'phrases';
 
 // Target frame rate for hand detection (lower = less CPU usage)
 const TARGET_FPS = 15;
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
+const MODES: { id: CameraMode; label: string; beta?: boolean }[] = [
+  { id: 'letters', label: 'Letters' },
+  { id: 'phrases', label: 'Phrases', beta: true },
+];
+
 export default function CameraPage({ onBack }: CameraPageProps) {
   const handleBack = onBack ?? (() => { window.location.href = '/'; });
+  // /camera?mode=phrases opens phrase mode directly
+  const [mode, setMode] = useState<CameraMode>(() =>
+    new URLSearchParams(window.location.search).get('mode') === 'phrases' ? 'phrases' : 'letters'
+  );
+
+  return (
+    <>
+      <div className="camera-mode-switch">
+        <div className="camera-mode-switch__group" role="group" aria-label="Recognition mode">
+          {MODES.map(m => (
+            <button
+              key={m.id}
+              className={`camera-mode-switch__tab ${mode === m.id ? 'camera-mode-switch__tab--active' : ''}`}
+              aria-pressed={mode === m.id}
+              onClick={() => setMode(m.id)}
+            >
+              {m.label}
+              {m.beta && <span className="camera-mode-switch__beta">Beta</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {mode === 'letters' ? (
+        <SpellingMode onBack={handleBack} />
+      ) : (
+        <Suspense fallback={<div className="camera-page"><div className="camera-page__loading"><div className="camera-page__spinner" /></div></div>}>
+          <PhraseMode onBack={handleBack} />
+        </Suspense>
+      )}
+    </>
+  );
+}
+
+function SpellingMode({ onBack: handleBack }: { onBack: () => void }) {
   const { videoRef, isReady: cameraReady, isLoading: cameraLoading, error: cameraError, facingMode, flipCamera, startCamera, stopCamera } = useCamera();
   const { landmarks, normalizedLandmarks, isHandDetected, isLoading: handLoading, error: handError, processFrame } = useHandDetection();
   const { predict, isLoading: modelLoading, error: modelError } = useASLClassifier();
@@ -63,7 +108,9 @@ export default function CameraPage({ onBack }: CameraPageProps) {
   }, [isLoading, error, startCamera]);
 
   useEffect(() => {
-    if (!cameraReady || isLoading) return;
+    // The first detection compiles GPU shaders and blocks the main thread for
+    // seconds; wait for the tutorial to close so its buttons stay responsive
+    if (!cameraReady || isLoading || !tutorialComplete) return;
 
     const processLoop = (timestamp: number) => {
       if (!isMountedRef.current) return;
@@ -88,7 +135,7 @@ export default function CameraPage({ onBack }: CameraPageProps) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [cameraReady, isLoading, videoRef, processFrame]);
+  }, [cameraReady, isLoading, tutorialComplete, videoRef, processFrame]);
 
   useEffect(() => {
     if (landmarks && !isLoading) {

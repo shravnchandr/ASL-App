@@ -19,10 +19,10 @@ export interface UseHandDetectionResult {
 
 // Pin to specific version to prevent breaking changes
 const MEDIAPIPE_VERSION = '0.10.32';
-const HAND_LANDMARKER_WASM_PATH = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
-const HAND_LANDMARKER_MODEL_PATH = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+export const MEDIAPIPE_WASM_PATH = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
+export const HAND_LANDMARKER_MODEL_PATH = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
-const isWebGLAvailable = (): boolean => {
+export const isWebGLAvailable = (): boolean => {
   try {
     const canvas = document.createElement('canvas');
     return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
@@ -42,7 +42,7 @@ function getOrLoadHandLandmarker(): Promise<void> {
   if (_singleton.loadPromise) return _singleton.loadPromise;
 
   _singleton.loadPromise = (async () => {
-    const vision = await FilesetResolver.forVisionTasks(HAND_LANDMARKER_WASM_PATH);
+    const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_PATH);
     const useGPU = isWebGLAvailable();
     const landmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: {

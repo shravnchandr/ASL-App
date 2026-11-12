@@ -10,6 +10,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
   },
+  optimizeDeps: {
+    // Pre-bundling breaks the runtime's relative URL to its .wasm file in dev
+    exclude: ['onnxruntime-web'],
+  },
   server: {
     proxy: {
       '/api': {
