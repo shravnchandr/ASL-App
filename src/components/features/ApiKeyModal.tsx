@@ -66,7 +66,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => 
 
                 <div className="modal-body">
                     <p className="modal-description">
-                        Use your own Google Gemini API key for unlimited translations. Your key is stored locally and never sent to our servers.
+                        Use your own Google Gemini API key to translate without the daily free limit. Your key is saved in this browser and sent to our server with each translation, which uses it to call Google. It is not saved on our server. Google's own limits for your key still apply.
                     </p>
 
                     <div className="form-group">
@@ -119,7 +119,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => 
                                 <li>Paste it in the field above and click "Save"</li>
                             </ol>
                             <div className="instructions-note">
-                                <strong>Note:</strong> The API key is free to create and includes a generous free tier. Your key is stored only in your browser's local storage.
+                                <strong>Note:</strong> The API key is free to create and includes a generous free tier. Remove the key here at any time to delete it from this browser.
                             </div>
                         </div>
                     )}

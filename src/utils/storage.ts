@@ -58,14 +58,35 @@ interface LevelProgressData {
     currentLevel: number;
 }
 
+/**
+ * Stored values can be valid JSON of the wrong shape (edited by hand, another
+ * version, a half-written save). Readers fall back to defaults instead of
+ * handing a wrong type to the app.
+ */
+function readJson(key: string): unknown {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw === null ? undefined : JSON.parse(raw);
+    } catch {
+        return undefined;
+    }
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+    typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const finiteOr = (v: unknown, fallback: number, min = 0): number =>
+    typeof v === 'number' && Number.isFinite(v) && v >= min ? v : fallback;
+
+function isSignProgress(v: unknown): v is SignProgress {
+    return isRecord(v)
+        && ['timesStudied', 'timesCorrect', 'mastery'].every(k => typeof v[k] === 'number' && Number.isFinite(v[k]));
+}
+
 export const storage = {
     getSearchHistory(): string[] {
-        try {
-            const history = localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY);
-            return history ? JSON.parse(history) : [];
-        } catch {
-            return [];
-        }
+        const history = readJson(STORAGE_KEYS.SEARCH_HISTORY);
+        return Array.isArray(history) ? history.filter((q): q is string => typeof q === 'string') : [];
     },
 
     addToSearchHistory(query: string): void {
@@ -87,12 +108,10 @@ export const storage = {
     },
 
     getFavorites(): Array<{ query: string; timestamp: number }> {
-        try {
-            const favorites = localStorage.getItem(STORAGE_KEYS.FAVORITES);
-            return favorites ? JSON.parse(favorites) : [];
-        } catch {
-            return [];
-        }
+        const favorites = readJson(STORAGE_KEYS.FAVORITES);
+        if (!Array.isArray(favorites)) return [];
+        return favorites.filter((f): f is { query: string; timestamp: number } =>
+            isRecord(f) && typeof f.query === 'string' && typeof f.timestamp === 'number');
     },
 
     addFavorite(query: string): void {
@@ -180,12 +199,12 @@ export const storage = {
     },
 
     getLearningProgress(): Record<string, SignProgress> {
-        try {
-            const progress = localStorage.getItem(STORAGE_KEYS.LEARNING_PROGRESS);
-            return progress ? JSON.parse(progress) : {};
-        } catch {
-            return {};
-        }
+        const progress = readJson(STORAGE_KEYS.LEARNING_PROGRESS);
+        if (!isRecord(progress)) return {};
+        // Drop only the damaged entries; the rest of the progress survives
+        return Object.fromEntries(
+            Object.entries(progress).filter((entry): entry is [string, SignProgress] => isSignProgress(entry[1]))
+        );
     },
 
     getSignProgress(sign: string): SignProgress | null {
@@ -266,22 +285,14 @@ export const storage = {
     },
 
     getLearningStats(): LearningStats {
-        try {
-            const stats = localStorage.getItem(STORAGE_KEYS.LEARNING_STATS);
-            return stats ? JSON.parse(stats) : {
-                totalXP: 0,
-                level: 1,
-                streak: 0,
-                lastActivityDate: '',
-            };
-        } catch {
-            return {
-                totalXP: 0,
-                level: 1,
-                streak: 0,
-                lastActivityDate: '',
-            };
-        }
+        const stats = readJson(STORAGE_KEYS.LEARNING_STATS);
+        const s = isRecord(stats) ? stats : {};
+        return {
+            totalXP: finiteOr(s.totalXP, 0),
+            level: finiteOr(s.level, 1, 1),
+            streak: finiteOr(s.streak, 0),
+            lastActivityDate: typeof s.lastActivityDate === 'string' ? s.lastActivityDate : '',
+        };
     },
 
     addXP(amount: number): LearningStats {
@@ -308,18 +319,13 @@ export const storage = {
     },
 
     getLearningSettings(): LearningSettings {
-        try {
-            const settings = localStorage.getItem(STORAGE_KEYS.LEARNING_SETTINGS);
-            return settings ? JSON.parse(settings) : {
-                animationSpeed: 1,
-                difficulty: 'beginner',
-            };
-        } catch {
-            return {
-                animationSpeed: 1,
-                difficulty: 'beginner',
-            };
-        }
+        const settings = readJson(STORAGE_KEYS.LEARNING_SETTINGS);
+        const s = isRecord(settings) ? settings : {};
+        return {
+            animationSpeed: typeof s.animationSpeed === 'number' && Number.isFinite(s.animationSpeed) && s.animationSpeed > 0
+                ? s.animationSpeed : 1,
+            difficulty: s.difficulty === 'intermediate' || s.difficulty === 'all' ? s.difficulty : 'beginner',
+        };
     },
 
     setLearningSettings(settings: Partial<LearningSettings>): void {
@@ -345,18 +351,16 @@ export const storage = {
     },
 
     getLevelProgress(): LevelProgressData {
-        try {
-            const data = localStorage.getItem(STORAGE_KEYS.LEVEL_PROGRESS);
-            return data ? JSON.parse(data) : {
-                unlockedLevels: [1],
-                currentLevel: 1,
-            };
-        } catch {
-            return {
-                unlockedLevels: [1],
-                currentLevel: 1,
-            };
-        }
+        const data = readJson(STORAGE_KEYS.LEVEL_PROGRESS);
+        const d = isRecord(data) ? data : {};
+        const unlocked = Array.isArray(d.unlockedLevels)
+            ? d.unlockedLevels.filter((id): id is number => typeof id === 'number' && !!getLevelById(id))
+            : [];
+        const unlockedLevels = unlocked.includes(1) ? unlocked : [1, ...unlocked];
+        return {
+            unlockedLevels,
+            currentLevel: typeof d.currentLevel === 'number' && getLevelById(d.currentLevel) ? d.currentLevel : 1,
+        };
     },
 
     unlockLevel(levelId: number): void {

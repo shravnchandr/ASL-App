@@ -1,10 +1,10 @@
 import axios, { AxiosError } from 'axios';
 import type { TranslateResponse, APIError, RateLimitStatus } from '../../types';
-import { apiClient, API_PREFIX } from './client';
+import { apiClient, API_PREFIX, customApiKeyHeaders } from './client';
 
 export async function translateToASL(text: string, signal?: AbortSignal): Promise<TranslateResponse> {
     try {
-        const response = await apiClient.post<TranslateResponse>(`${API_PREFIX}/translate`, { text }, { signal });
+        const response = await apiClient.post<TranslateResponse>(`${API_PREFIX}/translate`, { text }, { signal, headers: customApiKeyHeaders() });
         return response.data;
     } catch (error) {
         if (axios.isCancel(error)) {

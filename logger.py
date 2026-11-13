@@ -16,6 +16,10 @@ def setup_logging():
     # Remove default handler
     logger.remove()
 
+    # Diagnose mode prints local variable values in tracebacks (API keys,
+    # phrase text), so it is never enabled in production, whatever the format
+    is_production = settings.environment == "production"
+
     if settings.log_format == "json":
         # Production: JSON formatted logs
         logger.add(
@@ -34,11 +38,11 @@ def setup_logging():
             level=settings.log_level,
             colorize=True,
             backtrace=True,
-            diagnose=True,
+            diagnose=not is_production,
         )
 
     # Also log to file in production
-    if settings.environment == "production":
+    if is_production:
         logger.add(
             "logs/asl_api_{time:YYYY-MM-DD}.log",
             rotation="00:00",  # Rotate daily
@@ -46,6 +50,7 @@ def setup_logging():
             compression="zip",
             level=settings.log_level,
             serialize=True,
+            diagnose=False,
         )
 
     logger.info(f"Logging configured for {settings.environment} environment")

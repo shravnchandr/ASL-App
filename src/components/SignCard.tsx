@@ -5,6 +5,7 @@ import type { ASLSign } from '../types';
 import type { SignData } from '../types/index';
 import { SignAnimator } from './learn/SignAnimator';
 import { loadSignData } from '../utils/signDataLoader';
+import { signLibraryKey } from '../utils/animationSteps';
 import './SignCard.css';
 
 const LETTER_SHAPES: Record<string, string> = {
@@ -69,8 +70,8 @@ interface SignCardProps {
     totalCount?: number;
 }
 
-function findSignLevel(word: string): number | null {
-    const key = word.toLowerCase().replace(/[\s-]+/g, '_');
+function findSignLevel(key: string | null): number | null {
+    if (!key) return null;
     for (const level of LEVELS) {
         if (level.signs.includes(key)) return level.id;
     }
@@ -80,23 +81,28 @@ function findSignLevel(word: string): number | null {
 export const SignCard: React.FC<SignCardProps> = ({ sign, index, totalCount }) => {
     const [guideOpen, setGuideOpen] = useState(false);
     const [detailsOpen, setDetailsOpen] = useState(false);
-    const [animData, setAnimData] = useState<SignData | null>(null);
+    const [loaded, setLoaded] = useState<{ key: string; data: SignData | null } | null>(null);
     const cancelledRef = useRef(false);
 
     const letters = sign.fingerspell_letters ?? [];
-    const signLevel = findSignLevel(sign.word);
-    const isSingleLetter = sign.word.length === 1 && /^[a-zA-Z]$/.test(sign.word);
+    // null for word glosses like the pronoun "I", which must not borrow the letter I
+    const libraryKey = signLibraryKey(sign);
+    const signLevel = findSignLevel(libraryKey);
+    const isSingleLetter = libraryKey !== null && /^[a-z]$/.test(libraryKey);
 
     useEffect(() => {
         cancelledRef.current = false;
-        const key = sign.word.toLowerCase().replace(/\s+/g, '_');
-        loadSignData(key).then(data => {
+        if (!libraryKey) return;
+        loadSignData(libraryKey).then(data => {
             if (!cancelledRef.current) {
-                setAnimData(data);
+                setLoaded({ key: libraryKey, data });
             }
         }).catch(() => { /* no-op */ });
         return () => { cancelledRef.current = true; };
-    }, [sign.word]);
+    }, [libraryKey]);
+
+    // Only data loaded for this card's own sign; never a previous sign's animation
+    const animData = loaded && loaded.key === libraryKey ? loaded.data : null;
 
     const hasLinks = (signLevel !== null || isSingleLetter) || (sign.is_fingerspelled && letters.length > 0);
 
@@ -149,6 +155,9 @@ export const SignCard: React.FC<SignCardProps> = ({ sign, index, totalCount }) =
                     <span><span className="sign-card__meta-key">Hand</span> {sign.hand_shape}</span>
                     <span><span className="sign-card__meta-key">Where</span> {sign.location}</span>
                     <span><span className="sign-card__meta-key">Move</span> {sign.movement}</span>
+                    {sign.non_manual_markers && (
+                        <span><span className="sign-card__meta-key">Face</span> {sign.non_manual_markers}</span>
+                    )}
                 </div>
 
                 {/* Links & guides toggle — only shown when there's something to show */}

@@ -3,7 +3,7 @@ import { SignAnimator } from './learn/SignAnimator';
 import { loadSignData } from '../utils/signDataLoader';
 import { formatSignName } from '../utils/format';
 import type { SignData } from '../types';
-import type { AnimationStep } from '../utils/animationSteps';
+import { hasLibraryEntry, type AnimationStep } from '../utils/animationSteps';
 import './SentenceAnimator.css';
 
 interface SentenceAnimatorProps {
@@ -12,14 +12,6 @@ interface SentenceAnimatorProps {
 }
 
 type PlayState = 'idle' | 'loading' | 'playing' | 'paused';
-
-/** Skip single-letter non-fingerspelled words (e.g. pronoun "I") — no matching animation file. */
-function shouldLoadAnimation(entry: AnimationStep): boolean {
-    if (entry.key.length === 1 && /^[a-z]$/.test(entry.key) && !entry.isFingerspelled) {
-        return false;
-    }
-    return true;
-}
 
 export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => {
     const [signDataMap, setSignDataMap] = useState<Map<string, SignData>>(new Map());
@@ -42,7 +34,7 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
             const map = new Map<string, SignData>();
             await Promise.all(
                 words.map(async (entry) => {
-                    if (!shouldLoadAnimation(entry)) return;
+                    if (!hasLibraryEntry(entry)) return;
                     const data = await loadSignData(entry.key);
                     if (data && !cancelled) {
                         map.set(entry.key, data);

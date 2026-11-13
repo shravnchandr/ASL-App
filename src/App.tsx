@@ -8,6 +8,7 @@ import { Layout } from './components/Layout';
 import { DictionaryPage } from './components/DictionaryPage';
 import HomePage from './components/HomePage';
 import { OnboardingPage } from './components/OnboardingPage';
+import { NotFoundPage } from './components/NotFoundPage';
 
 const LearnPage = lazy(() => import('./components/learn/LearnPage').then(m => ({ default: m.LearnPage })));
 const CameraPage = lazy(() => import('./components/camera/CameraPage'));
@@ -40,6 +41,7 @@ function App() {
                     <Route path="learn" element={<LearnPage />} />
                     <Route path="camera" element={<CameraPage />} />
                     <Route path="onboarding" element={<OnboardingPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
                 </Route>
             </Routes>
         </BrowserRouter>

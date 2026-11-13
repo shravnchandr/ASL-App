@@ -13,8 +13,7 @@ import { announceToScreenReader } from '../utils/accessibility';
 import { print } from '../utils/print';
 import { useApp } from '../contexts/AppContext';
 import { formatSignName } from '../utils/format';
-import { buildAnimationSteps } from '../utils/animationSteps';
-import { toSignKey } from '../utils/signDataLoader';
+import { buildAnimationSteps, practiceKeys } from '../utils/animationSteps';
 import { LEVELS } from '../constants/levels';
 import type { TranslateResponse } from '../types';
 import './DictionaryPage.css';
@@ -784,7 +783,7 @@ export const DictionaryPage: React.FC = () => {
                         <button
                             className="practice-cta"
                             onClick={() => {
-                                const words = result.signs.map(s => toSignKey(s.word));
+                                const words = practiceKeys(result.signs);
                                 try { sessionStorage.setItem('asl_practice_words', JSON.stringify(words)); } catch { /* ignore */ }
                                 navigate('/learn?practice=1');
                             }}

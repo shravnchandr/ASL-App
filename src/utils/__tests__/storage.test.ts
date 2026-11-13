@@ -93,3 +93,36 @@ describe('storage - SM-2 spaced repetition', () => {
         expect(progress.mastery).toBeLessThanOrEqual(100);
     });
 });
+
+describe('storage - malformed saved data', () => {
+    beforeEach(() => {
+        localStorageMock.clear();
+    });
+
+    it.each(['null', '42', '"text"', '{"a":1}', '{not json'])('falls back to defaults for %s', (raw) => {
+        for (const key of ['asl_favorites', 'asl_search_history', 'asl_learn_progress', 'asl_learn_stats',
+            'asl_learn_settings', 'asl_level_progress']) {
+            localStorageMock.setItem(key, raw);
+        }
+        expect(storage.getFavorites()).toEqual([]);
+        expect(storage.getSearchHistory()).toEqual([]);
+        expect(storage.getLearningProgress()).toEqual({});
+        expect(storage.getLearningStats()).toEqual({ totalXP: 0, level: 1, streak: 0, lastActivityDate: '' });
+        expect(storage.getLearningSettings()).toEqual({ animationSpeed: 1, difficulty: 'beginner' });
+        expect(storage.getLevelProgress()).toEqual({ unlockedLevels: [1], currentLevel: 1 });
+        expect(storage.isFavorite('hello')).toBe(false);
+    });
+
+    it('keeps valid entries and drops only the damaged ones', () => {
+        storage.updateSignProgress('hello', true);
+        const saved = JSON.parse(localStorageMock.getItem('asl_learn_progress')!);
+        localStorageMock.setItem('asl_learn_progress', JSON.stringify({ ...saved, broken: null, worse: 'x' }));
+        expect(Object.keys(storage.getLearningProgress())).toEqual(['hello']);
+
+        localStorageMock.setItem('asl_favorites', JSON.stringify([{ query: 'hi', timestamp: 1 }, null, { query: 5 }]));
+        expect(storage.getFavorites()).toEqual([{ query: 'hi', timestamp: 1 }]);
+
+        localStorageMock.setItem('asl_level_progress', JSON.stringify({ unlockedLevels: [1, 2, 'x', 99], currentLevel: 2 }));
+        expect(storage.getLevelProgress()).toEqual({ unlockedLevels: [1, 2], currentLevel: 2 });
+    });
+});

@@ -10,6 +10,26 @@ export interface AnimationStep {
 }
 
 /**
+ * A bare single-letter gloss that is not fingerspelled is a word (the pronoun
+ * "I", the article "A"), not an alphabet handshape, so it has no library entry.
+ * Every place that maps a translated sign to the library goes through this.
+ */
+export function hasLibraryEntry(step: Pick<AnimationStep, 'key' | 'isFingerspelled'>): boolean {
+    return !(/^[a-z]$/.test(step.key) && !step.isFingerspelled);
+}
+
+/** Library key for a translated sign's own animation, or null when it has none. */
+export function signLibraryKey(sign: ASLSign): string | null {
+    const key = toSignKey(sign.word);
+    return key && hasLibraryEntry({ key, isFingerspelled: !!sign.is_fingerspelled }) ? key : null;
+}
+
+/** Distinct library keys to practise for a translation (fingerspelled words become their letters). */
+export function practiceKeys(signs: ASLSign[]): string[] {
+    return [...new Set(buildAnimationSteps(signs).filter(hasLibraryEntry).map(s => s.key))];
+}
+
+/**
  * Turn translated signs into the animation sequence: canonical library keys,
  * with fingerspelled words expanded into one step per letter/digit.
  */

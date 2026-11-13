@@ -187,14 +187,41 @@ const LearnPageContent: React.FC = () => {
         }
     }, [isLastExercise, nextExercise, endSession, selectLevel]);
 
+    // Every new session goes through here: feedback left over from the previous
+    // session would otherwise disable the first exercise's answers
+    const resetSessionUi = useCallback(() => {
+        if (autoAdvanceTimerRef.current) {
+            clearTimeout(autoAdvanceTimerRef.current);
+            autoAdvanceTimerRef.current = null;
+        }
+        setFeedback(null);
+        setShowXp(false);
+        setLastXp(0);
+        sessionStartTimeRef.current = Date.now();
+    }, []);
+
     const handleStartLevelSession = useCallback(() => {
         const levelToStart = state.selectedLevel || state.currentLevel;
         if (levelToStart) {
-            setFeedback(null);
-            sessionStartTimeRef.current = Date.now();
+            resetSessionUi();
             startLevelSession(levelToStart, 10);
         }
-    }, [startLevelSession, state.selectedLevel, state.currentLevel]);
+    }, [resetSessionUi, startLevelSession, state.selectedLevel, state.currentLevel]);
+
+    const handleContinueToNextLevel = useCallback(() => {
+        resetSessionUi();
+        startLevelSession(state.currentLevel + 1, 10);
+    }, [resetSessionUi, startLevelSession, state.currentLevel]);
+
+    const handlePracticeMissed = useCallback((signs: string[]) => {
+        resetSessionUi();
+        void startPracticeSession(signs);
+    }, [resetSessionUi, startPracticeSession]);
+
+    const handleResumeSession = useCallback(() => {
+        resetSessionUi();
+        resumeSession();
+    }, [resetSessionUi, resumeSession]);
 
     const handleBackToLevels = useCallback(() => {
         endSession();
@@ -313,10 +340,7 @@ const LearnPageContent: React.FC = () => {
                 {/* Actions */}
                 <div className="sc-actions">
                     {nextLevelInfo && nextLevelUnlocked ? (
-                        <button className="sc-actions__primary" onClick={() => {
-                            sessionStartTimeRef.current = Date.now();
-                            startLevelSession(state.currentLevel + 1, 10);
-                        }}>
+                        <button className="sc-actions__primary" onClick={handleContinueToNextLevel}>
                             → Continue to Level {state.currentLevel + 1}
                         </button>
                     ) : (
@@ -325,7 +349,7 @@ const LearnPageContent: React.FC = () => {
                         </button>
                     )}
                     {missedSigns.length > 0 && (
-                        <button className="sc-actions__secondary" onClick={handleStartLevelSession}>
+                        <button className="sc-actions__secondary" onClick={() => handlePracticeMissed(missedSigns)}>
                             Practice missed signs
                         </button>
                     )}
@@ -622,7 +646,7 @@ const LearnPageContent: React.FC = () => {
                     getLevelMastery={calculateLevelMastery}
                     getReviewDueCount={getReviewDueCountForLevel}
                     hasResumeSession={hasResumeSession}
-                    onResume={hasResumeSession ? resumeSession : undefined}
+                    onResume={hasResumeSession ? handleResumeSession : undefined}
                 />
             </main>
 

@@ -67,9 +67,9 @@ export function RateLimitBanner({ customApiKey, refreshKey = 0 }: RateLimitBanne
                 <button
                     className="banner-action"
                     onClick={() => window.dispatchEvent(new CustomEvent('openApiKeyModal'))}
-                    aria-label="Add your own API key for unlimited access"
+                    aria-label="Add your own API key to translate without the daily limit"
                 >
-                    Get unlimited access
+                    Use your own key
                 </button>
             </div>
         </div>

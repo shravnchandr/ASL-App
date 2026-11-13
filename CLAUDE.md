@@ -152,6 +152,8 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs (exact or semantic) instruct the LLM to copy descriptions faithfully
 - **`kb_verified` is server-computed only.** Gemini receives `GeneratedSentenceSchema` (no provenance field). `_postprocess_signs()` sets `kb_verified=True` only for **exact** KB matches and overwrites `hand_shape`/`location`/`movement`/`non_manual_markers` with the KB entry; `simple_description` stays model-written. Semantic matches are prompt hints only and are never marked verified
 
+**Logging:** `logger.py` — loguru. `diagnose` (local variable values in tracebacks) must stay off for **every** sink in production, whatever `LOG_FORMAT` is; `tests/test_logging.py` checks this with a synthetic secret
+
 **Caching:** `cache.py`
 - Dual-layer caching: Redis (when available) + in-memory LRU fallback
 - `_MemoryCache` class: OrderedDict-based LRU with TTL expiry, max 256 entries
@@ -168,7 +170,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 **Custom API Keys:**
 - Users can provide their own Google Gemini API key
-- Sent via `X-Custom-API-Key` header from frontend
+- Sent via `X-Custom-API-Key` header from frontend, **on the translate request only** (`customApiKeyHeaders()` in `api/client.ts`) — never set it as an axios default, or it rides along on feedback/admin/status calls. The key modal copy must say the key is sent to the backend
 - Passed directly to `ASLPipeline.invoke(state, api_key=...)` — no `os.environ` mutation
 - `_make_client(api_key)` uses the provided key; `ASLPipeline(default_api_key)` holds the server key (passed from `settings.google_api_key` in `app.py`, env var fallback for the CLI)
 - **Read secrets from `get_settings()`, not `os.environ`** — pydantic-settings loads `.env` into `Settings` but does not export it to `os.environ`
@@ -193,7 +195,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `src/components/features/`: Feature-specific components (ApiKeyModal, ThemeSwitcher, etc.)
 
 **API Layer:** `src/services/api/` package
-- `api/client.ts` — shared axios instance (60s timeout), `setCustomApiKey()`
+- `api/client.ts` — shared axios instance (60s timeout), `setCustomApiKey()`, `customApiKeyHeaders()`
 - `api/translate.ts` — `translateToASL(text, signal?)`, `getRateLimitStatus`. Errors are thrown with a type prefix: `ai_busy:`, `rate_limit:N:` (N = Retry-After seconds), `network:`, `server:`. Non-string FastAPI `detail` values (e.g. 422 validation arrays) are coerced to a generic message rather than `[object Object]`.
 - `api/feedback.ts` — `submitFeedback`, `submitGeneralFeedback`
 - `api/admin.ts` — `getAdminFeedback`, `deleteAdminFeedback`, `getAdminStats`, `getAnalyticsOverview`
@@ -203,6 +205,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 **Utilities:**
 - `src/utils/storage.ts`: LocalStorage wrapper with SM-2 spaced repetition (search history, favorites, theme, API key, learning progress with `easeFactor`, `interval`, `repetitions`, `nextReview`, and `getSignsDueForReview()`). Also persists active session state via `ActiveSessionData` interface and `saveActiveSession` / `getActiveSession` / `clearActiveSession` — used for mid-session resume. `getActiveSession()` validates structural integrity and sign-name format before returning data.
 - `src/utils/signOfTheDay.ts`: Deterministic daily sign picker using date hash
+- `src/utils/animationSteps.ts`: the one mapping from a translated sign to the sign library — `buildAnimationSteps`, `signLibraryKey` (card thumbnail and practice links), `practiceKeys` ("Practice these signs"). A bare single-letter gloss that is not fingerspelled (pronoun "I") has **no** library entry (`hasLibraryEntry`)
 - `src/utils/accessibility.ts`: Screen reader announcements
 - `src/utils/print.ts`: Print-optimized layouts
 - `src/utils/share.ts`: Web Share API integration
@@ -447,7 +450,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `python_code/sign_knowledge_base.json`: Verified sign descriptions for all 100 signs (grounding source)
 
 **Frontend Core:**
-- `src/App.tsx`: Main React component with lazy loading. Route map: `/` → `HomePage`, `/translate` → `DictionaryPage`, `/dictionary` + `/signs` → `SignBrowserPage`, `/learn` → `LearnPage`, `/camera` → `CameraPage`, `/onboarding` → `OnboardingPage`, `/admin` → `Admin`.
+- `src/App.tsx`: Main React component with lazy loading. Route map: `/` → `HomePage`, `/translate` → `DictionaryPage`, `/dictionary` + `/signs` → `SignBrowserPage`, `/learn` → `LearnPage`, `/camera` → `CameraPage`, `/onboarding` → `OnboardingPage`, `/admin` → `Admin`, anything else → `NotFoundPage`.
 - `src/main.tsx`: Entry point with ErrorBoundary
 - `src/components/Layout.tsx`: App shell with top bar and bottom pill nav. Top nav items: Home, Translate, Learn, Camera, Dictionary. ⌘K shortcut navigates to `/dictionary`. Learn nav icon is a graduation cap.
 - `src/components/HomePage.tsx`: Home page at `/` with Sign of the Day, lesson plan card, streak card, and mode selection shortcuts.

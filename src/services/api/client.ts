@@ -12,10 +12,16 @@ export const apiClient = axios.create({
     },
 });
 
+let customApiKey: string | null = null;
+
 export function setCustomApiKey(apiKey: string | null): void {
-    if (apiKey) {
-        apiClient.defaults.headers.common['X-Custom-API-Key'] = apiKey;
-    } else {
-        delete apiClient.defaults.headers.common['X-Custom-API-Key'];
-    }
+    customApiKey = apiKey;
+}
+
+/**
+ * Headers carrying the user's own Gemini key. Only the translate request
+ * needs them, so the key is never attached to feedback, admin or status calls.
+ */
+export function customApiKeyHeaders(): Record<string, string> {
+    return customApiKey ? { 'X-Custom-API-Key': customApiKey } : {};
 }
