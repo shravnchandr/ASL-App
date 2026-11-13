@@ -225,3 +225,7 @@
         animation: none;
     }
 }
+
+[data-theme="dark"] .sign-option--correct {
+    border-color: #81c784;
+}

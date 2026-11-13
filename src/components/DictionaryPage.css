@@ -98,6 +98,10 @@
     background: rgba(251, 249, 244, 0.72);
 }
 
+[data-theme="dark"] .translate-composer__bar {
+    background: var(--md-sys-color-surface-container);
+}
+
 .translate-composer__bar button {
     border: 0;
     background: transparent;

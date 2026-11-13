@@ -1016,3 +1016,27 @@
         gap: 6px;
     }
 }
+
+/* ── Dark theme: the Sign of the Day card uses fixed light tints ───────── */
+
+[data-theme="dark"] .sotd-card__eyebrow {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+[data-theme="dark"] .sotd-card__right {
+    background: var(--md-sys-color-surface-container);
+}
+
+[data-theme="dark"] .sotd-card__attribution,
+[data-theme="dark"] .sotd-card__right-label,
+[data-theme="dark"] .sotd-card__frame-info {
+    color: var(--md-sys-color-on-primary-container);
+}
+
+[data-theme="dark"] .sotd-card__verified,
+[data-theme="dark"] .plan-chip--mastered,
+[data-theme="dark"] .streak-card__badge,
+[data-theme="dark"] .review-card__badge {
+    background: rgba(106, 175, 192, 0.16);
+}

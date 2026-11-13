@@ -15,6 +15,8 @@ import {
   assignHandSlots,
   buildFeatures,
   decodeGreedy,
+  decodeWithScores,
+  UNSURE_BELOW,
   formatGloss,
   handSpan,
   segmentIndices,
@@ -168,6 +170,18 @@ describe('sign-phrase model', () => {
       const data = logits.data as Float32Array;
       expect(maxAbsDiff(data, fx.logits)).toBeLessThan(1e-3);
       expect(decodeGreedy(data, T, labels)).toEqual(fx.decoded);
+
+      // The scored decode emits the same signs; scores are probabilities, best first
+      const scored = decodeWithScores(data, T, labels);
+      expect(scored.signs.map(s => s.gloss)).toEqual(fx.decoded);
+      expect(scored.closest).toHaveLength(3);
+      for (const sign of scored.signs) {
+        expect(sign.score).toBeGreaterThan(0);
+        expect(sign.score).toBeLessThanOrEqual(1);
+        expect(sign.alternatives).toHaveLength(2);
+        expect(sign.alternatives.every(a => a.gloss !== sign.gloss)).toBe(true);
+        expect(sign.alternatives[0].score).toBeGreaterThanOrEqual(sign.alternatives[1].score);
+      }
     }
     await session.release();
   }, 30_000);
@@ -178,6 +192,55 @@ describe('sign-phrase model', () => {
     // a a blank a b b blank → a a b
     const logits = [0, 0, 2, 0, 1, 1, 2].flatMap(row);
     expect(decodeGreedy(logits, 7, vocab)).toEqual(['a', 'a', 'b']);
+  });
+
+  describe('scored decode', () => {
+    const vocab = ['a', 'b', 'c'];
+    // Rows of probabilities over [a, b, c, blank], given as logits
+    const rows = (probs: number[][]) => probs.flatMap(r => r.map(Math.log));
+
+    it('pools a one-sign segment over every frame, blank excluded', () => {
+      const logits = rows([
+        [0.05, 0.15, 0.1, 0.7],  // blank wins, but b is seen here
+        [0.8, 0.1, 0.05, 0.05],  // a emitted
+        [0.6, 0.2, 0.1, 0.1],
+        [0.1, 0.05, 0.25, 0.6],
+      ]);
+      const { signs, closest } = decodeWithScores(logits, 4, vocab);
+      expect(signs).toHaveLength(1);
+      expect(signs[0].gloss).toBe('a');
+      expect(signs[0].score).toBeCloseTo(0.8, 5);
+      expect(signs[0].unsure).toBe(false);
+      expect(signs[0].alternatives.map(x => x.gloss)).toEqual(['c', 'b']);
+      expect(signs[0].alternatives[0].score).toBeCloseTo(0.25, 5);
+      expect(closest.map(x => x.gloss)).toEqual(['a', 'c', 'b']);
+    });
+
+    it('scores each sign of a phrase over its own stretch and flags weak ones', () => {
+      const logits = rows([
+        [0.9, 0.04, 0.03, 0.03],   // a
+        [0.1, 0.1, 0.1, 0.7],
+        [0.1, 0.1, 0.1, 0.7],
+        [0.2, 0.45, 0.3, 0.05],    // b, weak
+      ]);
+      const { signs } = decodeWithScores(logits, 4, vocab);
+      expect(signs.map(s => s.gloss)).toEqual(['a', 'b']);
+      expect(signs[0].score).toBeCloseTo(0.9, 5);
+      expect(signs[0].unsure).toBe(false);
+      // b's stretch is frames 2–3, so a's 0.9 in frame 0 does not leak into its runners-up
+      expect(signs[1].score).toBeCloseTo(0.45, 5);
+      expect(signs[1].unsure).toBe(0.45 < UNSURE_BELOW);
+      expect(signs[1].alternatives[0]).toMatchObject({ gloss: 'c' });
+      expect(signs[1].alternatives[0].score).toBeCloseTo(0.3, 5);
+    });
+
+    it('offers the closest signs when nothing is emitted', () => {
+      const logits = rows([[0.1, 0.3, 0.05, 0.55], [0.2, 0.1, 0.1, 0.6]]);
+      const { signs, closest } = decodeWithScores(logits, 2, vocab);
+      expect(signs).toEqual([]);
+      expect(closest.map(x => x.gloss)).toEqual(['b', 'a', 'c']);
+      expect(closest[0].score).toBeCloseTo(0.3, 5);
+    });
   });
 
   it('formats run-together glosses for display', () => {

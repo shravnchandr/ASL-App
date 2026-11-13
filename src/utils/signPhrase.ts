@@ -223,6 +223,94 @@ export function decodeGreedy(logits: ArrayLike<number>, T: number, labels: strin
   return out;
 }
 
+export interface SignCandidate {
+  gloss: string;
+  /** Pooled model score in 0..1; not the chance of being right (see UNSURE_BELOW). */
+  score: number;
+}
+
+export interface DecodedSign extends SignCandidate {
+  /** Score under UNSURE_BELOW: show it as a guess. */
+  unsure: boolean;
+  /** Next-best signs for the same stretch of frames, best first. */
+  alternatives: SignCandidate[];
+}
+
+export interface PhraseDecode {
+  /** The greedy CTC decode, one entry per emitted sign. */
+  signs: DecodedSign[];
+  /** Best-scoring signs over the whole segment; what to show when nothing was emitted. */
+  closest: SignCandidate[];
+}
+
+/**
+ * Below this pooled score a sign is shown as "not sure". From the export's
+ * sign_reliability.json: keeping scores of about 0.68 and up gives 80% correct
+ * single signs on held-out signers; a score of 0.7–0.8 alone is right about half the time.
+ */
+export const UNSURE_BELOW = 0.7;
+
+/**
+ * Greedy CTC decode with a score per sign and its runners-up. Scores are pooled
+ * the way sign_reliability.json defines them: per sign, the maximum over frames
+ * of softmax(logits)[t, sign], blank excluded. A phrase is split between
+ * neighbouring emissions (halfway through the gap) and each sign is pooled over
+ * its own stretch, so a one-sign segment is pooled over the whole segment.
+ */
+export function decodeWithScores(logits: ArrayLike<number>, T: number, labels: string[], top = 3): PhraseDecode {
+  const C = labels.length + 1;
+  const blank = labels.length;
+
+  // Per-frame softmax and the argmax runs that greedy CTC emits
+  const probs = new Float32Array(T * C);
+  const runs: { cls: number; start: number; end: number }[] = [];
+  let prev = -1;
+  for (let t = 0; t < T; t++) {
+    const row = t * C;
+    let best = 0;
+    for (let c = 1; c < C; c++) if (logits[row + c] > logits[row + best]) best = c;
+    let sum = 0;
+    for (let c = 0; c < C; c++) {
+      probs[row + c] = Math.exp(logits[row + c] - logits[row + best]);
+      sum += probs[row + c];
+    }
+    for (let c = 0; c < C; c++) probs[row + c] /= sum;
+
+    if (best !== prev && best !== blank) runs.push({ cls: best, start: t, end: t });
+    else if (best === prev && best !== blank) runs[runs.length - 1].end = t;
+    prev = best;
+  }
+
+  const pool = (from: number, to: number): Float32Array => {
+    const pooled = new Float32Array(blank);
+    for (let t = from; t <= to; t++) {
+      for (let c = 0; c < blank; c++) pooled[c] = Math.max(pooled[c], probs[t * C + c]);
+    }
+    return pooled;
+  };
+  const best = (pooled: Float32Array, n: number, skip = -1): SignCandidate[] =>
+    Array.from(pooled, (score, cls) => ({ cls, score }))
+      .filter(c => c.cls !== skip)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, n)
+      .map(c => ({ gloss: labels[c.cls], score: c.score }));
+
+  const signs = runs.map((run, i): DecodedSign => {
+    const from = i === 0 ? 0 : Math.floor((runs[i - 1].end + run.start) / 2) + 1;
+    const to = i === runs.length - 1 ? T - 1 : Math.floor((run.end + runs[i + 1].start) / 2);
+    const pooled = pool(from, to);
+    const score = pooled[run.cls];
+    return {
+      gloss: labels[run.cls],
+      score,
+      unsure: score < UNSURE_BELOW,
+      alternatives: best(pooled, top - 1, run.cls),
+    };
+  });
+
+  return { signs, closest: T > 0 ? best(pool(0, T - 1), top) : [] };
+}
+
 function distance2d(a: Point, b: Point): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }

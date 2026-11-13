@@ -177,3 +177,18 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Dark theme: the badge sits on a light teal shape */
+[data-theme="dark"] .current-level-card__badge-num {
+    color: var(--md-sys-color-on-primary);
+}
+
+[data-theme="dark"] .current-level-card__resume-btn--ghost {
+    color: var(--md-sys-color-on-primary);
+    border-color: rgba(8, 24, 32, 0.4);
+}
+
+[data-theme="dark"] .current-level-card__resume-btn--ghost:hover {
+    background: rgba(8, 24, 32, 0.1);
+    color: var(--md-sys-color-on-primary);
+}

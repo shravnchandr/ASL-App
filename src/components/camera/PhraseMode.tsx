@@ -6,9 +6,12 @@ import { announceToScreenReader } from '../../utils/accessibility';
 import { HAND_CONNECTIONS } from '../../utils/handLandmarks';
 import {
   MIN_FRAMES,
+  UNSURE_BELOW,
   PhraseSegmenter,
   buildFeatures,
   formatGloss,
+  type DecodedSign,
+  type SignCandidate,
   keepDominantHand,
   medianShoulderRatio,
   portraitCrop,
@@ -38,7 +41,10 @@ interface LiveStatus {
 
 interface Attempt {
   id: number;
-  glosses: string[];
+  /** Decoded signs with their scores and runners-up. */
+  signs: DecodedSign[];
+  /** Best-scoring signs over the whole segment, shown when nothing was decoded. */
+  closest: SignCandidate[];
   frameCount: number;
   fps: number;
   /** Framing check: about 0.40 when the frame matches training (3:4 portrait). */
@@ -53,6 +59,9 @@ interface Attempt {
   /** Raw landmarks (both hands) for export; dropped from older attempts to bound memory. */
   frames: PhraseFrame[] | null;
 }
+
+const percent = (score: number) => `${Math.round(score * 100)}%`;
+const round3 = (n: number) => Number(n.toFixed(3));
 
 /** Which hands the model is given: both as detected, or one (experimental). */
 type HandMode = 'both' | 'auto' | HandSlot;
@@ -178,7 +187,8 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
       : keepDominantHand(segment.frames, mode === 'auto' ? undefined : mode);
     const modelFrames = mode === 'both' ? segment.frames : oneHanded?.frames ?? [];
     const tooShort = modelFrames.length < MIN_FRAMES;
-    let glosses: string[] = [];
+    let signs: DecodedSign[] = [];
+    let closest: SignCandidate[] = [];
     let inferenceMs: number | null = null;
 
     if (!tooShort) {
@@ -187,12 +197,12 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
       const result = await recognize(features, T);
       if (!isMountedRef.current) return;
       setIsRecognizing(false);
-      if (result) ({ glosses, inferenceMs } = result);
+      if (result) ({ signs, closest, inferenceMs } = result);
     }
 
     setAttempts(prev => [
       {
-        id, glosses, inferenceMs, tooShort, label: '',
+        id, signs, closest, inferenceMs, tooShort, label: '',
         frameCount: modelFrames.length,
         handMode: mode,
         keptHand: oneHanded?.kept ?? null,
@@ -206,7 +216,9 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     if (tooShort) {
       announceToScreenReader('Sign too short to read');
     } else {
-      announceToScreenReader(glosses.length ? `Read: ${glosses.map(formatGloss).join(', ')}` : 'No signs recognised');
+      announceToScreenReader(signs.length
+        ? `Read: ${signs.map(s => `${formatGloss(s.gloss)}, ${percent(s.score)}${s.unsure ? ', not sure' : ''}`).join('; ')}`
+        : 'No signs recognised');
     }
   }, [recognize]);
 
@@ -278,7 +290,11 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     downloadJson(
       `phrase-${String(attempt.id).padStart(3, '0')}-${label.replace(/\s+/g, '_') || 'unlabelled'}.json`,
       toRecording(attempt.frames, label, {
-        decoded: attempt.glosses,
+        decoded: attempt.signs.map(s => s.gloss),
+        // Pooled model scores (0..1) per decoded sign, with the runners-up
+        scores: attempt.signs.map(s => round3(s.score)),
+        alternatives: attempt.signs.map(s => s.alternatives.map(a => [a.gloss, round3(a.score)])),
+        closest: attempt.closest.map(c => [c.gloss, round3(c.score)]),
         fps: Number(attempt.fps.toFixed(2)),
         // `frames` always holds both hands as detected; in a one-hand mode the
         // model was given only `kept_hand`
@@ -431,8 +447,8 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
             ))}
           </div>
           <p className="phrase-mode__note phrase-mode__note--tight">
-            One-hand modes are an experiment: the model rarely saw a second hand in training.
-            Auto keeps the hand that moves more.
+            Both is right for this model, which was trained on two-handed signing. The one-hand
+            modes are kept for comparison; Auto keeps the hand that moves more.
           </p>
 
           {status.signing && (
@@ -450,16 +466,37 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
                 <p className="phrase-mode__empty">
                   Too short to read ({latest.frameCount} frames; the model needs at least {MIN_FRAMES}).
                 </p>
-              ) : latest.glosses.length > 0 ? (
-                <div className="phrase-mode__glosses">
-                  {latest.glosses.map((g, i) => (
-                    <span key={i} className="phrase-mode__gloss">{formatGloss(g)}</span>
+              ) : latest.signs.length > 0 ? (
+                <ol className="phrase-mode__glosses">
+                  {latest.signs.map((s, i) => (
+                    <li key={i} className={`phrase-mode__gloss ${s.unsure ? 'phrase-mode__gloss--unsure' : ''}`}>
+                      <span className="phrase-mode__gloss-main">
+                        <span className="phrase-mode__gloss-word">{formatGloss(s.gloss)}</span>
+                        <span className="phrase-mode__gloss-score">{percent(s.score)}</span>
+                      </span>
+                      {s.unsure && <span className="phrase-mode__gloss-flag">Not sure</span>}
+                      {s.alternatives.length > 0 && (
+                        <span className="phrase-mode__gloss-alts">
+                          or {s.alternatives.map(a => `${formatGloss(a.gloss)} ${percent(a.score)}`).join(', ')}
+                        </span>
+                      )}
+                    </li>
                   ))}
-                </div>
+                </ol>
               ) : (
-                <p className="phrase-mode__empty">No signs recognised.</p>
+                <>
+                  <p className="phrase-mode__empty">Not sure: no sign stood out.</p>
+                  {latest.closest.length > 0 && (
+                    <p className="phrase-mode__note">
+                      Closest: {latest.closest.map(c => `${formatGloss(c.gloss)} ${percent(c.score)}`).join(', ')}
+                    </p>
+                  )}
+                </>
               )}
-              <p className="phrase-mode__note">Signs in ASL order, not an English sentence.</p>
+              <p className="phrase-mode__note">
+                Signs in ASL order, not an English sentence. The percentage is the model's own score,
+                not the chance it is right; below {percent(UNSURE_BELOW)} a sign is marked "Not sure".
+              </p>
             </div>
           )}
         </div>
@@ -513,7 +550,11 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
                 <li key={a.id} className="phrase-mode__attempt">
                   <div className="phrase-mode__attempt-read">
                     <strong>#{a.id}</strong>{' '}
-                    {a.tooShort ? 'too short' : a.glosses.length ? a.glosses.join(' ') : 'nothing recognised'}
+                    {a.tooShort
+                      ? 'too short'
+                      : a.signs.length
+                        ? a.signs.map(s => `${s.gloss} ${percent(s.score)}${s.unsure ? '?' : ''}`).join(' · ')
+                        : 'nothing recognised'}
                     <span className="phrase-mode__attempt-meta">
                       {a.frameCount} frames · {a.fps.toFixed(1)} fps
                       {a.keptHand ? ` · ${a.keptHand === 'left_hand' ? 'left' : 'right'} hand only` : ' · both hands'}

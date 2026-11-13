@@ -2144,3 +2144,10 @@
         align-items: stretch;
     }
 }
+
+/* Dark theme: the fixed dark green is unreadable on dark surfaces */
+[data-theme="dark"] .queue-sign-row__badge--mastered,
+[data-theme="dark"] .sc-sign-card--correct .sc-sign-card__icon,
+[data-theme="dark"] .sc-sign-card--correct .sc-sign-card__status {
+    color: #a5d6a7;
+}

@@ -258,7 +258,8 @@
     --md-sys-color-surface-container-high: #1e2a38;
     --md-sys-color-surface-container-highest: #243040;
     --md-sys-color-on-surface: #e4dfd0;
-    --md-sys-color-on-surface-variant: #8e95a3;
+    /* Light enough that labels dimmed with opacity stay readable on dark surfaces */
+    --md-sys-color-on-surface-variant: #a4abb8;
 
     --md-sys-color-background: #0f1419;
     --md-sys-color-on-background: #e4dfd0;

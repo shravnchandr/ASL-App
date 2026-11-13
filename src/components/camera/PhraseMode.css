@@ -188,6 +188,9 @@
 }
 
 .phrase-mode__glosses {
+  list-style: none;
+  padding: 0;
+  margin-top: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -195,15 +198,56 @@
 }
 
 .phrase-mode__gloss {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   padding: 10px 16px;
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 10px;
   background: var(--md-sys-color-surface-container);
   color: var(--md-sys-color-on-surface);
+}
+
+.phrase-mode__gloss--unsure {
+  border-style: dashed;
+  background: transparent;
+}
+
+.phrase-mode__gloss-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.phrase-mode__gloss-word {
   font-size: 1.25rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.phrase-mode__gloss--unsure .phrase-mode__gloss-word {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.phrase-mode__gloss-score {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.phrase-mode__gloss-flag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-error);
+}
+
+.phrase-mode__gloss-alts {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .phrase-mode__empty {

@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { InferenceSession } from 'onnxruntime-web';
-import { N_FEATURES, decodeGreedy } from '../utils/signPhrase';
+import { N_FEATURES, decodeWithScores, type PhraseDecode } from '../utils/signPhrase';
 
-export interface PhraseResult {
-  glosses: string[];
+export interface PhraseResult extends PhraseDecode {
   inferenceMs: number;
 }
 
@@ -92,7 +91,7 @@ export function useSignPhraseModel(): UseSignPhraseModelResult {
           features: new ort.Tensor('float32', features, [1, T, N_FEATURES]),
         });
         const inferenceMs = performance.now() - start;
-        return { glosses: decodeGreedy(logits.data as Float32Array, T, labels), inferenceMs };
+        return { ...decodeWithScores(logits.data as Float32Array, T, labels), inferenceMs };
       } catch (err) {
         console.error('Phrase recognition error:', err);
         return null;
