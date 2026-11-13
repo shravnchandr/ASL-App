@@ -78,7 +78,7 @@ async def init_db():
     if settings.environment == "production" and _is_sqlite:
         app_logger.warning(
             "DATABASE_URL is SQLite: feedback, analytics and daily quotas are lost whenever "
-            "the container filesystem resets (every deploy on Render without a disk)"
+            "the container filesystem resets (every deploy, on hosts without a persistent disk)"
         )
     if settings.environment == "production" and not settings.ip_hash_salt:
         app_logger.warning("IP_HASH_SALT is not set — stored IP hashes are reversible")

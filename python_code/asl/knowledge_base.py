@@ -31,7 +31,7 @@ _ALPHABET_KEYS: frozenset[str] = frozenset(
     k for k in SIGN_KNOWLEDGE_BASE if len(k) == 1 and k.isalpha()
 )
 
-# Disabled by default — sentence-transformers + numpy exceeds Render Starter RAM (512MB).
+# Disabled by default — sentence-transformers + numpy exceeds a 512MB host's RAM.
 # Set ENABLE_SEMANTIC_LOOKUP=true to enable (requires ~200MB extra RAM).
 _EMBED_MODEL = None
 _KB_KEYS: list[str] = []

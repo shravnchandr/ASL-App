@@ -2,7 +2,7 @@
  * Preprocessing and decoding for the continuous sign-phrase (CTC) model.
  *
  * Mirrors the Python pipeline the model was trained with; the golden fixtures in
- * src/test/fixtures/phrases04 pin the behaviour (see signPhrase.test.ts). The
+ * src/test/fixtures/phrases05 pin the behaviour (see signPhrase.test.ts). The
  * landmark order matches public/models/sign-phrases/preprocess.json.
  */
 

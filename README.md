@@ -7,8 +7,6 @@ A production-ready web app for learning American Sign Language — AI-powered si
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Live App:** [https://asl-guide.onrender.com](https://asl-guide.onrender.com)
-
 > **Note:** This is a study tool that generates AI-powered text descriptions. Always verify signs with video tutorials and practice with fluent signers for accurate learning.
 
 ![Home page showing Sign of the Day, lesson plan, and streak card](docs/screenshots/Home_Page.png)
@@ -78,12 +76,6 @@ npm run dev            # http://localhost:5173
 
 Open http://localhost:5173.
 
-### Deploy to Render.com
-
-Push to GitHub → connect repo as a Render Blueprint → set `GOOGLE_API_KEY` → deploy. Live in 5–10 minutes with automatic HTTPS and PR previews.
-
-See [GEMINI.md](./GEMINI.md) for API setup details.
-
 ### Docker
 
 ```bash
@@ -103,7 +95,7 @@ docker build -t asl-guide . && docker run -p 8000:8000 -e GOOGLE_API_KEY=your_ke
 | Browser ML | TensorFlow.js, MediaPipe Hands (Tasks Vision API) |
 | Database | SQLAlchemy async, SQLite (dev) / PostgreSQL (prod) |
 | Caching | Redis (optional) + in-memory LRU fallback |
-| Deployment | Docker, Render.com, PWA (Service Worker + Web Manifest) |
+| Deployment | Docker, PWA (Service Worker + Web Manifest) |
 | Testing | Vitest (19 frontend tests), pytest (28 backend tests) |
 
 ---

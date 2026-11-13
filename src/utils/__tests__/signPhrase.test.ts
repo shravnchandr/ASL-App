@@ -45,7 +45,7 @@ interface Fixture {
 const readJson = <T,>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 const MODEL_DIR = 'public/models/sign-phrases/';
 const fixtures = ['100015657', '1001373962', 'concat'].map(name =>
-  readJson<Fixture>(`src/test/fixtures/phrases04/${name}.json`)
+  readJson<Fixture>(`src/test/fixtures/phrases05/${name}.json`)
 );
 const labels = readJson<string[]>(`${MODEL_DIR}labels.json`);
 const spec = readJson<{ in_feat: number; landmarks: [string, number][]; max_frames: number; blank: number }>(

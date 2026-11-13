@@ -54,8 +54,4 @@
   <rect x="762" y="490" width="200" height="44" rx="22" fill="url(#pill)" stroke="#0B75BC" stroke-opacity="0.4" stroke-width="1"/>
   <text x="862" y="512" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600"
         text-anchor="middle" dominant-baseline="middle" fill="#38bdf8">Live Camera</text>
-
-  <!-- URL -->
-  <text x="600" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="400"
-        text-anchor="middle" dominant-baseline="middle" fill="#475569">asl-guide.onrender.com</text>
 </svg>

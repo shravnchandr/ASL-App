@@ -19,13 +19,6 @@ class Settings(BaseSettings):
         super().__init__(**kwargs)
         if self.environment == "development":
             object.__setattr__(self, "debug", True)
-        # Must extend CORS here — class-body runs before env vars are loaded
-        if self.environment == "production":
-            origins = list(self.cors_origins)
-            for origin in ("https://asl-guide.onrender.com", "https://asl-dictionary.onrender.com"):
-                if origin not in origins:
-                    origins.append(origin)
-            object.__setattr__(self, "cors_origins", origins)
 
     cors_origins: List[str] = [
         "http://localhost:5173",
@@ -38,7 +31,7 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def fix_postgres_url(cls, v: str) -> str:
-        """Convert postgres:// to postgresql+asyncpg:// for Render compatibility"""
+        """Convert postgres:// to postgresql+asyncpg:// for hosts that provide the short form"""
         if v and v.startswith("postgres://"):
             return v.replace("postgres://", "postgresql+asyncpg://", 1)
         elif v and v.startswith("postgresql://") and "+asyncpg" not in v:
@@ -60,7 +53,7 @@ class Settings(BaseSettings):
     # 0 = ignore the header and use the socket peer address.
     trusted_proxy_hops: int = 1
     # X-Forwarded-For is only trusted when the socket peer is in one of these
-    # networks (Render's load balancer connects from its private network).
+    # networks (a host's load balancer usually connects from its private network).
     # Set to ["0.0.0.0/0", "::/0"] only if every path to the app goes through a proxy.
     trusted_proxy_networks: list[str] = [
         "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8", "::1/128", "fc00::/7",

@@ -28,51 +28,20 @@ Initial load (gzipped): ~222 kB (Admin, Learn & Camera lazy loaded)
 - **Rate limiting** — 100 requests/minute per IP in production (10/minute in development)
 - **Gemini context caching** — ~73% reduction on grammar agent input token cost (see [caching.md](caching.md))
 - **Dual-layer translation caching** — Redis + in-memory LRU fallback
-- **Health check** — `/health` endpoint used by Render and Docker
+- **Health check** — `/health` endpoint used by Docker and host health checks
 
 ---
 
 ## PostgreSQL
 
-The app currently uses SQLite in production (Render PostgreSQL trial expired). Data resets on each deploy because Render's filesystem is ephemeral.
+The app uses SQLite by default. On a host without a persistent disk, the SQLite file (feedback, analytics, daily quotas) is lost on every deploy.
 
-To re-enable PostgreSQL:
-
-1. Set `DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname` in `render.yaml` (or Render Dashboard environment variables)
-2. Uncomment the `databases:` block in `render.yaml`
-3. No code changes needed — the ORM and all queries are already compatible
-
-All queries use `func.date()` and SQLite-compatible syntax to support both drivers without modification.
+To use PostgreSQL, set `DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname`. No code changes are needed: all queries use `func.date()` and SQLite-compatible syntax, so both drivers work.
 
 ---
 
 ## Deployment Notes
 
-- Push to `main` triggers auto-deploy on Render.com (via `render.yaml`)
-- Build time: 5–10 minutes (Docker multi-stage)
-- Check Render Dashboard logs for build/runtime errors
+The app is not currently deployed anywhere. To host it, build the Docker image (`Dockerfile`, multi-stage, 5–10 minutes) and set the environment variables from `.env.example`, including `CORS_ORIGINS` for the public domain.
 
-### Current URLs
-
-| | URL |
-|---|---|
-| Production | `https://asl-guide.onrender.com` |
-| Old URL (kept live for shared professor links) | `https://asl-dictionary.onrender.com` |
-
-`render.yaml` and `config.py` still reference `asl-dictionary.onrender.com` and need updating. Override with the `CORS_ORIGINS` environment variable in the Render Dashboard in the meantime.
-
-### Custom Domain Migration
-
-Run the following sed command replacing `asl-guide.onrender.com` with the new domain:
-
-```bash
-sed -i '' 's|asl-guide\.onrender\.com|new-domain.com|g' \
-  public/sitemap.xml \
-  public/robots.txt \
-  public/og-image.svg \
-  index.html \
-  render.yaml \
-  config.py
-```
-
-Then update `CORS_ORIGINS` in the Render Dashboard and re-verify in Google Search Console (the verification file `public/googleed041497d630e95f.html` is already deployed).
+When it has a public URL again, restore the absolute URLs that search engines and link previews need: a canonical link, `og:url`, absolute `og:image` / `twitter:image` and JSON-LD `url` in `index.html`, plus a `public/sitemap.xml` referenced from `public/robots.txt`. Then verify the domain in Google Search Console (the verification file `public/googleed041497d630e95f.html` is still in place).

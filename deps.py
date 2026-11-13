@@ -34,7 +34,7 @@ def get_real_ip(request: Request) -> str:
     """
     Extract the real client IP address.
 
-    Render (and most reverse proxies) set X-Forwarded-For to the actual
+    Reverse proxies set X-Forwarded-For to the actual
     client IP. Using request.client.host returns the load-balancer's internal
     10.x.x.x address, causing all users to share a single rate-limit bucket.
 

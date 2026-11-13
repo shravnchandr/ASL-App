@@ -21,8 +21,7 @@
 
 **Error:** CORS policy blocking requests
 
-1. Update `CORS_ORIGINS` environment variable in the Render Dashboard with your domain
-2. Or add the domain directly in `config.py` inside the `__init__` method (not at class body level)
+1. Set the `CORS_ORIGINS` environment variable on your host to include your domain
 3. Redeploy
 
 ## Build Fails

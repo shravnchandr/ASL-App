@@ -70,7 +70,7 @@ def _request(xff: str | None, peer: str = "10.0.0.1"):
 class TestGetRealIp:
     def test_uses_proxy_appended_entry_not_client_supplied(self, monkeypatch):
         monkeypatch.setattr(get_settings(), "trusted_proxy_hops", 1)
-        # Client sent "1.2.3.4"; Render's edge appended the real address
+        # Client sent "1.2.3.4"; the proxy appended the real address
         assert get_real_ip(_request("1.2.3.4, 203.0.113.9")) == "203.0.113.9"
 
     def test_single_entry(self, monkeypatch):

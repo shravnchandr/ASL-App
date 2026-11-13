@@ -2,7 +2,7 @@
 Google-genai pipeline for ASL translation.
 
 Uses google-genai directly (no LangChain/LangGraph) to keep memory footprint
-low on Render Starter (512MB RAM).
+low on small hosts (512MB RAM).
 
 Two-agent pipeline:
   1. Grammar Agent  — applies 11 ASL grammar rules, outputs gloss sequence
@@ -428,7 +428,7 @@ class ASLPipeline:
                 model=self._model,
                 config=types.CreateCachedContentConfig(
                     system_instruction=_GRAMMAR_SYSTEM_PROMPT,
-                    ttl="86400s",  # 24 hours — covers a full Render deployment cycle
+                    ttl="86400s",  # 24 hours — covers a full deployment cycle
                 ),
             )
             print(

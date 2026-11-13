@@ -64,7 +64,7 @@ docker run -p 8000:8000 -e GOOGLE_API_KEY=your_key asl-dictionary
 
 ### Deployment
 
-Production deployment uses Render.com with automatic deploys via `render.yaml`. Push to `main` branch triggers auto-deployment.
+The app is **not currently deployed** (taken offline in November 2026). To host it again, use the Docker image and set the environment variables below.
 
 ## Architecture Overview
 
@@ -87,7 +87,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 
 **Shared Dependencies:** `deps.py`
 - Single `Limiter` instance imported by both `app.py` and all route modules (avoids duplication)
-- `get_real_ip()` takes the client IP from the **right** end of `X-Forwarded-For` (`TRUSTED_PROXY_HOPS` entries from the end, default 1 for Render's edge). The leftmost entries are client-supplied and spoofable — never use them for rate limiting or quotas. The header is only honoured when the socket peer is in `TRUSTED_PROXY_NETWORKS` (private ranges by default); otherwise, or when the chain is shorter than the hop count or unparseable, the peer address is used. A one-time warning is logged when an untrusted peer sends the header — if that appears on Render, add the load balancer's range.
+- `get_real_ip()` takes the client IP from the **right** end of `X-Forwarded-For` (`TRUSTED_PROXY_HOPS` entries from the end, default 1 for a single load balancer). The leftmost entries are client-supplied and spoofable — never use them for rate limiting or quotas. The header is only honoured when the socket peer is in `TRUSTED_PROXY_NETWORKS` (private ranges by default); otherwise, or when the chain is shorter than the hop count or unparseable, the peer address is used. A one-time warning is logged when an untrusted peer sends the header — if that appears behind a real proxy, add the load balancer's range.
 
 **Middleware:** `middleware.py`
 - `add_security_headers` — CSP (production only), HSTS, X-Frame-Options, X-Content-Type-Options. **CSP must include `cdn.jsdelivr.net` in `script-src`, `connect-src`, and `worker-src` for MediaPipe WASM to load, plus `'wasm-unsafe-eval'` in `script-src` and `blob:` in `worker-src`.** Missing any of these directives silently breaks the camera page in production.
@@ -113,15 +113,14 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `db/crud/feedback.py` — `create_feedback`, `get_feedback_stats`, `get_paginated_feedback`, `get_recent_feedback`
 - `db/crud/analytics.py` — `create_analytics_event`, `get_unique_users_count`, `check_shared_key_rate_limit`, and all aggregation queries
 - IP addresses are hashed for privacy via `hash_ip()` — HMAC-SHA256 keyed by `IP_HASH_SALT` (plain SHA-256 if unset, which is reversible; a warning is logged in production). Two feedback types: "translation" and "general"
-- **Currently using SQLite in production** (switched from PostgreSQL when Render trial expired)
-- SQLite file: `asl_feedback.db` — note Render's filesystem is **ephemeral**, so data resets on each deploy
+- SQLite by default. SQLite file: `asl_feedback.db` — on a host without a persistent disk, data resets on each deploy (a warning is logged in production)
 - All queries use `func.date()` and SQLite-compatible syntax — no code changes needed to switch back
-- To re-enable PostgreSQL: set `DATABASE_URL=postgresql+asyncpg://...` in `render.yaml` and uncomment the `databases:` block
+- To use PostgreSQL: set `DATABASE_URL=postgresql+asyncpg://...`
 
 **AI Workflow:** `python_code/asl/` package
 - `asl/schemas.py` — Pydantic models (`DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`) and `ASLState` TypedDict
 - `asl/knowledge_base.py` — KB loading, exact lookup, optional semantic lookup (`_build_knowledge_context`, `_extract_fs_glosses`, `_get_kb_matched_words`)
-- `asl/pipeline.py` — **active implementation**: `ASLPipeline` class with `.invoke()`, `build_asl_graph()` factory. Uses `google-genai` SDK directly (no LangChain/LangGraph) for ~120MB RAM savings on Render Starter. Two-agent logic: Grammar Agent → Translation Agent. Key internals:
+- `asl/pipeline.py` — **active implementation**: `ASLPipeline` class with `.invoke()`, `build_asl_graph()` factory. Uses `google-genai` SDK directly (no LangChain/LangGraph) for ~120MB RAM savings on small (512MB) hosts. Two-agent logic: Grammar Agent → Translation Agent. Key internals:
   - **Context cache**: `_try_create_grammar_cache()` uploads `_GRAMMAR_SYSTEM_PROMPT` to Gemini at startup with 24h TTL; `_can_use_grammar_cache(api_key)` bypasses it for custom API key requests; stale cache triggers recreation automatically. **Changing `_GRAMMAR_SYSTEM_PROMPT` invalidates the cache** — it recreates on the next request automatically.
   - **Retry logic**: `_gemini_with_retry(fn, *args, **kwargs)` wraps every `generate_content` call; retries up to 3 times on 503/429/overloaded errors with exponential backoff (2s → 4s → 8s). Non-transient errors (auth, not-found) are re-raised immediately.
   - **Token tracking**: `_usage_counts()` extracts prompt/cached/thinking/output counts from every response; `_PipelineStats` dataclass accumulates lifetime totals; `get_stats()` returns cache hit rate and token breakdown; `_log_usage()` prints per-agent counts to stdout
@@ -147,7 +146,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
   - **Alphabet guard**: Single-letter KB keys (a-z) are collected into `_ALPHABET_KEYS` frozenset and **only match `fs-` prefixed glosses** (fingerspelling). Bare single-letter glosses like "I" (pronoun) or "A" (article) are routed to the "Signs to generate" section so the LLM describes the word sign, not the alphabet handshape. This prevents homograph collisions across all 26 letters.
   - **Translation Agent context-awareness**: The system prompt includes a `CRITICAL: CONTEXT-AWARE SIGN DESCRIPTIONS` section instructing the LLM that bare glosses are words/concepts, not alphabet letters. Includes explicit examples (e.g. "I" = pointing at chest, not pinky-up handshape).
   - **Semantic fallback** (opt-in): if exact match fails, `_semantic_lookup()` uses cosine similarity against embeddings of all 100 KB keys (via `all-MiniLM-L6-v2`) to resolve synonyms (e.g. `GLAD → happy`, `AUTOMOBILE → car`). Threshold: 0.60. Matched key and similarity score are logged and annotated in the prompt. Semantic matches to alphabet keys are also guarded.
-  - **Disabled by default** — loading `sentence-transformers` + `numpy` uses ~200MB of RAM, which exceeds Render Starter (512MB total). Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with >700MB available. Both packages live in the `semantic` extra in `pyproject.toml` (not in the default image): add them with `uv sync --extra semantic` locally, or export with `--extra semantic` for a deploy that enables it.
+  - **Disabled by default** — loading `sentence-transformers` + `numpy` uses ~200MB of RAM, which exceeds a 512MB host. Enable with `ENABLE_SEMANTIC_LOOKUP=true` on plans with >700MB available. Both packages live in the `semantic` extra in `pyproject.toml` (not in the default image): add them with `uv sync --extra semantic` locally, or export with `--extra semantic` for a deploy that enables it.
   - When enabled, `numpy` is imported lazily (inside the `if ENABLE_SEMANTIC_LOOKUP` block), not at module level. Embeddings are computed once at startup from `SIGN_KNOWLEDGE_BASE` keys and held in a numpy array (`_KB_EMBEDDINGS`) — no vector database needed
 - Signs not in the knowledge base are explicitly flagged for LLM generation; matched signs (exact or semantic) instruct the LLM to copy descriptions faithfully
 - **`kb_verified` is server-computed only.** Gemini receives `GeneratedSentenceSchema` (no provenance field). `_postprocess_signs()` sets `kb_verified=True` only for **exact** KB matches and overwrites `hand_shape`/`location`/`movement`/`non_manual_markers` with the KB entry; `simple_description` stays model-written. Semantic matches are prompt hints only and are never marked verified
@@ -159,7 +158,7 @@ Production deployment uses Render.com with automatic deploys via `render.yaml`. 
 - `_MemoryCache` class: OrderedDict-based LRU with TTL expiry, max 256 entries
 - Always writes to memory cache; also writes to Redis if connected
 - Reads try memory first, then Redis (with deadline + backoff, see "Caching notes")
-- Works without Redis configured (Render free tier has no Redis)
+- Works without Redis configured
 - `init_redis()` imports `redis.asyncio` lazily — no import error if redis package isn't installed
 
 **Daily free-translation quota:**
@@ -244,7 +243,7 @@ PORT=8000
 RATE_LIMIT=10/minute                  # 100/minute in production
 DATABASE_URL=sqlite+aiosqlite:///./asl_feedback.db
 ADMIN_PASSWORD=your_secure_password   # For admin dashboard access
-IP_HASH_SALT=random_secret            # Salt for IP hashing (Render generates one via render.yaml)
+IP_HASH_SALT=random_secret            # Salt for IP hashing (any long random string)
 TRUSTED_PROXY_HOPS=1                  # Proxies appending to X-Forwarded-For (0 = ignore header)
 TRUSTED_PROXY_NETWORKS='["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","127.0.0.0/8","::1/128","fc00::/7"]'  # peers allowed to set X-Forwarded-For (default shown)
 SHARED_KEY_DAILY_LIMIT=10             # Free translations per IP per UTC day without a user key
@@ -331,17 +330,7 @@ If CSS/JS files don't load in production:
 
 ### CORS Configuration
 
-Production domains must be added inside the `__init__` method in `config.py` (not at class body level — class-body code runs at definition time before env vars are loaded):
-```python
-def __init__(self, **kwargs):
-    super().__init__(**kwargs)
-    if self.environment == "production":
-        origins = list(self.cors_origins)
-        origins.extend(["https://your-domain.com"])
-        object.__setattr__(self, "cors_origins", origins)
-```
-
-Or set `CORS_ORIGINS` environment variable as JSON array.
+`config.py` allows the local dev origins by default. For a deployed domain, set the `CORS_ORIGINS` environment variable to a JSON array (e.g. `["https://your-domain.com"]`); no production origins are hardcoded.
 
 ### Rate Limiting
 
@@ -359,13 +348,13 @@ Configured in `middleware.py` → `add_security_headers`:
 - X-Frame-Options: Prevents clickjacking
 - X-Content-Type-Options: Prevents MIME sniffing
 
-Modify CSP if adding external scripts or resources. The CSP is only applied in production (`settings.environment == "production"`), so camera works locally but may fail on Render if CSP is wrong.
+Modify CSP if adding external scripts or resources. The CSP is only applied in production (`settings.environment == "production"`), so camera works locally but may fail in production if CSP is wrong.
 
 ## Common Pitfalls
 
 1. **Forgetting to run both services**: Frontend and backend must both be running in development
 2. **API key not set**: Translation fails without `GOOGLE_API_KEY` in environment or user-provided key
-3. **CORS errors**: Production domain not added to config.py
+3. **CORS errors**: Production domain missing from the `CORS_ORIGINS` environment variable
 4. **Static files 404**: Catch-all route intercepting `/assets/*` requests
 5. **Rate limiting in dev**: Clear rate limit with API restart (in-memory storage)
 6. **Import errors**: Backend packages (`db/`, `routes/`, `deps.py`, `middleware.py`) and `python_code/asl/` must be on sys.path — `app.py` sets this via `sys.path.insert(0, "python_code")` at startup
@@ -384,43 +373,11 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 
 ## Deployment Notes
 
-- Push to `main` branch triggers Render.com auto-deploy
-- Build takes 5-10 minutes (Docker multi-stage build)
-- Check Render dashboard logs for build/runtime errors
-- Update `CORS_ORIGINS` environment variable after first deploy
-- Health check endpoint: `/health` (used by Render and Docker)
-
-## Domain / URL Status
-
-**Current production URL:** `https://asl-guide.onrender.com`
-**Render service name (render.yaml):** `asl-dictionary` ← not yet updated to match new URL
-**Old URL (still live, kept for shared professor links):** `https://asl-dictionary.onrender.com`
-
-Frontend SEO files were updated in April 2026 (`public/sitemap.xml`, `public/robots.txt`, `public/og-image.svg`, `index.html` canonical/og tags all reference `asl-guide.onrender.com`). `render.yaml` (`CORS_ORIGINS`) and `config.py` now list both `asl-guide.onrender.com` and `asl-dictionary.onrender.com`. The Render service name in `render.yaml` is still `asl-dictionary` (renaming it would create a new service).
-
-```bash
-# What was run for SEO files:
-sed -i '' 's|asl-dictionary\.onrender\.com|asl-guide.onrender.com|g' \
-  public/sitemap.xml \
-  public/robots.txt \
-  public/og-image.svg \
-  index.html
-```
-
-### To migrate to a custom domain in the future:
-
-Run the same sed command replacing `asl-guide.onrender.com` with the new domain, then update the Render environment variable:
-- `CORS_ORIGINS` → `["https://NEW-DOMAIN"]`
-
-Re-verify Google Search Console for the new domain (the verification file `public/googleed041497d630e95f.html` is already deployed — just add the new property in Search Console and click Verify).
-
-### SEO files in place (as of April 2026):
-- `public/robots.txt` — allows all crawlers, points to sitemap
-- `public/sitemap.xml` — covers `/`, `/translate`, `/dictionary`, `/learn`, `/camera`
-- `public/og-image.svg` — 1200×630 social share image
-- `public/googleed041497d630e95f.html` — Google Search Console verification
-- `index.html` — JSON-LD (`WebSite` + `SearchAction` + `EducationalApplication`), og:image, keywords, canonical
-- `src/components/DictionaryPage.tsx` — `?q=` param synced to URL for shareable translation results
+- The app is currently offline; there is no production URL and no auto-deploy
+- Docker multi-stage build takes 5-10 minutes
+- Set `CORS_ORIGINS` (JSON array) for the public domain; there are no hardcoded production origins in `config.py`
+- Health check endpoint: `/health` (used by Docker)
+- `index.html` has no canonical link, `og:url` or JSON-LD `url`, `og:image` is a relative path, and there is no `public/sitemap.xml`: these all need an absolute public URL, so restore them when the app has a domain again. `public/robots.txt`, `public/og-image.svg` and the Google Search Console verification file (`public/googleed041497d630e95f.html`) are still in place
 
 ## Key Files Reference
 
@@ -518,7 +475,6 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - `vite.config.ts`: Build configuration, dev proxy, vitest config
 - `Dockerfile`: Multi-stage production build
 - `docker-compose.yml`: Development environment
-- `render.yaml`: Render.com deployment config
 
 ## Tech Stack Summary
 
@@ -528,7 +484,7 @@ Re-verify Google Search Console for the new domain (the verification file `publi
 - **Browser ML**: TensorFlow.js, MediaPipe Hands (Tasks Vision API)
 - **Database**: SQLAlchemy (async), aiosqlite/PostgreSQL
 - **Caching**: Redis (optional) + in-memory LRU fallback
-- **Deployment**: Docker, Render.com, PWA (Service Worker + Web Manifest)
+- **Deployment**: Docker, PWA (Service Worker + Web Manifest)
 
 ---
 
@@ -900,13 +856,13 @@ const NUMBER_LABEL_MAP: Record<string, string> = {
 
 ### Phrase Mode (experimental continuous signing)
 
-`/camera` has a **Letters / Phrases** switch (`CameraPage` wrapper; `/camera?mode=phrases` opens phrases directly). Letters is the fingerspelling mode above (`SpellingMode`); Phrases is the lazy-loaded `src/components/camera/PhraseMode.tsx`, which runs the `phrases04` CTC model (250 glosses + blank) from the separate model repo. The integration contract is `instructions.md` in that repo's export.
+`/camera` has a **Letters / Phrases** switch (`CameraPage` wrapper; `/camera?mode=phrases` opens phrases directly). Letters is the fingerspelling mode above (`SpellingMode`); Phrases is the lazy-loaded `src/components/camera/PhraseMode.tsx`, which runs the `phrases05` CTC model (250 glosses + blank) from the separate model repo. The integration contract is `instructions.md` in that repo's export.
 
 - `public/models/sign-phrases/`: `sign_ctc.onnx` (27 MB, input `features (1, T, 788)`, 8 ≤ T ≤ 512), `labels.json`, `preprocess.json`
 - `src/utils/signPhrase.ts`: pure preprocessing/decoding — `segmentIndices` (frames with a pose, first..last with a hand), `buildFeatures` (order is fixed by the export contract in the model repo's `browser_fixtures.py`: nose origin → hold-fill → subsample over 384 frames → Δ1; presence is the kept frame's actual detection), `decodeGreedy`, `assignHandSlots`, `keepDominantHand` (experimental **one-hand mode**, off by default: nulls the less active or unchosen hand and re-trims; the Hands control in the UI switches between Both / One (auto) / Left only / Right only so the two can be compared), `PhraseSegmenter` (segment ends after 1 s without a hand), `toRecording` (fixture-format export)
 - `src/hooks/useHolisticLandmarks.ts`: Pose + Hand (`numHands: 2`) + Face landmarkers, session singleton. Uses `landmarks` (image coordinates) on the **raw, unmirrored** frame, **centre-cropped to 3:4 portrait** (`portraitCrop`) because the model was trained on portrait video; the stage is 3:4 so the user sees exactly the crop, and the display is mirrored with CSS only. `shoulderRatio` (≈ 0.40 when framing matches training) is shown per segment. Hand slots come from distance to pose wrists 15/16, **never** MediaPipe's handedness label
 - `src/hooks/useSignPhraseModel.ts`: `onnxruntime-web/wasm` session singleton, single-threaded. Vite emits the runtime's `.wasm` to `/assets` (same-origin, no CSP change); `optimizeDeps.exclude: ['onnxruntime-web']` in `vite.config.ts` keeps that URL working in dev
-- `src/utils/__tests__/signPhrase.test.ts`: parity against the golden fixtures in `src/test/fixtures/phrases04/` (`segment`/`subsample` exact — older fixtures with `trim` are also accepted — features < 1e-5, logits < 1e-3, decode exact). **When the model is re-exported, replace the model files and the fixtures together**
+- `src/utils/__tests__/signPhrase.test.ts`: parity against the golden fixtures in `src/test/fixtures/phrases05/` (`segment`/`subsample` exact — older fixtures with `trim` are also accepted — features < 1e-5, logits < 1e-3, decode exact). **When the model is re-exported, replace the model files and the fixtures together**
 - Each attempt can be labelled and saved as JSON (landmarks only) to send back to the model repo for scoring
 
 ### Performance Optimizations

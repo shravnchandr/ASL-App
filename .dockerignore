@@ -60,7 +60,6 @@ LICENSE
 # CI/CD
 .github/
 .gitlab-ci.yml
-render.yaml
 
 # Docker
 Dockerfile
