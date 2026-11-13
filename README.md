@@ -11,7 +11,7 @@ A production-ready web app for learning American Sign Language — AI-powered si
 
 > **Note:** This is a study tool that generates AI-powered text descriptions. Always verify signs with video tutorials and practice with fluent signers for accurate learning.
 
-![Home page showing Sign of the Day, lesson plan, and streak card](screenshots/Home_Page.png)
+![Home page showing Sign of the Day, lesson plan, and streak card](docs/screenshots/Home_Page.png)
 
 ---
 
@@ -43,7 +43,7 @@ Type any English phrase and get a complete ASL breakdown: grammar-reordered glos
 
 | Home | Translate | Learn | Camera |
 |:---:|:---:|:---:|:---:|
-| <img src="screenshots/Home_Page.png" width="220" alt="Home page with Sign of the Day, lesson plan, and streak"> | <img src="screenshots/Translation_Results.gif" width="220" alt="Translate results showing ASL gloss order, verified sign cards, and sentence animation"> | <img src="screenshots/Learn_Page.gif" width="220" alt="Sign-to-word exercise with animated sign playing and multiple choice answers"> | <img src="screenshots/Camera_Page.png" width="220" alt="Live camera recognizing the letter O with MediaPipe landmark overlay"> |
+| <img src="docs/screenshots/Home_Page.png" width="220" alt="Home page with Sign of the Day, lesson plan, and streak"> | <img src="docs/screenshots/Translation_Results.gif" width="220" alt="Translate results showing ASL gloss order, verified sign cards, and sentence animation"> | <img src="docs/screenshots/Learn_Page.gif" width="220" alt="Sign-to-word exercise with animated sign playing and multiple choice answers"> | <img src="docs/screenshots/Camera_Page.png" width="220" alt="Live camera recognizing the letter O with MediaPipe landmark overlay"> |
 
 ---
 
