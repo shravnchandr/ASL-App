@@ -8,6 +8,8 @@ import json
 import hashlib
 import time
 from collections import OrderedDict
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urlsplit
 
@@ -167,14 +169,35 @@ def get_redis():
     return _redis_client
 
 
-# Bump when the response shape or pipeline semantics change so stale entries
-# (e.g. pre-v2 model-claimed kb_verified flags) are never served.
-CACHE_VERSION = "v2"
+# Bump when the response shape changes so stale entries (e.g. pre-v2
+# model-claimed kb_verified flags) are never served.
+CACHE_VERSION = "v3"
+
+_PIPELINE_DIR = Path(__file__).parent / "python_code"
+
+
+@lru_cache()
+def pipeline_revision() -> str:
+    """
+    Fingerprint of everything that decides a translation: the model, the pipeline
+    code (prompts live there) and the knowledge base. Part of every cache key, so
+    entries written by an older pipeline (in Redis) are never served by a newer one.
+    """
+    digest = hashlib.sha256(settings.model_name.encode())
+    sources = sorted((_PIPELINE_DIR / "asl").glob("*.py"))
+    sources.append(_PIPELINE_DIR / "sign_knowledge_base.json")
+    for path in sources:
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
 
 
 def normalize_query(text: str) -> str:
-    """Cache identity for a phrase: case- and whitespace-insensitive."""
-    return " ".join(text.lower().split())
+    """
+    Cache identity for a phrase: whitespace-insensitive only. Case is kept
+    because it can carry meaning ("May" the month, "may" the verb).
+    """
+    return " ".join(text.split())
 
 
 def generate_cache_key(text: str, prefix: str = "asl:translation") -> str:
@@ -183,7 +206,7 @@ def generate_cache_key(text: str, prefix: str = "asl:translation") -> str:
     Uses SHA256 hash to handle long texts and special characters.
     """
     text_hash = hashlib.sha256(normalize_query(text).encode()).hexdigest()[:16]
-    return f"{prefix}:{CACHE_VERSION}:{text_hash}"
+    return f"{prefix}:{CACHE_VERSION}:{pipeline_revision()}:{text_hash}"
 
 
 async def get_cached_translation(text: str) -> Optional[dict]:

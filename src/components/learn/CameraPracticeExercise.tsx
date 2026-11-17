@@ -37,7 +37,7 @@ export function CameraPracticeExercise({
   const [isMatched, setIsMatched] = useState(false);
 
   const predictionBufferRef = useRef(new PredictionBuffer(5, 0.6));
-  const matchTimeRef = useRef<number>(0);
+  const matchStartRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(0);
   const isMountedRef = useRef(true);
@@ -109,17 +109,20 @@ export function CameraPracticeExercise({
     if (landmarks && !isLoading && status === 'ready') {
       void predict(landmarks).then(result => {
         if (!result) return;
-        predictionBufferRef.current.add(result.label);
-        const stablePrediction = predictionBufferRef.current.getStablePrediction();
-        if (stablePrediction) {
-          setPrediction(stablePrediction);
-          setConfidence(result.confidence);
+        predictionBufferRef.current.add(result.label, result.confidence);
+        const stable = predictionBufferRef.current.getStable();
+        if (stable) {
+          setPrediction(stable.label);
+          setConfidence(stable.confidence);
 
-          if (isMatch(stablePrediction) && result.confidence > 0.75) {
-            matchTimeRef.current += FRAME_INTERVAL;
-            setMatchProgress(Math.min(matchTimeRef.current / MATCH_THRESHOLD, 1));
+          if (isMatch(stable.label) && stable.confidence > 0.75) {
+            // Real elapsed time of one continuous match; frames don't arrive at a fixed rate
+            const now = performance.now();
+            if (matchStartRef.current === null) matchStartRef.current = now;
+            const held = now - matchStartRef.current;
+            setMatchProgress(Math.min(held / MATCH_THRESHOLD, 1));
 
-            if (matchTimeRef.current >= MATCH_THRESHOLD) {
+            if (held >= MATCH_THRESHOLD) {
               setIsMatched(true);
               announceToScreenReader(`Correct! You signed ${formatSignName(targetSign)}`);
               completeTimerRef.current = setTimeout(() => {
@@ -127,9 +130,13 @@ export function CameraPracticeExercise({
               }, 1000);
             }
           } else {
-            matchTimeRef.current = 0;
+            matchStartRef.current = null;
             setMatchProgress(0);
           }
+        } else {
+          // No agreed label: the hold is broken
+          matchStartRef.current = null;
+          setMatchProgress(0);
         }
       });
     }
@@ -138,7 +145,7 @@ export function CameraPracticeExercise({
   useEffect(() => {
     if (!isHandDetected) {
       predictionBufferRef.current.clear();
-      matchTimeRef.current = 0;
+      matchStartRef.current = null;
       queueMicrotask(() => {
         setPrediction(null);
         setConfidence(0);

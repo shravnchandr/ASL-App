@@ -78,9 +78,27 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const finiteOr = (v: unknown, fallback: number, min = 0): number =>
     typeof v === 'number' && Number.isFinite(v) && v >= min ? v : fallback;
 
-function isSignProgress(v: unknown): v is SignProgress {
-    return isRecord(v)
-        && ['timesStudied', 'timesCorrect', 'mastery'].every(k => typeof v[k] === 'number' && Number.isFinite(v[k]));
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
+
+/**
+ * A stored progress entry with every field the readers and the SM-2 update use
+ * brought to its declared type. Entries without valid counts are dropped (null);
+ * a damaged scheduling field falls back to its starting value.
+ */
+function toSignProgress(v: unknown): SignProgress | null {
+    if (!isRecord(v)) return null;
+    const counts = [v.timesStudied, v.timesCorrect, v.mastery];
+    if (!counts.every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0)) return null;
+    return {
+        timesStudied: v.timesStudied as number,
+        timesCorrect: v.timesCorrect as number,
+        mastery: v.mastery as number,
+        lastStudied: typeof v.lastStudied === 'string' ? v.lastStudied : '',
+        easeFactor: finiteOr(v.easeFactor, 2.5, 1.3),
+        interval: finiteOr(v.interval, 0),
+        repetitions: finiteOr(v.repetitions, 0),
+        nextReview: typeof v.nextReview === 'string' && ISO_DAY.test(v.nextReview) ? v.nextReview : '',
+    };
 }
 
 export const storage = {
@@ -202,9 +220,12 @@ export const storage = {
         const progress = readJson(STORAGE_KEYS.LEARNING_PROGRESS);
         if (!isRecord(progress)) return {};
         // Drop only the damaged entries; the rest of the progress survives
-        return Object.fromEntries(
-            Object.entries(progress).filter((entry): entry is [string, SignProgress] => isSignProgress(entry[1]))
-        );
+        const valid: Record<string, SignProgress> = {};
+        for (const [sign, entry] of Object.entries(progress)) {
+            const clean = toSignProgress(entry);
+            if (clean) valid[sign] = clean;
+        }
+        return valid;
     },
 
     getSignProgress(sign: string): SignProgress | null {

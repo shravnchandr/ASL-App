@@ -278,11 +278,12 @@ function formatWait(seconds: number): string {
 
 // sessionStorage cache of translation results (tab-scoped). Versioned so a shape
 // or pipeline change never revives stale results; expires like the server cache.
-const RESULT_CACHE_PREFIX = 'asl_result:v2:';
+// Case is part of the key: "May" (the month) and "may" translate differently.
+const RESULT_CACHE_PREFIX = 'asl_result:v3:';
 const RESULT_CACHE_TTL_MS = 60 * 60 * 1000;
 
 function resultCacheKey(query: string): string {
-    return RESULT_CACHE_PREFIX + query.toLowerCase().trim().replace(/\s+/g, ' ');
+    return RESULT_CACHE_PREFIX + query.trim().replace(/\s+/g, ' ');
 }
 
 function readCachedResult(query: string): TranslateResponse | null {

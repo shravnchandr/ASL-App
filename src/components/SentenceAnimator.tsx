@@ -18,6 +18,8 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [playState, setPlayState] = useState<PlayState>('idle');
     const [isPlaying, setIsPlaying] = useState(false);
+    // Bumped to rewind the animator when the sign being replayed is already the current one
+    const [resetToken, setResetToken] = useState(0);
     const isMountedRef = useRef(true);
 
     const wordKeys = useMemo(() => words.map(w => w.key), [words]);
@@ -98,6 +100,7 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
             setCurrentIndex(firstAvailable);
             setPlayState('playing');
             setIsPlaying(true);
+            setResetToken(t => t + 1);
         }
     }, [findNextAvailable]);
 
@@ -106,6 +109,7 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
         setCurrentIndex(index);
         setPlayState('playing');
         setIsPlaying(true);
+        setResetToken(t => t + 1);
     }, [signDataMap, wordKeys]);
 
     if (words.length === 0) return null;
@@ -161,6 +165,7 @@ export const SentenceAnimator: React.FC<SentenceAnimatorProps> = ({ words }) => 
                         signData={currentData}
                         isPlaying={isPlaying && playState === 'playing'}
                         playbackSpeed={1}
+                        resetToken={resetToken}
                         size="medium"
                         onAnimationEnd={handleAnimationEnd}
                     />

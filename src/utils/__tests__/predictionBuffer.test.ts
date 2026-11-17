@@ -71,4 +71,24 @@ describe('PredictionBuffer', () => {
     const buffer = new PredictionBuffer(5, 0.6);
     expect(buffer.getLatestPrediction()).toBeNull();
   });
+
+  it('reports the confidence of the agreeing frames, not of the latest frame', () => {
+    const buffer = new PredictionBuffer(5, 0.6);
+    buffer.add('a', 0.5);
+    buffer.add('a', 0.6);
+    buffer.add('a', 0.7);
+    // a confident frame for another label must not lend its confidence to 'a'
+    buffer.add('b', 0.99);
+    expect(buffer.getStable()).toEqual({ label: 'a', confidence: expect.closeTo(0.6, 5) });
+
+    buffer.add('b', 0.99);
+    buffer.add('b', 0.99);
+    expect(buffer.getStable()).toEqual({ label: 'b', confidence: expect.closeTo(0.99, 5) });
+  });
+
+  it('has no stable prediction when the window disagrees', () => {
+    const buffer = new PredictionBuffer(5, 0.6);
+    for (const l of ['a', 'b', 'c', 'd', 'e']) buffer.add(l, 0.9);
+    expect(buffer.getStable()).toBeNull();
+  });
 });

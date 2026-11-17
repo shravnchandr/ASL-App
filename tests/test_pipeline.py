@@ -114,6 +114,84 @@ class TestVerificationProvenance:
         assert _get_kb_exact_entries("GLAD") == {}
 
 
+class TestOutputConsistency:
+    def test_empty_sign_list_is_an_error(self, fake_gemini):
+        fake_gemini({"signs": [], "note": "n"}, {"signs": [], "note": "n"})
+        with pytest.raises(ValueError):
+            pipeline._run_instructor_agent("HELLO", "hello", api_key="k")
+
+    def test_empty_output_is_reported_not_returned(self, fake_gemini, monkeypatch):
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        fake_gemini(
+            {"should_reorder": False, "asl_gloss_order": "HELLO"},
+            {"signs": [], "note": "n"},
+            {"signs": [], "note": "n"},
+        )
+        out = pipeline.ASLPipeline(default_api_key=None).invoke({"english_input": "hello"}, api_key="k")
+        assert out.get("error") and "final_output" not in out
+
+    def test_verified_sign_is_never_fingerspelled(self, fake_gemini):
+        result = _translate(
+            fake_gemini, "HELLO", [_sign("HELLO", is_fingerspelled=True, fingerspell_letters=["X"])]
+        )
+        sign = result.signs[0]
+        assert sign.kb_verified is True
+        assert sign.is_fingerspelled is False and sign.fingerspell_letters == []
+
+    def test_model_identified_name_is_spelled_from_its_word(self, fake_gemini):
+        result = _translate(
+            fake_gemini, "ZORBLAX", [_sign("ZORBLAX", is_fingerspelled=True, fingerspell_letters=["X"])]
+        )
+        assert result.signs[0].is_fingerspelled is True
+        assert result.signs[0].fingerspell_letters == list("ZORBLAX")
+
+    def test_letters_without_the_flag_are_dropped(self, fake_gemini):
+        result = _translate(fake_gemini, "ZORBLAX", [_sign("ZORBLAX", fingerspell_letters=["Z"])])
+        assert result.signs[0].is_fingerspelled is False
+        assert result.signs[0].fingerspell_letters == []
+
+
+class TestGlossCoverage:
+    def _words(self, result):
+        return [s.word for s in result.signs]
+
+    def test_reversed_signs_are_put_in_gloss_order(self, fake_gemini):
+        result = _translate(fake_gemini, "HELLO WATER", [_sign("WATER"), _sign("HELLO")])
+        assert self._words(result) == ["HELLO", "WATER"]
+
+    def test_signs_outside_the_gloss_are_dropped(self, fake_gemini):
+        result = _translate(
+            fake_gemini, "HELLO WATER", [_sign("HELLO"), _sign("BANANA"), _sign("WATER")]
+        )
+        assert self._words(result) == ["HELLO", "WATER"]
+
+    def test_repeated_gloss_reuses_its_sign(self, fake_gemini):
+        result = _translate(fake_gemini, "YOU HELP YOU", [_sign("YOU"), _sign("HELP")])
+        assert self._words(result) == ["YOU", "HELP", "YOU"]
+        assert result.signs[0] is not result.signs[2]
+
+    def test_missing_gloss_is_asked_for_again(self, fake_gemini):
+        client = fake_gemini(
+            {"signs": [_sign("HELLO")], "note": "n"},
+            {"signs": [_sign("HELLO"), _sign("WATER")], "note": "second"},
+        )
+        result, _ = pipeline._run_instructor_agent("HELLO WATER", "hello water", api_key="k")
+        assert self._words(result) == ["HELLO", "WATER"] and result.note == "second"
+        assert len(client.configs) == 2
+
+    @pytest.mark.parametrize("signs", [[_sign("HELLO")], [_sign("BANANA"), _sign("APPLE")]])
+    def test_incomplete_output_is_rejected_after_one_retry(self, fake_gemini, signs):
+        client = fake_gemini({"signs": signs, "note": "n"}, {"signs": signs, "note": "n"})
+        with pytest.raises(ValueError):
+            pipeline._run_instructor_agent("HELLO WATER", "hello water", api_key="k")
+        assert len(client.configs) == 2
+
+    def test_digit_gloss_uses_the_verified_number_sign(self, fake_gemini):
+        result = _translate(fake_gemini, "3 BOOK", [_sign("3"), _sign("BOOK")])
+        assert result.signs[0].kb_verified is True
+        assert result.signs[0].movement == SIGN_KNOWLEDGE_BASE["three"]["movement"]
+
+
 class TestNumericFingerspelling:
     def test_extract_keeps_digits(self):
         fs = _extract_fs_glosses("YOU CALL-ME fs-6-1-7 fs-5-5-5 fs-1-2-3-4")

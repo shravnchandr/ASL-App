@@ -3,8 +3,14 @@
  * Prevents flickering by returning the mode prediction when it appears
  * in a sufficient percentage of the buffer.
  */
+export interface StablePrediction {
+  label: string;
+  /** Mean classifier confidence of the frames in the window that agree on the label */
+  confidence: number;
+}
+
 export class PredictionBuffer {
-  private buffer: string[] = [];
+  private buffer: Array<{ label: string; confidence: number }> = [];
   private readonly size: number;
   private readonly threshold: number;
 
@@ -17,11 +23,38 @@ export class PredictionBuffer {
     this.threshold = threshold;
   }
 
-  add(prediction: string): void {
-    this.buffer.push(prediction);
+  add(prediction: string, confidence: number = 1): void {
+    this.buffer.push({ label: prediction, confidence });
     if (this.buffer.length > this.size) {
       this.buffer.shift();
     }
+  }
+
+  /**
+   * The stable label with the confidence that belongs to it. The latest frame's
+   * confidence must not be used for this: that frame may have predicted a
+   * different label than the one the window agrees on.
+   */
+  getStable(): StablePrediction | null {
+    const stats = new Map<string, { count: number; total: number }>();
+    for (const { label, confidence } of this.buffer) {
+      const s = stats.get(label) ?? { count: 0, total: 0 };
+      s.count += 1;
+      s.total += confidence;
+      stats.set(label, s);
+    }
+
+    let best: StablePrediction | null = null;
+    let maxCount = 0;
+    for (const [label, { count, total }] of stats) {
+      if (count > maxCount) {
+        maxCount = count;
+        best = { label, confidence: total / count };
+      }
+    }
+
+    const requiredCount = Math.ceil(this.size * this.threshold);
+    return maxCount >= requiredCount ? best : null;
   }
 
   /**
@@ -30,30 +63,11 @@ export class PredictionBuffer {
    * Returns null if no prediction meets the threshold.
    */
   getStablePrediction(): string | null {
-    if (this.buffer.length === 0) {
-      return null;
-    }
-
-    const counts = new Map<string, number>();
-    for (const p of this.buffer) {
-      counts.set(p, (counts.get(p) || 0) + 1);
-    }
-
-    let mode = '';
-    let maxCount = 0;
-    for (const [prediction, count] of counts) {
-      if (count > maxCount) {
-        maxCount = count;
-        mode = prediction;
-      }
-    }
-
-    const requiredCount = Math.ceil(this.size * this.threshold);
-    return maxCount >= requiredCount ? mode : null;
+    return this.getStable()?.label ?? null;
   }
 
   getLatestPrediction(): string | null {
-    return this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : null;
+    return this.buffer.length > 0 ? this.buffer[this.buffer.length - 1].label : null;
   }
 
   clear(): void {

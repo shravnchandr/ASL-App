@@ -142,11 +142,14 @@ function SpellingMode({ onBack: handleBack }: { onBack: () => void }) {
       let isCurrent = true;
       void predict(landmarks).then(result => {
         if (!isCurrent || !result) return;
-        predictionBufferRef.current.add(result.label);
-        const stablePrediction = predictionBufferRef.current.getStablePrediction();
-        if (stablePrediction) {
+        predictionBufferRef.current.add(result.label, result.confidence);
+        const stable = predictionBufferRef.current.getStable();
+        if (stable) {
+          // Confidence of the frames that agree on this label, not of the latest
+          // frame, which may have predicted something else
+          const { label: stablePrediction, confidence: stableConfidence } = stable;
           setPrediction(stablePrediction);
-          setConfidence(result.confidence);
+          setConfidence(stableConfidence);
 
           const now = Date.now();
 
@@ -155,7 +158,7 @@ function SpellingMode({ onBack: handleBack }: { onBack: () => void }) {
             letterHoldStartRef.current = null;
           }
 
-          if (stablePrediction === lastAddedLetterRef.current || result.confidence <= 0.8) {
+          if (stablePrediction === lastAddedLetterRef.current || stableConfidence <= 0.8) {
             // Already added, or a low-confidence frame: the hold must restart from scratch
             letterHoldStartRef.current = null;
             setHoldProgress(0);

@@ -87,3 +87,18 @@ async def test_memory_hit_skips_redis(monkeypatch):
 
     assert await cache.get_cached_translation("hi") == {"query": "hi"}
     assert stalled.calls == 0
+
+
+def test_cache_key_keeps_case_and_ignores_spacing():
+    assert cache.generate_cache_key("May") != cache.generate_cache_key("may")
+    assert cache.generate_cache_key("  how   are you ") == cache.generate_cache_key("how are you")
+
+
+def test_cache_key_changes_with_the_pipeline(monkeypatch):
+    before = cache.generate_cache_key("hello")
+    cache.pipeline_revision.cache_clear()
+    monkeypatch.setattr(cache.settings, "model_name", "another-model")
+    try:
+        assert cache.generate_cache_key("hello") != before
+    finally:
+        cache.pipeline_revision.cache_clear()

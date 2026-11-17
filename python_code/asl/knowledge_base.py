@@ -87,6 +87,11 @@ def _semantic_lookup(gloss: str) -> Optional[Tuple[str, dict, float]]:
     return None
 
 
+_DIGIT_KEYS = dict(
+    zip("1 2 3 4 5 6 7 8 9 10".split(), "one two three four five six seven eight nine ten".split())
+)
+
+
 def _exact_kb_entry(gloss: str) -> Optional[dict]:
     """
     Exact (non-semantic) KB lookup for a bare gloss: case-insensitive, hyphenated
@@ -98,6 +103,7 @@ def _exact_kb_entry(gloss: str) -> Optional[dict]:
     if gloss.lower().startswith("fs-"):
         return None
     key = gloss.lower().replace("-", "_").lstrip("#")
+    key = _DIGIT_KEYS.get(key, key)  # the Grammar Agent writes quantities as digits: 3 CAT
     for candidate in (key, key.replace("_", "")):
         entry = SIGN_KNOWLEDGE_BASE.get(candidate)
         if entry:

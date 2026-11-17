@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import type { RefObject } from 'react';
 import type { FacingMode } from '../../hooks/useCamera';
 import type { NormalizedLandmark } from '../../hooks/useHandDetection';
-import { HAND_CONNECTIONS } from '../../utils/handLandmarks';
+import { HAND_CONNECTIONS, coverPoint } from '../../utils/handLandmarks';
 import './CameraView.css';
 
 interface CameraViewProps {
@@ -41,6 +41,9 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
     if (!landmarks || landmarks.length === 0) return;
 
     const mirror = facingMode === 'user';
+    // The video is shown with object-fit: cover, so part of the frame is cropped
+    const toCanvas = (lm: NormalizedLandmark) =>
+      coverPoint(lm, video.videoWidth, video.videoHeight, canvas.width, canvas.height, mirror);
 
     // draw connections first so landmark points render on top
     ctx.strokeStyle = CONNECTION_COLOR;
@@ -52,14 +55,12 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
       const endLm = landmarks[end];
       if (!startLm || !endLm) continue;
 
-      const startX = mirror ? (1 - startLm.x) * canvas.width : startLm.x * canvas.width;
-      const startY = startLm.y * canvas.height;
-      const endX = mirror ? (1 - endLm.x) * canvas.width : endLm.x * canvas.width;
-      const endY = endLm.y * canvas.height;
+      const from = toCanvas(startLm);
+      const to = toCanvas(endLm);
 
       ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, endY);
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
       ctx.stroke();
     }
 
@@ -68,8 +69,7 @@ export function CameraView({ videoRef, isLoading, facingMode, landmarks }: Camer
     ctx.shadowBlur = 8;
 
     for (const lm of landmarks) {
-      const x = mirror ? (1 - lm.x) * canvas.width : lm.x * canvas.width;
-      const y = lm.y * canvas.height;
+      const { x, y } = toCanvas(lm);
 
       ctx.beginPath();
       ctx.arc(x, y, LANDMARK_RADIUS, 0, 2 * Math.PI);

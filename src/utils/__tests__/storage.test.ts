@@ -125,4 +125,25 @@ describe('storage - malformed saved data', () => {
         localStorageMock.setItem('asl_level_progress', JSON.stringify({ unlockedLevels: [1, 2, 'x', 99], currentLevel: 2 }));
         expect(storage.getLevelProgress()).toEqual({ unlockedLevels: [1, 2], currentLevel: 2 });
     });
+
+    it('repairs damaged scheduling fields so their consumers keep working', () => {
+        const counts = { timesStudied: 3, timesCorrect: 2, mastery: 50 };
+        localStorageMock.setItem('asl_learn_progress', JSON.stringify({
+            a: { ...counts, nextReview: ['2020-01-01'] },
+            b: { ...counts, nextReview: ['2020-01-02'], easeFactor: 'x', interval: null, repetitions: {} },
+            c: { ...counts, nextReview: '2020-01-03', lastStudied: 7 },
+            d: { ...counts, timesStudied: -1 },
+        }));
+
+        // only the entry with a real date is due; sorting no longer throws
+        expect(storage.getSignsDueForReview()).toEqual(['c']);
+        expect(storage.getSignProgress('d')).toBeNull();
+        expect(storage.getSignProgress('c')!.lastStudied).toBe('');
+
+        storage.updateSignProgress('b', true);
+        const b = storage.getSignProgress('b')!;
+        expect(b).toMatchObject({ timesStudied: 4, timesCorrect: 3, repetitions: 1, interval: 1 });
+        expect(b.easeFactor).toBeGreaterThanOrEqual(1.3);
+        expect(b.nextReview).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
 });

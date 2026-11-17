@@ -34,6 +34,7 @@ from .schemas import (
 from .knowledge_base import (
     _build_knowledge_context,
     _extract_fs_glosses,
+    _fs_characters,
     _get_kb_exact_entries,
 )
 
@@ -294,14 +295,11 @@ def _run_instructor_agent(
         f"ASL Gloss Order: '{input_text}'"
     )
 
-    owns_client = client is None
-    if owns_client:
-        client = _make_client(api_key)
-    try:
+    def generate(contents: str):
         response = _gemini_with_retry(
             client.models.generate_content,
             model=model,
-            contents="Generate detailed ASL sign descriptions for the gloss sequence.",
+            contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=0.0,
@@ -309,13 +307,72 @@ def _run_instructor_agent(
                 response_schema=GeneratedSentenceSchema,
             ),
         )
+        _log_usage("translation", response.usage_metadata)
+        parsed = GeneratedSentenceSchema.model_validate_json(_strip_json_fences(response.text))
+        return parsed, response.usage_metadata
+
+    owns_client = client is None
+    if owns_client:
+        client = _make_client(api_key)
+    try:
+        generated, usage = generate("Generate detailed ASL sign descriptions for the gloss sequence.")
+        signs, missing = _align_signs(generated.signs, input_text)
+        if missing:
+            # One corrective attempt; a second incomplete answer fails the request
+            # so it is never returned or cached as a successful translation.
+            print(
+                f"{Fore.YELLOW}   -> {len(missing)} gloss(es) without a sign; asking again{Style.RESET_ALL}"
+            )
+            generated, usage = generate(
+                "Your previous answer did not cover the gloss sequence. Return exactly one sign "
+                "per gloss, in this order, using each gloss as the word: "
+                + " | ".join(input_text.split())
+            )
+            signs, missing = _align_signs(generated.signs, input_text)
     finally:
         if owns_client:
             _close_client(client)
-    usage = response.usage_metadata
-    _log_usage("translation", usage)
-    generated = GeneratedSentenceSchema.model_validate_json(_strip_json_fences(response.text))
+    if missing:
+        raise ValueError(
+            f"Translation agent left out {len(missing)} of {len(input_text.split())} glosses"
+        )
+    generated.signs = signs
     return _postprocess_signs(generated, input_text), usage
+
+
+def _gloss_key(word: str) -> str:
+    """Identity of a gloss or sign word for matching: fs- prefix, case and punctuation ignored."""
+    word = word.strip()
+    if word.lower().startswith("fs-"):
+        word = word[3:]
+    return "".join(c for c in word.upper() if c.isalnum())
+
+
+def _align_signs(signs: list, input_text: str) -> tuple[list, list[str]]:
+    """
+    Put the model's signs in gloss order, one per gloss. Signs that match no gloss
+    are dropped, and a repeated gloss reuses its sign. Returns the ordered signs
+    and the glosses that have no sign at all (which cannot be repaired here).
+    """
+    pool: dict[str, list] = {}
+    for sign in signs:
+        pool.setdefault(_gloss_key(sign.word), []).append(sign)
+
+    ordered: list = []
+    missing: list[str] = []
+    used: dict[str, object] = {}
+    for gloss in input_text.split():
+        key = _gloss_key(gloss)
+        if not key:
+            continue  # punctuation-only token: nothing to sign
+        if pool.get(key):
+            used[key] = pool[key].pop(0)
+            ordered.append(used[key])
+        elif key in used:
+            ordered.append(used[key].model_copy(deep=True))
+        else:
+            missing.append(gloss)
+    return ordered, missing
 
 
 def _norm_word(word: str) -> str:
@@ -331,7 +388,16 @@ def _postprocess_signs(
     force fingerspelling for fs- glosses, and for exact KB matches overwrite the
     detailed fields with the verified entry and set kb_verified. kb_verified is
     never taken from the model.
+
+    Spelling fields are made consistent with the word shown: a verified word sign
+    is never fingerspelled, and a model-identified proper noun is spelled from its
+    own word. An empty sign list is an error, not a successful translation.
+    Coverage and order against the gloss sequence are enforced by the caller
+    (_align_signs) before this runs.
     """
+    if not generated.signs:
+        raise ValueError("Translation agent returned no signs")
+
     result = SentenceDescriptionSchema(
         signs=[DescriptionSchema(**s.model_dump(), kb_verified=False) for s in generated.signs],
         note=generated.note,
@@ -350,6 +416,7 @@ def _postprocess_signs(
             sign.word = (
                 sign.word[3:] if sign.word.upper().startswith("FS-") else sign.word
             )
+            sign.is_fingerspelled = True
         norm_key = _norm_word(clean_word)
         if clean_word in fs_map:
             fs_key: str | None = clean_word
@@ -373,6 +440,14 @@ def _postprocess_signs(
             for field in _KB_FIELDS:
                 setattr(sign, field, entry[field])
             sign.kb_verified = True
+            sign.is_fingerspelled = False
+            sign.fingerspell_letters = []
+        elif sign.is_fingerspelled:
+            # Proper noun the model identified without an fs- gloss
+            sign.fingerspell_letters = _fs_characters(sign.word)
+            sign.is_fingerspelled = bool(sign.fingerspell_letters)
+        else:
+            sign.fingerspell_letters = []
 
     return result
 
