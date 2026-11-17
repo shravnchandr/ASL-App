@@ -15,7 +15,7 @@ A production-ready web app for learning American Sign Language — AI-powered si
 
 ## What it does
 
-Type any English phrase and get a complete ASL breakdown: grammar-reordered gloss, plain-English signing instructions, animated demonstrations, and links to video resources. Browse the full sign library at `/dictionary` — 100 verified signs with category filters, A–Z sidebar, and live animation previews. A built-in learning module with spaced repetition and live camera recognition round out the app. Try it with the shared API key — no setup required.
+Type any English phrase and get a complete ASL breakdown: grammar-reordered gloss, plain-English signing instructions, animated demonstrations, and links to video resources. Browse the full sign library at `/dictionary` — 100 verified signs with category filters, A–Z sidebar, and live animation previews. A built-in learning module with spaced repetition and live camera recognition round out the app. The app is not hosted at the moment: run it locally with your own Gemini API key (see Quick Start).
 
 ---
 
@@ -33,7 +33,9 @@ Type any English phrase and get a complete ASL breakdown: grammar-reordered glos
 
 **Live Camera Recognition** — A TensorFlow.js classifier (95.5% accuracy, 36 classes: A–Z + 0–9) runs entirely in-browser via MediaPipe Hands (Tasks Vision API v0.10.32). Hold a sign for 1 second to add it to a spelled word — no server round-trip.
 
-**Production Infrastructure** — Gemini context caching reduces grammar prompt token costs by ~73%. Dual-layer caching (Redis + in-memory LRU) handles repeat translations. PWA with Service Worker for offline use. Rate limiting, security headers, and privacy-preserving analytics with IP hashing.
+**Phrase Mode (experimental)** — The camera page's Phrases switch reads continuous signing: MediaPipe pose, hand and face landmarks feed a 250-sign CTC model running in the browser with ONNX Runtime Web. Each sign is shown with the model's score and runners-up, and low scores are marked "Not sure". Two models can be compared from a Model control (the default `phrases05` and the newer `phrases07`). This is an early research model trained on stitched single-sign clips and is not yet validated on real signing; attempts can be saved as landmark-only JSON (never video) for evaluation.
+
+**Production Infrastructure** — Gemini context caching reduces grammar prompt token costs by ~73%. Dual-layer caching (Redis + in-memory LRU) handles repeat translations. PWA with Service Worker: the app shell, sign data and, after one online visit to each camera mode, the recognition models work offline (translation always needs the network). Rate limiting, security headers, and privacy-preserving analytics with IP hashing.
 
 ---
 
@@ -57,7 +59,7 @@ Type any English phrase and get a complete ASL breakdown: grammar-reordered glos
 ```bash
 # Install dependencies
 npm install
-pip install -r requirements.txt
+pip install -r requirements.txt   # or: uv sync (also installs the test tools)
 
 # Configure environment
 cp .env.example .env
@@ -92,11 +94,11 @@ docker build -t asl-guide . && docker run -p 8000:8000 -e GOOGLE_API_KEY=your_ke
 |-------|-------------|
 | Frontend | React 18.3, TypeScript 5.9, Vite 7, custom Calm design system |
 | Backend | FastAPI, Python 3.11+, Google Gemini 2.5 Flash |
-| Browser ML | TensorFlow.js, MediaPipe Hands (Tasks Vision API) |
+| Browser ML | TensorFlow.js, MediaPipe Tasks Vision (hands, pose, face), ONNX Runtime Web |
 | Database | SQLAlchemy async, SQLite (dev) / PostgreSQL (prod) |
 | Caching | Redis (optional) + in-memory LRU fallback |
 | Deployment | Docker, PWA (Service Worker + Web Manifest) |
-| Testing | Vitest (19 frontend tests), pytest (28 backend tests) |
+| Testing | Vitest (160 frontend tests), pytest (114 backend tests) |
 
 ---
 
@@ -133,6 +135,7 @@ MIT — see [LICENSE](LICENSE)
 
 - **Bill Vicars / Lifeprint (ASLU)** — ASL education reference used for the verified sign knowledge base
 - **Google Gemini** — AI-powered translation pipeline
+- **Phrase-model training data** — [PopSign ASL v1.0](https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/) (Starner et al., 2023, Georgia Tech and Deaf Professional Arts Network; [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), Google's [ASL Signs](https://www.kaggle.com/competitions/asl-signs/data) and [WLASL](https://dxli94.github.io/WLASL/) (Li et al., 2020). The data was processed into landmarks and the model is not endorsed by the dataset creators; full credits and changes are in [ATTRIBUTION.md](public/models/sign-phrases/ATTRIBUTION.md)
 - **Custom Calm design system** — warm off-white, ocean accent, inspired by Apple Translate / Linear / Notion
 - **FastAPI & React** — Core frameworks
 

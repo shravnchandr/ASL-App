@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ASL Dictionary is a full-stack web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. The app uses a React TypeScript frontend with a custom calm design system and a FastAPI Python backend with a direct google-genai SDK pipeline for AI workflow orchestration.
+ASL Dictionary is a full-stack web application that translates English phrases into detailed American Sign Language (ASL) descriptions using Google Gemini AI. The app uses a React TypeScript frontend with a custom calm design system and a FastAPI Python backend with a direct google-genai SDK pipeline for AI workflow orchestration. It also has a learning module with animated signs and two in-browser camera modes: fingerspelling recognition (Letters) and an experimental continuous-signing model (Phrases).
 
 ## Development Commands
 
@@ -446,6 +446,7 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 - `src/utils/predictionBuffer.ts`: Rolling window smoothing. `getStable()` returns the agreed label **with the mean confidence of the frames that agree on it**; gate holds on that, never on the latest frame's confidence (it may belong to another label). Hold/match durations are measured with timestamps, not by counting frames
 - `src/utils/handLandmarks.ts`: Landmark normalization; `coverPoint()` maps a landmark onto the `object-fit: cover` video box for the overlay
 - `public/models/asl-classifier/`: TensorFlow.js model files
+- `src/components/camera/PhraseMode.tsx`, `src/hooks/useHolisticLandmarks.ts`, `src/hooks/useSignPhraseModel.ts`, `src/utils/signPhrase.ts`, `src/utils/signPhraseContract.ts`, `src/utils/phraseModelHashes.ts`, `public/models/sign-phrases/`: phrase mode (see "Phrase Mode")
 
 **Utilities:**
 - `src/utils/storage.ts`: LocalStorage with level persistence and SM-2 spaced repetition
@@ -455,11 +456,9 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 **Testing:**
 - `vitest.config` embedded in `vite.config.ts` (test block)
 - `src/test/setup.ts`: Test setup file
-- `src/utils/__tests__/predictionBuffer.test.ts`: PredictionBuffer unit tests (8 tests)
-- `src/utils/__tests__/signOfTheDay.test.ts`: Sign of the Day tests (4 tests)
-- `src/utils/__tests__/storage.test.ts`: SM-2 spaced repetition tests (7 tests)
+- Frontend tests live in `__tests__/` folders next to the code (`src/utils`, `src/hooks`, `src/components`, `src/contexts`); 160 tests in 15 files as of November 2026. Notable ones: `storage.test.ts` (SM-2 and repair of damaged saved progress), `predictionBuffer.test.ts`, `handLandmarks.test.ts`, `swModelBundle.test.ts` and `swPhraseModel.test.ts` (the service worker's source run against fake caches), `signPhrase.test.ts` and `signPhraseContract.test.ts` (phrase-model parity; these run the real ONNX models), `useSignPhraseModel.contract.test.tsx`
 - Run: `npm test` (single run) or `npm run test:watch` (watch mode)
-- Backend: `pytest` (install with `uv sync`, or `pip install -r requirements-dev.txt`). `tests/test_security.py` covers static path confinement, client-IP extraction, admin lockout, IP hashing, and `/translate` with a fake pipeline. `tests/test_pipeline.py` runs the real pipeline against a fake Gemini client (verification provenance, KB grounding, numeric fingerspelling)
+- Backend: `pytest` (114 tests; install with `uv sync`, or `pip install -r requirements-dev.txt`). `tests/test_security.py` covers static path confinement, client-IP extraction, admin lockout, IP hashing, and `/translate` with a fake pipeline. `tests/test_pipeline.py` runs the real pipeline against a fake Gemini client (verification provenance, KB grounding, numeric fingerspelling)
 - CI type check uses `tsc -b` — `tsconfig.json` is a solution file, so plain `tsc --noEmit` checks nothing
 
 **PWA:**
@@ -484,7 +483,7 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 - **Frontend**: React 18.3, TypeScript 5.9, Vite 7, Vitest, custom Calm design system
 - **Backend**: FastAPI, Python 3.11+, uvicorn
 - **AI**: Google Gemini 2.5 Flash, google-genai SDK, sentence-transformers (all-MiniLM-L6-v2, opt-in)
-- **Browser ML**: TensorFlow.js, MediaPipe Hands (Tasks Vision API)
+- **Browser ML**: TensorFlow.js, MediaPipe Tasks Vision (Hands; Pose + Hands + Face for phrase mode), ONNX Runtime Web (phrase model)
 - **Database**: SQLAlchemy (async), aiosqlite/PostgreSQL
 - **Caching**: Redis (optional) + in-memory LRU fallback
 - **Deployment**: Docker, PWA (Service Worker + Web Manifest)
@@ -769,14 +768,18 @@ Hold a sign steady for 1 second to add it to the spelled word:
 const letterHoldStartRef = useRef<number | null>(null);
 const LETTER_HOLD_THRESHOLD = 1000; // 1 second
 
-// When stable prediction matches last prediction
-if (stablePrediction === lastStablePredictionRef.current) {
-  if (letterHoldStartRef.current !== null && confidence > 0.8) {
+predictionBuffer.add(result.label, result.confidence);
+const stable = predictionBuffer.getStable();   // { label, confidence } or null
+if (stable) {
+  // stable.confidence = mean over the frames that agree on stable.label
+  if (stable.label === lastAddedLetterRef.current || stable.confidence <= 0.8) {
+    letterHoldStartRef.current = null;          // the hold restarts from scratch
+  } else {
+    letterHoldStartRef.current ??= Date.now();
     const elapsed = Date.now() - letterHoldStartRef.current;
     setHoldProgress(Math.min(elapsed / LETTER_HOLD_THRESHOLD, 1));
-
     if (elapsed >= LETTER_HOLD_THRESHOLD) {
-      setSpelledLetters(prev => [...prev, stablePrediction]);
+      setSpelledLetters(prev => [...prev, stable.label]);
       // Reset and play sound
     }
   }
@@ -795,16 +798,18 @@ if (stablePrediction === lastStablePredictionRef.current) {
 
 ```typescript
 class PredictionBuffer {
-  private buffer: string[] = [];
+  private buffer: { label: string; confidence: number }[] = [];
   private size = 5;          // Window size
   private threshold = 0.6;   // 60% agreement needed
 
-  add(prediction: string): void { ... }
+  add(prediction: string, confidence = 1): void { ... }
 
-  getStablePrediction(): string | null {
-    // Returns mode if it appears in 60%+ of buffer
-    // Prevents flickering between predictions
+  getStable(): { label: string; confidence: number } | null {
+    // The mode, if it appears in 60%+ of the buffer, with the mean
+    // confidence of the frames that agree on it
   }
+
+  getStablePrediction(): string | null { ... }   // label only
 }
 ```
 
@@ -884,6 +889,7 @@ const NUMBER_LABEL_MAP: Record<string, string> = {
 ```typescript
 SOUND_EFFECTS_KEY: 'asl_sound_effects_enabled'  // Sound toggle
 TUTORIAL_KEY: 'asl_camera_tutorial_seen'        // Tutorial completed
+MODEL_KEY: 'asl_phrase_model'                   // Phrase mode: chosen model bundle
 ```
 
 ### Accessibility
