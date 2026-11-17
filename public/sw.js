@@ -16,6 +16,20 @@ const MODEL_FILES = ['model.json', 'group1-shard1of1.bin', 'labels.json', 'scale
 // Requests within this window share one bundle download (one page load = 4 requests)
 const MODEL_REFRESH_WINDOW_MS = 60 * 1000;
 
+// Phrase model files, requested as <file>?v=<sha256 of the file>. The bytes are
+// checked against that hash before they are cached, so an entry is always the
+// file the page asked for, whatever was deployed in between. The two bundles
+// (/models/sign-phrases/ and its phrases05/ folder) are kept side by side.
+const PHRASE_MODEL_CACHE = 'asl-phrase-model-v1';
+const PHRASE_MODEL_DIR = '/models/sign-phrases/';
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+// Third-party files the camera needs: the MediaPipe runtime and its landmark
+// models. Their URLs carry a version, so they never change and cache-first is safe.
+const VENDOR_CACHE = 'asl-vendor-v1';
+const MEDIAPIPE_RUNTIME = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@';
+const VENDOR_PREFIXES = [MEDIAPIPE_RUNTIME, 'https://storage.googleapis.com/mediapipe-models/'];
+
 // Hashed /assets/* files accumulate across deploys; keep the newest N.
 const MAX_ASSET_ENTRIES = 80;
 
@@ -36,7 +50,7 @@ self.addEventListener('install', (event) => {
 
 // Activate: clean old caches
 self.addEventListener('activate', (event) => {
-  const keepCaches = [CACHE_NAME, SIGN_DATA_CACHE, MODEL_POINTER_CACHE];
+  const keepCaches = [CACHE_NAME, SIGN_DATA_CACHE, MODEL_POINTER_CACHE, PHRASE_MODEL_CACHE, VENDOR_CACHE];
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
@@ -81,6 +95,69 @@ function staleWhileRevalidate(event, cacheName) {
       return network;
     })
   );
+}
+
+/**
+ * Cache-first for URLs whose content never changes. `isStale(cachedUrl)` marks
+ * entries the new one replaces (an older version of the same files).
+ */
+async function serveImmutable(event, cacheName, request, isStale) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request.url);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (isCacheableData(response)) {
+    const copy = response.clone();
+    event.waitUntil((async () => {
+      await cache.put(request.url, copy);
+      const stale = (await cache.keys()).filter((k) => k.url !== request.url && isStale(k.url));
+      await Promise.all(stale.map((k) => cache.delete(k)));
+    })());
+  }
+  return response;
+}
+
+async function sha256Hex(buffer) {
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function servePhraseModelFile(event, url) {
+  const cache = await caches.open(PHRASE_MODEL_CACHE);
+  const cached = await cache.match(event.request.url);
+  if (cached) return cached;
+
+  const response = await fetch(event.request);
+  if (!isCacheableData(response)) return response;
+  // The server answers this path with whatever is deployed now. If that is not
+  // the file asked for, fail the load (the page reports it) and cache nothing.
+  const body = await response.clone().arrayBuffer();
+  if ((await sha256Hex(body)) !== url.searchParams.get('v')) return Response.error();
+
+  const copy = response.clone();
+  event.waitUntil((async () => {
+    await cache.put(event.request.url, copy);
+    // Older versions of this file go once no other page is open that may still
+    // be loading them (a model is 27 MB; a loaded page no longer needs its entry)
+    const pages = await self.clients.matchAll({ type: 'window' });
+    if (pages.length > 1) return;
+    const stale = (await cache.keys()).filter((k) =>
+      k.url !== event.request.url && new URL(k.url).pathname === url.pathname);
+    await Promise.all(stale.map((k) => cache.delete(k)));
+  })());
+  return response;
+}
+
+function serveVendorFile(event) {
+  const url = event.request.url;
+  // Script tags ask without CORS, which would give an opaque response whose
+  // status can't be checked before caching. Both hosts allow CORS, so ask with it.
+  const request = new Request(url, { mode: 'cors', credentials: 'omit' });
+  const runtimeVersion = (u) => u.startsWith(MEDIAPIPE_RUNTIME) && u.slice(MEDIAPIPE_RUNTIME.length).split('/')[0];
+  const version = runtimeVersion(url);
+  return serveImmutable(event, VENDOR_CACHE, request,
+    (cachedUrl) => !!version && !!runtimeVersion(cachedUrl) && runtimeVersion(cachedUrl) !== version);
 }
 
 // ── Model bundles ───────────────────────────────────────────────────────────
@@ -228,7 +305,12 @@ async function serveModelFile(event, path) {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) {
+    if (VENDOR_PREFIXES.some((prefix) => url.href.startsWith(prefix))) {
+      event.respondWith(serveVendorFile(event));
+    }
+    return;
+  }
 
   // API calls — network only
   if (url.pathname.startsWith('/api/')) {
@@ -243,6 +325,12 @@ self.addEventListener('fetch', (event) => {
   // Classifier files are served from one complete, versioned bundle
   if (url.pathname.startsWith(MODEL_DIR) && MODEL_FILES.includes(url.pathname.slice(MODEL_DIR.length))) {
     event.respondWith(serveModelFile(event, url.pathname));
+    return;
+  }
+
+  // Phrase model files, when asked for by content hash
+  if (url.pathname.startsWith(PHRASE_MODEL_DIR) && SHA256_HEX.test(url.searchParams.get('v') || '')) {
+    event.respondWith(servePhraseModelFile(event, url));
     return;
   }
 

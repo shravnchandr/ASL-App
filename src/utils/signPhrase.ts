@@ -1,9 +1,15 @@
+import {
+  preparePhraseFrames,
+  type PhraseContractVersion,
+} from './signPhraseContract';
+
 /**
  * Preprocessing and decoding for the continuous sign-phrase (CTC) model.
  *
- * Mirrors the Python pipeline the model was trained with; the golden fixtures in
- * src/test/fixtures/phrases05 pin the behaviour (see signPhrase.test.ts). The
- * landmark order matches public/models/sign-phrases/preprocess.json.
+ * Mirrors the Python pipeline the models were trained with; the golden fixtures
+ * in src/test/fixtures/ pin the behaviour (frozen-phrases07: contract v4, see
+ * signPhraseContract.test.ts; phrases05: legacy, see signPhrase.test.ts). The
+ * landmark order matches each bundle's preprocess.json.
  */
 
 /** One landmark as [x, y, z] in normalised image coordinates. */
@@ -141,16 +147,37 @@ export interface PhraseFeatures {
   T: number;
   /** Positions kept when the segment was over 384 frames, else null. */
   subsample: number[] | null;
+  /** Provenance before subsampling, in pose-present frame order (v4 only). */
+  keptFrames?: number[];
+  handStatus?: [number, number][];
+  assignmentUncertain?: number[];
 }
 
 /**
  * Model input for one segment. Order matters and matches the export contract:
  * origin + hold-fill over every frame, then subsample (over 384 frames), then Δ1.
  * Frames without a pose are dropped (the origin needs the nose).
+ *
+ * `trim` cuts the clip to its hand span (segmentIndices). Under v4 that happens
+ * after hold-fill, as in Python, so a part last detected before the span (a
+ * face that then drops out) is still held inside it. The legacy contract trims
+ * first.
  */
-export function buildFeatures(segment: PhraseFrame[]): PhraseFeatures {
-  const frames = segment.filter(f => f.pose);
+export function buildFeatures(
+  segment: PhraseFrame[],
+  contractVersion: PhraseContractVersion = 'v4',
+  aspect = TRAINING_ASPECT,
+  trim = false,
+): PhraseFeatures {
+  const prepared = contractVersion === 'v4' ? preparePhraseFrames(segment, aspect) : null;
+  const posed = prepared?.frames ?? segment.filter(f => f.pose);
+  // Resolve copies using the full clip's median shoulder width before trimming.
+  const handSegment = trim ? segmentIndices(posed) : null;
+  const fillWholeClip = contractVersion === 'v4';
+  const frames = handSegment && !fillWholeClip ? handSegment.map(i => posed[i]) : posed;
   const total = frames.length;
+  // Rows of `frames` that make up the segment, before subsampling
+  const span = handSegment && fillWholeClip ? handSegment : frames.map((_, i) => i);
 
   // Positions: origin-subtracted where detected, then hold-filled per part
   const positions = new Float32Array(total * N_POSITIONS);
@@ -185,12 +212,13 @@ export function buildFeatures(segment: PhraseFrame[]): PhraseFeatures {
     offset += width;
   }
 
-  const keep = subsampleIndices(total);
+  const keep = subsampleIndices(span.length);
   const T = keep.length;
   const features = new Float32Array(T * N_FEATURES);
   for (let t = 0; t < T; t++) {
     const row = t * N_FEATURES;
-    const src = keep[t] * N_POSITIONS;
+    const frame = span[keep[t]];
+    const src = frame * N_POSITIONS;
     features.set(positions.subarray(src, src + N_POSITIONS), row);
     if (t > 0) {
       const prev = row - N_FEATURES;
@@ -199,11 +227,18 @@ export function buildFeatures(segment: PhraseFrame[]): PhraseFeatures {
       }
     }
     // Presence is the actual detection in that frame, never the filled value
-    features[row + 2 * N_POSITIONS] = frames[keep[t]].left_hand ? 1 : 0;
-    features[row + 2 * N_POSITIONS + 1] = frames[keep[t]].right_hand ? 1 : 0;
+    features[row + 2 * N_POSITIONS] = frames[frame].left_hand ? 1 : 0;
+    features[row + 2 * N_POSITIONS + 1] = frames[frame].right_hand ? 1 : 0;
   }
 
-  return { features, T, subsample: total > MAX_FRAMES ? keep : null };
+  return {
+    features, T, subsample: span.length > MAX_FRAMES ? keep : null,
+    ...(prepared && {
+      keptFrames: prepared.keptFrames,
+      handStatus: prepared.handStatus,
+      assignmentUncertain: prepared.assignmentUncertain,
+    }),
+  };
 }
 
 /** Greedy CTC: argmax per frame, collapse repeats, drop blank. */
@@ -244,9 +279,10 @@ export interface PhraseDecode {
 }
 
 /**
- * Below this pooled score a sign is shown as "not sure". From the export's
+ * Below this pooled score a sign is shown as "not sure". From phrases05's
  * sign_reliability.json: keeping scores of about 0.68 and up gives 80% correct
  * single signs on held-out signers; a score of 0.7–0.8 alone is right about half the time.
+ * Provisional for frozen phrases07, which has no sign_reliability.json yet.
  */
 export const UNSURE_BELOW = 0.7;
 
@@ -390,38 +426,149 @@ export function keepDominantHand(
 }
 
 export interface PhraseSegment {
-  /** Trimmed: first to last frame with a hand detected. */
+  /**
+   * The raw stream around one utterance: up to a second before the first frame
+   * with a hand, through the frames after the last one. The contract fills
+   * missing parts over this whole clip and only then trims to the hand span
+   * (`buildFeatures(..., trim = true)`), so the context must not be cut here.
+   * Frames without a pose are kept (all parts null) so that timing and
+   * resampling see the stream as it was captured.
+   */
   frames: PhraseFrame[];
+  /** Capture time of each frame (ms). */
+  times: number[];
   /** Capture rate over the segment (frames per second). */
   fps: number;
 }
 
+/** Live timing rule of the export contract (preprocess.json `frame_rate`). */
+export const MODEL_FPS = 30;
+/** Capture at this fraction of MODEL_FPS or faster picks frames; slower capture interpolates. */
+const NEAREST_MIN = 0.95;
+/** A tick this close to a capture timestamp takes that frame (timestamps are rounded). */
+const SNAP_MS = 0.5;
+
+const PARTS: Part[] = ['pose', 'left_hand', 'right_hand', 'face'];
+
+/** One output frame: (1 - w) · frame i0 + w · frame i1. */
+export interface ResampleStep {
+  i0: number;
+  i1: number;
+  w: number;
+}
+
+/**
+ * Port of the model repo's `browser_fixtures.resample_plan` (pinned by
+ * timing_vectors.json): a 30 fps grid t_k = t_0 + k · 1000 / fps over the capture
+ * timestamps. The mode is chosen once per stream from the median capture
+ * interval: at 28.5 fps or faster each tick takes the nearest frame (ties → the
+ * earlier), which is what training's frame step does; slower capture is
+ * interpolated between the frames around the tick, because repeating frames
+ * would add zero-velocity steps the model never saw. Timestamps must be
+ * strictly increasing.
+ */
+export function resamplePlan(timesMs: number[], fps = MODEL_FPS): ResampleStep[] {
+  const n = timesMs.length;
+  if (n === 0) return [];
+  const step = 1000 / fps;
+  const count = Math.floor((timesMs[n - 1] - timesMs[0] + SNAP_MS) / step) + 1;
+
+  const intervals = timesMs.slice(1).map((t, i) => t - timesMs[i]).sort((x, y) => x - y);
+  const mid = intervals.length >> 1;
+  const median = intervals.length % 2 ? intervals[mid] : (intervals[mid - 1] + intervals[mid]) / 2;
+  const nearest = n < 2 || median <= step / NEAREST_MIN;
+
+  const plan: ResampleStep[] = [];
+  let j = 0;
+  for (let k = 0; k < count; k++) {
+    const tick = timesMs[0] + step * k;
+    while (j < n - 1 && timesMs[j + 1] <= tick) j++;   // last frame at or before the tick
+    if (j === n - 1 || tick - timesMs[j] <= SNAP_MS) {
+      plan.push({ i0: j, i1: j, w: 0 });
+    } else if (timesMs[j + 1] - tick <= SNAP_MS) {
+      plan.push({ i0: j + 1, i1: j + 1, w: 0 });
+    } else if (nearest) {
+      const pick = tick - timesMs[j] <= timesMs[j + 1] - tick ? j : j + 1;
+      plan.push({ i0: pick, i1: pick, w: 0 });
+    } else {
+      plan.push({ i0: j, i1: j + 1, w: (tick - timesMs[j]) / (timesMs[j + 1] - timesMs[j]) });
+    }
+  }
+  return plan;
+}
+
+/**
+ * Port of `browser_fixtures.apply_plan`: a part detected in both frames is
+ * interpolated (float32); otherwise the nearer frame's part, or its absence,
+ * is taken as it is.
+ */
+export function applyResamplePlan(frames: PhraseFrame[], plan: ResampleStep[]): PhraseFrame[] {
+  return plan.map(({ i0, i1, w }) => {
+    const frame = {} as PhraseFrame;
+    for (const part of PARTS) {
+      const a = frames[i0][part];
+      const b = frames[i1][part];
+      frame[part] = w === 0 || !a || !b
+        ? (w < 0.5 ? a : b)
+        : a.map((p, i) => p.map((v, c) => Math.fround((1 - w) * v + w * b[i][c])));
+    }
+    return frame;
+  });
+}
+
+/**
+ * The captured stream on the model's 30 fps grid; the first step for live
+ * input, before anything else. The camera and the landmark models decide how
+ * many frames a browser gets per second, and the velocity features scale with
+ * that: the same motion at 15 fps has half the frames and twice the step.
+ */
+export function resampleFrames(frames: PhraseFrame[], timesMs: number[], fps = MODEL_FPS): PhraseFrame[] {
+  // The rule needs strictly increasing times; a repeated timestamp is the same instant
+  const keep: number[] = [];
+  for (let i = 0; i < timesMs.length; i++) {
+    if (!keep.length || timesMs[i] > timesMs[keep[keep.length - 1]]) keep.push(i);
+  }
+  return applyResamplePlan(keep.map(i => frames[i]), resamplePlan(keep.map(i => timesMs[i]), fps));
+}
+
+const NO_POSE_FRAME: PhraseFrame = { pose: null, left_hand: null, right_hand: null, face: null };
+
 const SEGMENT_END_GAP_MS = 1000;
+/** Frames kept from before the first hand, as context for hold-fill. */
+const SEGMENT_PRE_ROLL_MS = 1000;
 // Safety cap so a hand resting in view cannot buffer forever (~1 min at 30 fps)
 const SEGMENT_MAX_FRAMES = 1800;
 
 /**
  * Cuts the live frame stream into utterances: a segment starts at the first
  * frame with a hand and ends once no hand has been seen for about a second.
+ * The frames just before and after the hands are part of the segment.
  */
 export class PhraseSegmenter {
   private frames: PhraseFrame[] = [];
   private times: number[] = [];
   private lastHandIndex = -1;
 
+  /** A hand has been seen and the segment has not ended yet. */
   get isActive(): boolean {
-    return this.frames.length > 0;
+    return this.lastHandIndex >= 0;
   }
 
-  /** Feed one frame (null = no pose, dropped). Returns a segment when one ends. */
+  /** Feed one frame (null = no pose). Returns a segment when one ends. */
   push(frame: PhraseFrame | null, timeMs: number): PhraseSegment | null {
-    const hasHand = !!frame && !!(frame.left_hand || frame.right_hand);
-    if (frame && (hasHand || this.isActive)) {
-      this.frames.push(frame);
-      this.times.push(timeMs);
-      if (hasHand) this.lastHandIndex = this.frames.length - 1;
+    this.frames.push(frame ?? NO_POSE_FRAME);
+    this.times.push(timeMs);
+    if (frame && (frame.left_hand || frame.right_hand)) this.lastHandIndex = this.frames.length - 1;
+
+    if (!this.isActive) {
+      // Waiting for a hand: only the last second is kept
+      const stale = this.times.findIndex(t => t >= timeMs - SEGMENT_PRE_ROLL_MS);
+      if (stale > 0) {
+        this.frames.splice(0, stale);
+        this.times.splice(0, stale);
+      }
+      return null;
     }
-    if (!this.isActive) return null;
 
     const sinceHand = timeMs - this.times[this.lastHandIndex];
     if (sinceHand >= SEGMENT_END_GAP_MS || this.frames.length >= SEGMENT_MAX_FRAMES) {
@@ -430,15 +577,17 @@ export class PhraseSegmenter {
     return null;
   }
 
-  /** End the current segment now (null if nothing is buffered). */
+  /** End the current segment now (null if no hand has been seen). */
   flush(): PhraseSegment | null {
     if (!this.isActive) return null;
-    const count = this.lastHandIndex + 1;
-    const frames = this.frames.slice(0, count);
-    const elapsed = this.times[count - 1] - this.times[0];
-    const fps = elapsed > 0 ? ((count - 1) * 1000) / elapsed : 0;
-    this.reset();
-    return { frames, fps };
+    const { frames, times } = this;
+    const elapsed = times[times.length - 1] - times[0];
+    const fps = elapsed > 0 ? ((times.length - 1) * 1000) / elapsed : 0;
+    // The frames after the last hand are also the next segment's lead-in
+    this.frames = frames.slice(this.lastHandIndex + 1);
+    this.times = times.slice(this.lastHandIndex + 1);
+    this.lastHandIndex = -1;
+    return { frames, times, fps };
   }
 
   reset(): void {
@@ -465,27 +614,30 @@ export function formatGloss(gloss: string): string {
   return GLOSS_DISPLAY[gloss] ?? gloss;
 }
 
-const round7 = (v: number) => Math.round(v * 1e7) / 1e7;
-const roundPoints = (points: Point[] | null, limit = Infinity) =>
-  points ? points.slice(0, limit).map(p => p.map(round7)) : null;
+// Landmarks are float32; written as such, a recording replays to the same input
+const float32Points = (points: Point[] | null, limit = Infinity) =>
+  points ? points.slice(0, limit).map(p => p.map(Math.fround)) : null;
 
 /**
  * A segment in the model repo's fixture format, for scoring real signing:
- * `{label, frames}` with raw per-frame landmarks after slot assignment.
+ * `{label, frames, timestamps_ms}` with raw per-frame landmarks after slot
+ * assignment and each frame's capture time.
  */
 export function toRecording(
   frames: PhraseFrame[],
   label: string,
-  meta: Record<string, unknown>
-): { label: string; frames: PhraseFrame[]; meta: Record<string, unknown> } {
+  meta: Record<string, unknown>,
+  timestampsMs?: number[],
+): { label: string; frames: PhraseFrame[]; timestamps_ms?: number[]; meta: Record<string, unknown> } {
   return {
     label,
     frames: frames.map(f => ({
-      pose: roundPoints(f.pose),
-      left_hand: roundPoints(f.left_hand),
-      right_hand: roundPoints(f.right_hand),
-      face: roundPoints(f.face, FACE_MESH_POINTS),
+      pose: float32Points(f.pose),
+      left_hand: float32Points(f.left_hand),
+      right_hand: float32Points(f.right_hand),
+      face: float32Points(f.face, FACE_MESH_POINTS),
     })),
+    ...(timestampsMs && { timestamps_ms: timestampsMs }),
     meta,
   };
 }

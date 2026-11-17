@@ -153,6 +153,10 @@
   flex-wrap: wrap;
 }
 
+.phrase-mode__hand-choice + .phrase-mode__hand-choice {
+  margin-top: 10px;
+}
+
 .phrase-mode__hand-choice-label {
   margin-right: 6px;
   font-size: 0.875rem;
@@ -261,6 +265,10 @@
   font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--md-sys-color-on-surface-variant);
+}
+
+.phrase-mode__note a {
+  color: var(--md-sys-color-primary);
 }
 
 /* ── Attempts ── */

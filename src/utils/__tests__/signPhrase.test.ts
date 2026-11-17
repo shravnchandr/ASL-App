@@ -12,6 +12,9 @@ import {
   N_POSITIONS,
   NUM_CLASSES,
   PhraseSegmenter,
+  resampleFrames,
+  resamplePlan,
+  type ResampleStep,
   assignHandSlots,
   buildFeatures,
   decodeGreedy,
@@ -45,7 +48,8 @@ interface Fixture {
 }
 
 const readJson = <T,>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
-const MODEL_DIR = 'public/models/sign-phrases/';
+// The legacy bundle; frozen phrases07 (contract v4) is covered by signPhraseContract.test.ts
+const MODEL_DIR = 'public/models/sign-phrases/phrases05/';
 const fixtures = ['100015657', '1001373962', 'concat'].map(name =>
   readJson<Fixture>(`src/test/fixtures/phrases05/${name}.json`)
 );
@@ -79,7 +83,7 @@ describe('sign-phrase preprocessing', () => {
   it.each(fixtures)('reproduces fixture $name (segment, subsample, features, presence)', fx => {
     expect(segmentIndices(fx.frames)).toEqual(expectedSegment(fx));
 
-    const { features, T, subsample } = buildFeatures(segmentFrames(fx));
+    const { features, T, subsample } = buildFeatures(segmentFrames(fx), 'legacy');
     expect(subsample).toEqual(fx.subsample ?? null);
     expect(T).toBe(fx.features.length);
     expect(features).toHaveLength(T * N_FEATURES);
@@ -162,7 +166,7 @@ describe('sign-phrase model', () => {
         continue;
       }
       // Our own features, so the test covers preprocessing → model → decode
-      const { features, T } = buildFeatures(segmentFrames(fx));
+      const { features, T } = buildFeatures(segmentFrames(fx), 'legacy');
       const { logits } = await session.run({
         features: new ort.Tensor('float32', features, [1, T, N_FEATURES]),
       });
@@ -281,33 +285,150 @@ describe('PhraseSegmenter', () => {
   const idle: PhraseFrame = { pose, left_hand: null, right_hand: null, face: null };
   const signing: PhraseFrame = { ...idle, right_hand: hand };
 
-  it('emits first-to-last hand frame after a second without hands', () => {
+  it('emits the utterance with the frames around it after a second without hands', () => {
     const seg = new PhraseSegmenter();
     let t = 0;
     const step = (f: PhraseFrame | null) => seg.push(f, (t += 100));
 
-    expect(step(idle)).toBeNull(); // before any hand: not buffered
+    for (let i = 0; i < 30; i++) expect(step(idle)).toBeNull(); // before any hand: only context
     expect(seg.isActive).toBe(false);
     for (let i = 0; i < 5; i++) expect(step(signing)).toBeNull();
+    expect(seg.isActive).toBe(true);
     expect(step(idle)).toBeNull(); // short gap stays inside the segment
-    expect(step(null)).toBeNull(); // no pose: dropped
+    expect(step(null)).toBeNull(); // no pose: stays in the stream
     for (let i = 0; i < 5; i++) expect(step(signing)).toBeNull();
     let out = null;
     for (let i = 0; i < 10 && !out; i++) out = step(idle);
 
     expect(out).not.toBeNull();
-    expect(out!.frames).toHaveLength(11); // 5 + gap frame + 5, trailing idle trimmed
-    expect(out!.frames[5]).toBe(idle);
-    expect(out!.fps).toBeCloseTo((10 * 1000) / 1100, 5);
+    // the second before the first hand, 5 + two gap frames + 5, and the second after the last
+    expect(out!.frames).toHaveLength(11 + 12 + 10);
+    expect(handSpan(out!.frames)).toEqual([11, 22]);
+    expect(out!.frames[16]).toBe(idle);
+    expect(out!.frames[17].pose).toBeNull(); // no pose: kept in place, all parts null
+    expect(out!.times).toHaveLength(33);
+    expect(out!.times[0]).toBe(2000);
+    expect(out!.fps).toBeCloseTo(10, 5);
     expect(seg.isActive).toBe(false);
+  });
+
+  it('starts the next segment with the frames that followed the last one', () => {
+    const seg = new PhraseSegmenter();
+    let t = 0;
+    const step = (f: PhraseFrame | null) => seg.push(f, (t += 100));
+    step(signing);
+    let first = null;
+    while (!first) first = step(idle);
+    expect(first.frames).toHaveLength(11);
+    step(signing);
+    const second = seg.flush()!;
+    expect(second.frames).toHaveLength(11); // ten idle frames of lead-in, then the hand
+    expect(second.times[0]).toBe(first.times[1]);
   });
 
   it('flush ends the segment immediately', () => {
     const seg = new PhraseSegmenter();
     expect(seg.flush()).toBeNull();
+    seg.push(idle, -40);
+    expect(seg.flush()).toBeNull(); // no hand yet
     seg.push(signing, 0);
     seg.push(signing, 33);
-    expect(seg.flush()!.frames).toHaveLength(2);
+    const out = seg.flush()!;
+    expect(out.frames).toHaveLength(3);
+    expect(out.times).toEqual([-40, 0, 33]);
+    expect(seg.isActive).toBe(false);
+  });
+});
+
+describe('live timing rule (30 fps grid by capture timestamp)', () => {
+  const vectors = JSON.parse(readFileSync('src/test/fixtures/frozen-phrases07/timing_vectors.json', 'utf8')) as {
+    cases: { name: string; timestamps_ms: number[]; plan: ResampleStep[] }[];
+  };
+
+  it.each(vectors.cases)('reproduces the reference plan for $name', ({ timestamps_ms, plan }) => {
+    expect(resamplePlan(timestamps_ms)).toEqual(plan);
+  });
+
+  // A hand moving steadily to the right, face and body still
+  const at = (ms: number): PhraseFrame => {
+    const x = 0.2 + 0.3 * (ms / 2000);
+    return {
+      pose: Array.from({ length: 33 }, (_, i): Point => [0.5 + i * 0.001, 0.4, 0]),
+      left_hand: null,
+      right_hand: Array.from({ length: 21 }, (_, i): Point => [x + i * 0.002, 0.6, 0.01]),
+      face: null,
+    };
+  };
+  const RIGHT_WRIST_X = (21 + 33) * 3;   // feature column of right_hand[0].x
+
+  it.each([15, 24, 30, 60, 120])('gives the same velocity per frame for motion captured at %d fps', fps => {
+    const times = Array.from({ length: 2 * fps }, (_, i) => (i * 1000) / fps + 50);
+    const { features, T } = buildFeatures(resampleFrames(times.map(t => at(t - 50)), times), 'legacy');
+    expect([59, 60]).toContain(T);
+    // 0.3 of the width in 2 s = 0.005 per 30 fps frame, at every step
+    for (let t = 1; t < T; t++) {
+      expect(features[t * N_FEATURES + N_POSITIONS + RIGHT_WRIST_X]).toBeCloseTo(0.005, 5);
+    }
+  });
+
+  it('interpolates slow capture and takes detection from the nearer frame', () => {
+    const noHand = { ...at(0), right_hand: null };
+    const frames = [at(0), noHand, at(200), at(300)];
+    const out = resampleFrames(frames, [0, 100, 200, 300]);
+    // grid: 0, 33, 67, 100, 133, 167, 200, 233, 267, 300 ms
+    expect(out.map(f => !!f.right_hand)).toEqual([true, true, false, false, false, true, true, true, true, true]);
+    expect(out[1].right_hand).toBe(frames[0].right_hand);   // nothing to interpolate with: copied
+    expect(out[7].right_hand![0][0]).toBeCloseTo(0.2 + 0.3 * (700 / 3 / 2000), 6);
+  });
+
+  it('picks whole frames when capture is at least 28.5 fps', () => {
+    const times = Array.from({ length: 20 }, (_, i) => i * 16 + (i % 3));
+    const frames = times.map(at);
+    const hands = frames.map(f => f.right_hand);
+    for (const f of resampleFrames(frames, times)) expect(hands).toContain(f.right_hand);
+  });
+
+  it('skips a repeated or backward timestamp instead of failing', () => {
+    const frames = [at(0), at(100), at(100), at(90), at(200)];
+    expect(resampleFrames(frames, [0, 100, 100, 90, 200])).toHaveLength(7);
+  });
+
+  it('handles an empty stream and a single frame', () => {
+    expect(resampleFrames([], [])).toEqual([]);
+    const one = at(0);
+    expect(resampleFrames([one], [5])).toEqual([one]);
+  });
+});
+
+describe('trimming under the v4 contract', () => {
+  const pose: Point[] = Array.from({ length: 33 }, (_, i): Point => [0.5 + i * 0.001, 0.3, 0]);
+  const hand: Point[] = Array.from({ length: 21 }, (): Point => [0.4, 0.6, 0]);
+  const face: Point[] = Array.from({ length: 478 }, (_, i): Point => [0.5 + i * 1e-4, 0.25, 0.02]);
+  const FACE = (21 + 33 + 21) * 3;   // first face feature column
+  // face seen before the hands come up, then lost while signing
+  const clip: PhraseFrame[] = [
+    { pose, left_hand: null, right_hand: null, face },
+    { pose, left_hand: null, right_hand: null, face },
+    ...Array.from({ length: 8 }, (): PhraseFrame => ({ pose, left_hand: null, right_hand: hand, face: null })),
+    { pose, left_hand: null, right_hand: null, face: null },
+  ];
+
+  it('holds a face last seen before the hand span (fill, then trim)', () => {
+    const { features, T } = buildFeatures(clip, 'v4', 0.75, true);
+    expect(T).toBe(8);
+    for (let t = 0; t < T; t++) {
+      expect(features[t * N_FEATURES + FACE]).toBeCloseTo(face[70][0] - pose[0][0], 6);
+      expect(features[t * N_FEATURES + FACE + 2]).toBeCloseTo(0.02, 6);
+    }
+    // the first kept frame has no velocity even though earlier frames were filled
+    expect(Array.from(features.subarray(N_POSITIONS, 2 * N_POSITIONS)).every(v => v === 0)).toBe(true);
+    expect(Array.from(features.subarray(2 * N_POSITIONS, N_FEATURES))).toEqual([0, 1]);
+  });
+
+  it('keeps the legacy order (trim, then fill): no face inside the span', () => {
+    const { features, T } = buildFeatures(clip, 'legacy', 0.75, true);
+    expect(T).toBe(8);
+    expect(features[FACE]).toBe(0);
   });
 });
 
@@ -318,9 +439,34 @@ describe('toRecording', () => {
     const rec = toRecording([{ pose, left_hand: null, right_hand: null, face }], 'cloud have', { fps: 30 });
     expect(rec.label).toBe('cloud have');
     expect(rec.frames[0].face).toHaveLength(468);
-    expect(rec.frames[0].face![0][0]).toBe(0.1234568);
+    expect(rec.frames[0].face![0][0]).toBe(Math.fround(0.123456789));
     expect(rec.frames[0].left_hand).toBeNull();
     expect(handSpan(rec.frames)).toBeNull();
+    expect(rec).not.toHaveProperty('timestamps_ms');
+  });
+
+  it.each(['legacy', 'v4'] as const)('replays to the same model input, bit for bit (%s)', contract => {
+    // Captured landmarks are float32; capture is slower than 30 fps, so frames are interpolated
+    const f32 = (points: Point[] | null) => points?.map(p => p.map(Math.fround)) ?? null;
+    const captured = fixtures[0].frames.map((f): PhraseFrame =>
+      ({ pose: f32(f.pose), left_hand: f32(f.left_hand), right_hand: f32(f.right_hand), face: f32(f.face) }));
+    const times = captured.map((_, i) => Math.round(i * 41.7 * 1000) / 1000);
+    const input = (frames: PhraseFrame[], timesMs: number[]) =>
+      buildFeatures(resampleFrames(frames, timesMs), contract, 0.75, true);
+
+    const saved = JSON.parse(JSON.stringify(toRecording(captured, 'cloud', {}, times)));
+    const live = input(captured, times);
+    const replayed = input(saved.frames, saved.timestamps_ms);
+    expect(live.T).toBeGreaterThan(captured.length);
+    expect(replayed.T).toBe(live.T);
+    expect(Buffer.from(replayed.features.buffer).equals(Buffer.from(live.features.buffer))).toBe(true);
+  });
+
+  it('adds the capture times when given', () => {
+    const none: PhraseFrame = { pose: null, left_hand: null, right_hand: null, face: null };
+    const rec = toRecording([none, none], '', { contract_version: 'v4' }, [0, 33.4]);
+    expect(rec.timestamps_ms).toEqual([0, 33.4]);
+    expect(rec.frames).toEqual([none, none]);
   });
 });
 

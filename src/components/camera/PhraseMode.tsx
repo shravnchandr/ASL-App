@@ -1,11 +1,20 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useCamera } from '../../hooks/useCamera';
 import { useHolisticLandmarks } from '../../hooks/useHolisticLandmarks';
-import { useSignPhraseModel } from '../../hooks/useSignPhraseModel';
+import {
+  DEFAULT_PHRASE_BUNDLE,
+  PHRASE_BUNDLES,
+  PHRASE_BUNDLE_IDS,
+  useSignPhraseModel,
+  type PhraseBundleId,
+} from '../../hooks/useSignPhraseModel';
+import type { PhraseContractVersion } from '../../utils/signPhraseContract';
 import { announceToScreenReader } from '../../utils/accessibility';
 import { HAND_CONNECTIONS } from '../../utils/handLandmarks';
 import {
   MIN_FRAMES,
+  MODEL_FPS,
+  TRAINING_ASPECT,
   UNSURE_BELOW,
   PhraseSegmenter,
   buildFeatures,
@@ -15,6 +24,7 @@ import {
   keepDominantHand,
   medianShoulderRatio,
   portraitCrop,
+  resampleFrames,
   toRecording,
   type HandSlot,
   type PhraseFrame,
@@ -54,10 +64,21 @@ interface Attempt {
   tooShort: boolean;
   label: string;
   handMode: HandMode;
+  /** Model bundle that read this attempt. */
+  model: PhraseBundleId;
+  contractVersion: PhraseContractVersion;
+  /** Copy-rule outcome per frame of the 30 fps grid the model's input was built from. */
+  preparation: {
+    kept_frames: number[];
+    hand_status: [number, number][];
+    assignment_uncertain: number[];
+  } | null;
   /** One-hand modes: the hand the model was given. */
   keptHand: HandSlot | null;
-  /** Raw landmarks (both hands) for export; dropped from older attempts to bound memory. */
+  /** Raw captured landmarks (both hands) for export; dropped from older attempts to bound memory. */
   frames: PhraseFrame[] | null;
+  /** Capture time of each raw frame, ms from the first. */
+  times: number[];
 }
 
 const percent = (score: number) => `${Math.round(score * 100)}%`;
@@ -71,6 +92,16 @@ const HAND_MODES: { id: HandMode; label: string }[] = [
   { id: 'left_hand', label: 'Left only' },
   { id: 'right_hand', label: 'Right only' },
 ];
+
+const MODEL_KEY = 'asl_phrase_model';
+
+function savedModel(): PhraseBundleId {
+  try {
+    const saved = localStorage.getItem(MODEL_KEY);
+    if (PHRASE_BUNDLE_IDS.includes(saved as PhraseBundleId)) return saved as PhraseBundleId;
+  } catch { /* storage unavailable */ }
+  return DEFAULT_PHRASE_BUNDLE;
+}
 
 const IDLE_STATUS: LiveStatus = { body: false, left: false, right: false, signing: false, facing: true };
 const MAX_ATTEMPTS = 30;
@@ -149,7 +180,8 @@ function downloadJson(filename: string, data: unknown) {
 export default function PhraseMode({ onBack }: PhraseModeProps) {
   const { videoRef, isReady: cameraReady, isLoading: cameraLoading, error: cameraError, facingMode, flipCamera, startCamera } = useCamera();
   const { detect, isLoading: landmarksLoading, error: landmarksError } = useHolisticLandmarks();
-  const { recognize, isLoading: modelLoading, error: modelError } = useSignPhraseModel();
+  const [model, setModel] = useState<PhraseBundleId>(savedModel);
+  const { recognize, isLoading: modelLoading, error: modelError, contractVersion } = useSignPhraseModel(model);
 
   const [status, setStatus] = useState<LiveStatus>(IDLE_STATUS);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -179,21 +211,28 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
   }, [isLoading, error, startCamera]);
 
   const handleSegment = useCallback(async (segment: PhraseSegment) => {
+    if (!contractVersion) return;
     const id = nextIdRef.current++;
     // One-hand modes drop the less active (or unchosen) hand for the whole segment
     const mode = handModeRef.current;
+    // Times as they are saved, so a recording replays to exactly this input
+    const times = segment.times.map(t => round3(t - segment.times[0]));
+    // The model expects 30 fps video; browsers deliver whatever the device manages
+    const frames = resampleFrames(segment.frames, times);
     const oneHanded = mode === 'both'
       ? null
-      : keepDominantHand(segment.frames, mode === 'auto' ? undefined : mode);
-    const modelFrames = mode === 'both' ? segment.frames : oneHanded?.frames ?? [];
-    const tooShort = modelFrames.length < MIN_FRAMES;
+      : keepDominantHand(frames, mode === 'auto' ? undefined : mode);
+    const modelFrames = mode === 'both' ? frames : oneHanded?.frames ?? [];
+    // Missing parts are filled over the whole clip, context included, then it is cut to the hands
+    const input = buildFeatures(modelFrames, contractVersion, TRAINING_ASPECT, true);
+    const tooShort = input.T < MIN_FRAMES;
     let signs: DecodedSign[] = [];
     let closest: SignCandidate[] = [];
     let inferenceMs: number | null = null;
 
     if (!tooShort) {
       setIsRecognizing(true);
-      const { features, T } = buildFeatures(modelFrames);
+      const { features, T } = input;
       const result = await recognize(features, T);
       if (!isMountedRef.current) return;
       setIsRecognizing(false);
@@ -203,12 +242,20 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     setAttempts(prev => [
       {
         id, signs, closest, inferenceMs, tooShort, label: '',
-        frameCount: modelFrames.length,
+        frameCount: input.T,
         handMode: mode,
+        model,
+        contractVersion,
+        preparation: contractVersion === 'v4' ? {
+          kept_frames: input.keptFrames!,
+          hand_status: input.handStatus!,
+          assignment_uncertain: input.assignmentUncertain!,
+        } : null,
         keptHand: oneHanded?.kept ?? null,
         fps: segment.fps,
         shoulderRatio: medianShoulderRatio(segment.frames),
         frames: segment.frames,
+        times,
       },
       ...prev.map((a, i) => (i + 1 >= ATTEMPTS_WITH_FRAMES && a.frames ? { ...a, frames: null } : a)),
     ].slice(0, MAX_ATTEMPTS));
@@ -220,7 +267,7 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
         ? `Read: ${signs.map(s => `${formatGloss(s.gloss)}, ${percent(s.score)}${s.unsure ? ', not sure' : ''}`).join('; ')}`
         : 'No signs recognised');
     }
-  }, [recognize]);
+  }, [recognize, contractVersion, model]);
 
   useEffect(() => {
     if (!cameraReady || isLoading) return;
@@ -234,9 +281,9 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
       // One detection per new camera frame; the raw (unmirrored) frame goes to MediaPipe
       if (video && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
-        const now = performance.now();
-        const frame = detect(video, now);
-        const segment = segmenter.push(frame, now);
+        const frame = detect(video, performance.now());
+        // The camera's own clock: when the frame was captured, not when it was processed
+        const segment = segmenter.push(frame, video.currentTime * 1000);
 
         if (canvasRef.current) drawOverlay(canvasRef.current, video, frame, facingMode === 'user');
 
@@ -280,6 +327,13 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     if (segment) void handleSegment(segment);
   }, [handleSegment]);
 
+  const handleModelChange = useCallback((id: PhraseBundleId) => {
+    setModel(id);
+    try {
+      localStorage.setItem(MODEL_KEY, id);
+    } catch { /* storage unavailable */ }
+  }, []);
+
   const handleLabelChange = useCallback((id: number, label: string) => {
     setAttempts(prev => prev.map(a => (a.id === id ? { ...a, label } : a)));
   }, []);
@@ -295,10 +349,16 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
         scores: attempt.signs.map(s => round3(s.score)),
         alternatives: attempt.signs.map(s => s.alternatives.map(a => [a.gloss, round3(a.score)])),
         closest: attempt.closest.map(c => [c.gloss, round3(c.score)]),
+        // `frames` are the raw capture with its context frames, at `fps`; the
+        // model's input is built from them resampled to `frame_rate` by `timestamps_ms`
         fps: Number(attempt.fps.toFixed(2)),
+        frame_rate: MODEL_FPS,
+        model: attempt.model,
         // `frames` always holds both hands as detected; in a one-hand mode the
         // model was given only `kept_hand`
         hand_mode: attempt.handMode,
+        contract_version: attempt.contractVersion,
+        preparation: attempt.preparation,
         kept_hand: attempt.keptHand,
         frame_count: attempt.frameCount,
         shoulder_ratio: Number(attempt.shoulderRatio.toFixed(3)),
@@ -309,7 +369,7 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
         facing_mode: facingMode,
         recorded_at: new Date().toISOString(),
         user_agent: navigator.userAgent,
-      })
+      }, attempt.times)
     );
   }, [facingMode, videoRef]);
 
@@ -432,6 +492,20 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
           <div className="camera-page__your-turn">Phrases · experimental</div>
           <h2 className="camera-page__spell-heading">{heading}</h2>
           <p className="camera-page__instruction">{instruction}</p>
+
+          <div className="phrase-mode__hand-choice" role="group" aria-label="Model">
+            <span className="phrase-mode__hand-choice-label">Model</span>
+            {PHRASE_BUNDLE_IDS.map(id => (
+              <button
+                key={id}
+                className={`phrase-mode__hand-btn ${model === id ? 'phrase-mode__hand-btn--active' : ''}`}
+                aria-pressed={model === id}
+                onClick={() => handleModelChange(id)}
+              >
+                {PHRASE_BUNDLES[id].name}
+              </button>
+            ))}
+          </div>
 
           <div className="phrase-mode__hand-choice" role="group" aria-label="Hands the model reads">
             <span className="phrase-mode__hand-choice-label">Hands</span>
@@ -556,7 +630,7 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
                         ? a.signs.map(s => `${s.gloss} ${percent(s.score)}${s.unsure ? '?' : ''}`).join(' · ')
                         : 'nothing recognised'}
                     <span className="phrase-mode__attempt-meta">
-                      {a.frameCount} frames · {a.fps.toFixed(1)} fps
+                      {PHRASE_BUNDLES[a.model].name} · {a.frameCount} frames · {a.fps.toFixed(1)} fps
                       {a.keptHand ? ` · ${a.keptHand === 'left_hand' ? 'left' : 'right'} hand only` : ' · both hands'}
                     </span>
                   </div>
@@ -588,6 +662,14 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
           Early research model: 250 signs, trained on stitched single-sign clips and not yet
           validated on real signing. Expect mistakes. No video is stored or sent to any server.
         </div>
+        <p className="phrase-mode__note">
+          Trained on landmark data from{' '}
+          <a href="https://signdata.cc.gatech.edu/view/datasets/popsign_v1_0/" target="_blank" rel="noopener noreferrer">PopSign ASL v1.0</a>{' '}
+          (Starner et al., 2023;{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>),
+          Google's ASL Signs and WLASL.{' '}
+          <a href={`${PHRASE_BUNDLES['frozen-phrases07'].dir}ATTRIBUTION.md`} target="_blank" rel="noopener noreferrer">Full credits and changes</a>
+        </p>
       </div>
     </div>
   );

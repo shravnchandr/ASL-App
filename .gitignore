@@ -89,8 +89,10 @@ saved_models/
 *.pth
 *.pkl
 *.onnx
-# The phrase-mode model is served to the browser, so it ships with the app
+# The phrase-mode models are served to the browser, so they ship with the app
+# (vite.config.ts reads every bundle: a missing one fails the build)
 !public/models/sign-phrases/sign_ctc.onnx
+!public/models/sign-phrases/*/sign_ctc.onnx
 
 # Python training/experiment scripts (local development only)
 alphabet_translate/
