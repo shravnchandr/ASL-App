@@ -279,10 +279,14 @@ export interface PhraseDecode {
 }
 
 /**
- * Below this pooled score a sign is shown as "not sure". From phrases05's
- * sign_reliability.json: keeping scores of about 0.68 and up gives 80% correct
- * single signs on held-out signers; a score of 0.7–0.8 alone is right about half the time.
- * Provisional for frozen phrases07, which has no sign_reliability.json yet.
+ * Below this pooled score a sign is shown as "not sure". Measured for frozen
+ * phrases07 (the model repo's exports/frozen-phrases07/sign_reliability.json,
+ * 14,984 emitted signs from held-out single-sign clips): 72% of signs score 0.7
+ * or more and 85% of those are right; 32% of the signs below it are. Signs
+ * scoring 0.5–0.7 are right 41–44% of the time, which is why the cutoff is not
+ * the lower 0.548 that averages 80%; 0.7–0.8 alone is right 55% of the time.
+ * phrases05 shares the value (its own 80% cutoff is about 0.68). Not validated
+ * for signs inside phrases or on a live camera.
  */
 export const UNSURE_BELOW = 0.7;
 
