@@ -98,7 +98,7 @@ docker build -t asl-guide . && docker run -p 8000:8000 -e GOOGLE_API_KEY=your_ke
 | Database | SQLAlchemy async, SQLite (dev) / PostgreSQL (prod) |
 | Caching | Redis (optional) + in-memory LRU fallback |
 | Deployment | Docker, PWA (Service Worker + Web Manifest) |
-| Testing | Vitest (160 frontend tests), pytest (114 backend tests) |
+| Testing | Vitest (162 frontend tests), pytest (114 backend tests) |
 
 ---
 

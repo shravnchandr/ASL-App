@@ -336,12 +336,14 @@ self.addEventListener('fetch', (event) => {
 
   // Navigations — network-first so a new deploy's index.html (with new chunk
   // hashes) is always used when online. Stored under one key ('/') rather than
-  // per URL, since every route serves the same SPA shell.
+  // per URL, since every route serves the same SPA shell. Only HTML is the shell:
+  // opening a file directly (ATTRIBUTION.md) is a navigation too, and caching
+  // it as '/' would replace the app offline.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response.ok) {
+          if (response.ok && (response.headers.get('content-type') || '').includes('text/html')) {
             const copy = response.clone();
             event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put('/', copy)));
           }
