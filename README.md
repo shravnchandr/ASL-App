@@ -15,7 +15,7 @@ A production-ready web app for learning American Sign Language — AI-powered si
 
 ## What it does
 
-Type any English phrase and get a complete ASL breakdown: grammar-reordered gloss, plain-English signing instructions, animated demonstrations, and links to video resources. Browse the full sign library at `/dictionary` — 100 verified signs with category filters, A–Z sidebar, and live animation previews. A built-in learning module with spaced repetition and live camera recognition round out the app. The app is not hosted at the moment: run it locally with your own Gemini API key (see Quick Start).
+Type any English phrase and get a complete ASL breakdown: grammar-reordered gloss, plain-English signing instructions, animated demonstrations, and links to video resources. Browse the full sign library at `/dictionary` — 100 verified signs with category filters, A–Z sidebar, and live animation previews. A built-in learning module with spaced repetition and live camera recognition round out the app. The app is not hosted at the moment: run it locally with your own Gemini API key (see Quick Start), or host it yourself (see Hosting on Cloud Run).
 
 ---
 
@@ -85,6 +85,54 @@ docker-compose up
 # or
 docker build -t asl-guide . && docker run -p 8000:8000 -e GOOGLE_API_KEY=your_key asl-guide
 ```
+
+### Hosting on Cloud Run (free tier)
+
+The planned setup is Google Cloud Run for the app and a free Neon Postgres database. Cloud Run scales to zero and has a monthly free allowance (2 million requests, 180,000 vCPU-seconds); Neon's free plan holds 0.5 GB and sleeps when idle. The app's data is small: feedback, 90 days of analytics, and the daily free-translation counter.
+
+A database outside the container is required: Cloud Run starts fresh containers, so with SQLite the daily translation limit would reset every time.
+
+**1. Database (Neon).** Create a project in the region nearest your Cloud Run region and copy the **direct** connection string (the host without `-pooler`). Paste it as given: the app converts Neon's `sslmode`/`channel_binding` parameters for its driver. Check it:
+
+```bash
+DATABASE_URL='postgresql://...' uv run python scripts/check_database.py
+```
+
+This creates the tables, runs every query the app makes, and removes its own test rows.
+
+**2. Google Cloud, one time.** A project with billing enabled is needed even for the free tier; set a budget alert.
+
+```bash
+gcloud config set project PROJECT_ID
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com secretmanager.googleapis.com
+
+printf '%s' 'GEMINI_KEY'         | gcloud secrets create google-api-key --data-file=-
+printf '%s' 'NEON_URL'           | gcloud secrets create database-url   --data-file=-
+printf '%s' 'ADMIN_PASSWORD'     | gcloud secrets create admin-password --data-file=-
+openssl rand -hex 32 | tr -d '\n' | gcloud secrets create ip-hash-salt  --data-file=-
+
+# Let the service read them (Cloud Run runs as the default compute service account)
+PROJECT_NUMBER=$(gcloud projects describe PROJECT_ID --format='value(projectNumber)')
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role=roles/secretmanager.secretAccessor
+```
+
+**3. Deploy** (also for every later update):
+
+```bash
+PROJECT_ID=PROJECT_ID scripts/deploy-cloudrun.sh
+```
+
+It builds the Dockerfile with Cloud Build and runs at most one container (the per-minute rate limit, admin lockout and translation cache are kept in memory).
+
+**4. Check after the first deploy.**
+- `https://<service-url>/health` responds.
+- The logs (`gcloud run services logs read asl-app --region us-central1`) do **not** show `Ignoring X-Forwarded-For from untrusted peer`. If they do, every visitor shares one rate limit and one daily quota: add the address it names to `TRUSTED_PROXY_NETWORKS` in the script.
+- Translate once on Wi-Fi and once on mobile data: `/api/rate-limit` should count each separately.
+
+Each deploy stores an image in Artifact Registry (`cloud-run-source-deploy`), whose free storage is 0.5 GB: delete old images there now and then.
 
 ---
 

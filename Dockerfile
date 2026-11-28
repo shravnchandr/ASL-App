@@ -65,12 +65,13 @@ RUN useradd -m -u 1000 appuser && \
 
 USER appuser
 
-# Expose port
+# Listens on $PORT (Cloud Run sets it, usually 8080), else 8000
+ENV PORT=8000
 EXPOSE 8000
 
-# Health check (using curl instead of requests library)
+# Health check (using curl instead of requests library); Cloud Run ignores it
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f "http://localhost:${PORT}/health" || exit 1
 
-# Run the application
-CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application; exec so uvicorn receives the platform's stop signal
+CMD exec python -m uvicorn app:app --host 0.0.0.0 --port "${PORT}"

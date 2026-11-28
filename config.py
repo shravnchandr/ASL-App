@@ -3,6 +3,7 @@
 from typing import List
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+from sqlalchemy.engine import make_url
 from functools import lru_cache
 
 
@@ -31,12 +32,28 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def fix_postgres_url(cls, v: str) -> str:
-        """Convert postgres:// to postgresql+asyncpg:// for hosts that provide the short form"""
+        """Accept a host's libpq-style URL (e.g. Neon's) for the asyncpg driver.
+
+        postgres:// and postgresql:// become postgresql+asyncpg://. SQLAlchemy passes
+        query parameters to asyncpg.connect() as keywords, and asyncpg has no
+        `sslmode` or `channel_binding`: `sslmode` becomes asyncpg's `ssl` (same
+        values), and `channel_binding` is dropped because asyncpg can't do it.
+        """
         if v and v.startswith("postgres://"):
-            return v.replace("postgres://", "postgresql+asyncpg://", 1)
-        elif v and v.startswith("postgresql://") and "+asyncpg" not in v:
-            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return v
+            v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v and v.startswith("postgresql://"):
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if not v.startswith("postgresql+asyncpg://"):
+            return v
+        url = make_url(v)
+        if "sslmode" not in url.query and "channel_binding" not in url.query:
+            return v
+        query = dict(url.query)
+        query.pop("channel_binding", None)
+        sslmode = query.pop("sslmode", None)
+        if sslmode is not None:
+            query.setdefault("ssl", sslmode)
+        return url.set(query=query).render_as_string(hide_password=False)
 
     google_api_key: str = ""
     model_name: str = "gemini-2.5-flash"

@@ -64,7 +64,11 @@ docker run -p 8000:8000 -e GOOGLE_API_KEY=your_key asl-dictionary
 
 ### Deployment
 
-The app is **not currently deployed** (taken offline in November 2026). To host it again, use the Docker image and set the environment variables below.
+The app is **not currently deployed** (taken offline in November 2026). The planned host is **Google Cloud Run + Neon Postgres, both on free tiers**, until there are real users; the steps are in README.md ("Hosting on Cloud Run").
+
+- `scripts/deploy-cloudrun.sh` (`PROJECT_ID=... scripts/deploy-cloudrun.sh`): `gcloud run deploy --source .` (Cloud Build builds the Dockerfile; `.gcloudignore` keeps everything git ignores out of the upload), scale to zero, **`--max-instances 1`** (rate limits, admin lockout and the translation cache are per-container memory), secrets `google-api-key`, `database-url`, `admin-password`, `ip-hash-salt` from Secret Manager, and `TRUSTED_PROXY_NETWORKS` with `169.254.0.0/16` added for Cloud Run's front end. That range is not yet confirmed on a live deploy: if the logs show "Ignoring X-Forwarded-For from untrusted peer", all visitors share one quota
+- The image listens on `$PORT` (Cloud Run sets it; 8000 otherwise)
+- Don't use SQLite on Cloud Run: containers are replaced freely, so the daily quota would reset. `scripts/check_database.py` runs every query the app makes against `DATABASE_URL` and removes its rows; run it against a new database before deploying. It has not yet been run against Postgres
 
 ## Architecture Overview
 
@@ -114,8 +118,8 @@ The app is **not currently deployed** (taken offline in November 2026). To host 
 - `db/crud/analytics.py` — `create_analytics_event`, `get_unique_users_count`, `check_shared_key_rate_limit`, and all aggregation queries
 - IP addresses are hashed for privacy via `hash_ip()` — HMAC-SHA256 keyed by `IP_HASH_SALT` (plain SHA-256 if unset, which is reversible; a warning is logged in production). Two feedback types: "translation" and "general"
 - SQLite by default. SQLite file: `asl_feedback.db` — on a host without a persistent disk, data resets on each deploy (a warning is logged in production)
-- All queries use `func.date()` and SQLite-compatible syntax — no code changes needed to switch back
-- To use PostgreSQL: set `DATABASE_URL=postgresql+asyncpg://...`
+- Queries are written to work on both SQLite and PostgreSQL (`func.date()`, `extract`, `ON CONFLICT ... RETURNING`); timestamps are naive UTC (asyncpg rejects aware datetimes for these columns)
+- To use PostgreSQL: set `DATABASE_URL` to the host's URL. `Settings.fix_postgres_url` turns `postgres://`/`postgresql://` into `postgresql+asyncpg://` and, because SQLAlchemy passes query parameters to `asyncpg.connect()` as keywords, rewrites `sslmode` to asyncpg's `ssl` and drops `channel_binding` (Neon's strings have both; unconverted, startup fails). Covered by `tests/test_config.py`. With Neon use the direct host, not `-pooler`
 
 **AI Workflow:** `python_code/asl/` package
 - `asl/schemas.py` — Pydantic models (`DescriptionSchema`, `SentenceDescriptionSchema`, `GrammarPlanSchema`) and `ASLState` TypedDict
@@ -335,8 +339,7 @@ If CSS/JS files don't load in production:
 
 ### Rate Limiting
 
-- Development: 10 requests/minute per IP
-- Production: 100 requests/minute per IP
+- Default: 10 requests/minute per IP (`RATE_LIMIT`); set 100/minute in production
 - Uses SlowAPI with in-memory storage
 - Admin endpoints: 5 failed passwords from one IP within 15 minutes → 429 until the window clears (`auth.py`, in-memory, at most 10k tracked IPs)
 - For scaling, migrate to Redis-backed rate limiting
@@ -374,7 +377,8 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 
 ## Deployment Notes
 
-- The app is currently offline; there is no production URL and no auto-deploy
+- The app is currently offline; there is no production URL and no auto-deploy. Planned: Cloud Run + Neon (see "Deployment" above)
+- Production needs `RATE_LIMIT` set explicitly (the default is 10/minute in every environment); the deploy script sets 100/minute
 - Docker multi-stage build takes 5-10 minutes
 - Set `CORS_ORIGINS` (JSON array) for the public domain; there are no hardcoded production origins in `config.py`
 - Health check endpoint: `/health` (used by Docker)
@@ -458,7 +462,7 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 - `src/test/setup.ts`: Test setup file
 - Frontend tests live in `__tests__/` folders next to the code (`src/utils`, `src/hooks`, `src/components`, `src/contexts`); 162 tests in 16 files as of November 2026. Notable ones: `storage.test.ts` (SM-2 and repair of damaged saved progress), `predictionBuffer.test.ts`, `handLandmarks.test.ts`, `swModelBundle.test.ts`, `swPhraseModel.test.ts` and `swNavigation.test.ts` (the service worker's source run against fake caches), `signPhrase.test.ts` and `signPhraseContract.test.ts` (phrase-model parity; these run the real ONNX models), `useSignPhraseModel.contract.test.tsx`
 - Run: `npm test` (single run) or `npm run test:watch` (watch mode)
-- Backend: `pytest` (114 tests; install with `uv sync`, or `pip install -r requirements-dev.txt`). `tests/test_security.py` covers static path confinement, client-IP extraction, admin lockout, IP hashing, and `/translate` with a fake pipeline. `tests/test_pipeline.py` runs the real pipeline against a fake Gemini client (verification provenance, KB grounding, numeric fingerspelling)
+- Backend: `pytest` (120 tests; install with `uv sync`, or `pip install -r requirements-dev.txt`). `tests/test_security.py` covers static path confinement, client-IP extraction, admin lockout, IP hashing, and `/translate` with a fake pipeline. `tests/test_pipeline.py` runs the real pipeline against a fake Gemini client (verification provenance, KB grounding, numeric fingerspelling)
 - CI type check uses `tsc -b` — `tsconfig.json` is a solution file, so plain `tsc --noEmit` checks nothing
 
 **PWA:**
@@ -476,6 +480,7 @@ Modify CSP if adding external scripts or resources. The CSP is only applied in p
 **Configuration:**
 - `vite.config.ts`: Build configuration, dev proxy, vitest config
 - `Dockerfile`: Multi-stage production build
+- `scripts/deploy-cloudrun.sh`, `.gcloudignore`: Cloud Run deploy; `scripts/check_database.py`: database check
 - `docker-compose.yml`: Development environment
 
 ## Tech Stack Summary

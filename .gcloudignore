@@ -1,0 +1,6 @@
+# Files `gcloud run deploy --source .` does not upload to Cloud Build.
+# Everything git ignores (.env, node_modules, data/, *.db, ...) stays local too.
+.gcloudignore
+.git
+.github
+#!include:.gitignore
