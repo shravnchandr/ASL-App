@@ -55,6 +55,8 @@ const LearnPageContent: React.FC = () => {
     const isMountedRef = useRef(true);
     const sessionStartTimeRef = useRef<number>(0);
     const [sessionElapsed, setSessionElapsed] = useState(0);
+    // The summary waits for the last answer's feedback, like every other answer
+    const [showSummary, setShowSummary] = useState(false);
 
     const currentExercise = getCurrentExercise();
     const selectedLevelInfo = state.selectedLevel ? getLevelById(state.selectedLevel) : null;
@@ -94,7 +96,7 @@ const LearnPageContent: React.FC = () => {
     }, []);
 
     // Capture elapsed time once on completion so the render doesn't call Date.now() on every tick
-    const sessionIsComplete = state.isSessionActive && state.currentIndex >= state.exercises.length - 1 && !!feedback;
+    const sessionIsComplete = state.isSessionActive && showSummary;
     useEffect(() => {
         if (sessionIsComplete) {
             setSessionElapsed(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
@@ -164,7 +166,7 @@ const LearnPageContent: React.FC = () => {
             if (!isMountedRef.current) return;
 
             if (isLastExercise()) {
-                // leave state as-is — session complete screen renders from state
+                setShowSummary(true);
             } else {
                 nextExercise();
                 setFeedback(null);
@@ -197,6 +199,7 @@ const LearnPageContent: React.FC = () => {
         setFeedback(null);
         setShowXp(false);
         setLastXp(0);
+        setShowSummary(false);
         sessionStartTimeRef.current = Date.now();
     }, []);
 
@@ -226,14 +229,14 @@ const LearnPageContent: React.FC = () => {
     const handleBackToLevels = useCallback(() => {
         endSession();
         selectLevel(null);
-        setFeedback(null);
-    }, [endSession, selectLevel]);
+        resetSessionUi();  // also stops a pending auto-advance
+    }, [endSession, selectLevel, resetSessionUi]);
 
     const handleEndSession = useCallback(() => {
         endSession();
         selectLevel(null);
-        setFeedback(null);
-    }, [endSession, selectLevel]);
+        resetSessionUi();  // also stops a pending auto-advance
+    }, [endSession, selectLevel, resetSessionUi]);
 
 
     if (showUnlockCelebration && state.justUnlockedLevel) {
@@ -257,7 +260,7 @@ const LearnPageContent: React.FC = () => {
         );
     }
 
-    if (state.isSessionActive && state.currentIndex >= state.exercises.length - 1 && feedback) {
+    if (sessionIsComplete) {
         const nextLevelUnlocked = state.unlockedLevels.includes(state.currentLevel + 1);
         const nextLevelInfo = getLevelById(state.currentLevel + 1);
         const correctCount = exerciseResults.filter(r => r.isCorrect).length;
@@ -385,7 +388,7 @@ const LearnPageContent: React.FC = () => {
                         End session
                     </button>
                     <span className="session-header__info">Exercise {doneEx + 1} of {totalEx}</span>
-                    <span className="session-header__xp">+{lastXp > 0 ? lastXp : 30} XP</span>
+                    <span className="session-header__xp">+{state.sessionScore} XP</span>
                 </header>
 
                 <main className="learn-page__content">
@@ -511,21 +514,16 @@ const LearnPageContent: React.FC = () => {
                                 <h2>Exercise mix</h2>
                                 <table className="presession-mix">
                                     <tbody>
+                                        {/* What generateLevelExercises can produce: the first two at random,
+                                            recall only for signs already known well. No counts: they vary. */}
                                         <tr>
                                             <td className="presession-mix__type">Sign → Word <span>(multiple choice)</span></td>
-                                            <td className="presession-mix__count">×4</td>
                                         </tr>
                                         <tr>
                                             <td className="presession-mix__type">Word → Sign <span>(pick the animation)</span></td>
-                                            <td className="presession-mix__count">×3</td>
                                         </tr>
                                         <tr>
-                                            <td className="presession-mix__type">Camera practice <span>(one-handed letters)</span></td>
-                                            <td className="presession-mix__count">×2</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="presession-mix__type">Free recall <span>(sign it cold)</span></td>
-                                            <td className="presession-mix__count">×1</td>
+                                            <td className="presession-mix__type">Free recall <span>(signs you know well)</span></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -571,17 +569,6 @@ const LearnPageContent: React.FC = () => {
                                 <div className="queue-preview__title">
                                     QUEUE PREVIEW · {signCount} signs · ~{estMin} min
                                 </div>
-                                <button
-                                    className="queue-preview__shuffle"
-                                    onClick={handleStartLevelSession}
-                                    disabled={state.isLoading}
-                                    title="Shuffle and start"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                        <path d="M16 3l4 4-4 4M2 7h18M8 21l-4-4 4-4M22 17H4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                    Shuffle
-                                </button>
                             </div>
                             <div className="queue-preview__list">
                                 {queueSigns.map(({ sign, status }) => (

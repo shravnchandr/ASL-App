@@ -33,12 +33,18 @@ export interface LearnState {
     isLoading: boolean;
     error: string | null;
     activeSessionLevelId: number | null;
+    /**
+     * The running session is the saved level session (started from a level or
+     * resumed). Practice and ad-hoc sessions are not saved, and must never write
+     * to or clear the saved one: it may be a paused level session.
+     */
+    isPersistedSession: boolean;
 }
 
 type LearnAction =
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_ERROR'; payload: string | null }
-    | { type: 'START_SESSION'; payload: Exercise[] }
+    | { type: 'START_SESSION'; payload: { exercises: Exercise[]; persisted: boolean } }
     | { type: 'END_SESSION' }
     | { type: 'NEXT_EXERCISE' }
     | { type: 'SKIP_EXERCISE' }
@@ -71,6 +77,7 @@ export const initialState: LearnState = {
     isLoading: false,
     error: null,
     activeSessionLevelId: null,
+    isPersistedSession: false,
 };
 
 export function learnReducer(state: LearnState, action: LearnAction): LearnState {
@@ -84,7 +91,8 @@ export function learnReducer(state: LearnState, action: LearnAction): LearnState
         case 'START_SESSION':
             return {
                 ...state,
-                exercises: action.payload,
+                exercises: action.payload.exercises,
+                isPersistedSession: action.payload.persisted,
                 currentIndex: 0,
                 sessionScore: 0,
                 results: [],
@@ -96,6 +104,7 @@ export function learnReducer(state: LearnState, action: LearnAction): LearnState
             return {
                 ...state,
                 isSessionActive: false,
+                isPersistedSession: false,
             };
 
         case 'NEXT_EXERCISE':
@@ -178,6 +187,7 @@ export function learnReducer(state: LearnState, action: LearnAction): LearnState
                 sessionScore: action.payload.sessionScore,
                 results: action.payload.results,
                 isSessionActive: true,
+                isPersistedSession: true,
                 selectedLevel: action.payload.levelId,
                 currentLevel: action.payload.levelId,
                 activeSessionLevelId: null,
@@ -319,7 +329,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 await loadSign(sign);
             }
 
-            dispatch({ type: 'START_SESSION', payload: exercises });
+            dispatch({ type: 'START_SESSION', payload: { exercises, persisted: false } });
         } catch (error) {
             dispatch({
                 type: 'SET_ERROR',
@@ -384,7 +394,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 await loadSign(sign);
             }
 
-            dispatch({ type: 'START_SESSION', payload: exercises });
+            dispatch({ type: 'START_SESSION', payload: { exercises, persisted: false } });
         } catch (error) {
             dispatch({
                 type: 'SET_ERROR',
@@ -396,10 +406,15 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, [state.signProgress, loadSign]);
 
     const endSession = useCallback(() => {
-        storage.clearActiveSession();
-        dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
+        if (state.isPersistedSession) {
+            storage.clearActiveSession();
+            dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
+        } else {
+            // A practice session ended: a paused level session is still there to resume
+            dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: storage.getActiveSession()?.levelId ?? null });
+        }
         dispatch({ type: 'END_SESSION' });
-    }, []);
+    }, [state.isPersistedSession]);
 
     const skipExercise = useCallback(() => {
         dispatch({ type: 'SKIP_EXERCISE' });
@@ -469,11 +484,11 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Sync currentIndex to localStorage so resume picks up at the right spot
     useEffect(() => {
-        if (!state.isSessionActive || state.exercises.length === 0) return;
+        if (!state.isSessionActive || !state.isPersistedSession || state.exercises.length === 0) return;
         const saved = storage.getActiveSession();
         if (!saved) return;
         storage.saveActiveSession({ ...saved, currentIndex: state.currentIndex });
-    }, [state.currentIndex, state.isSessionActive, state.exercises.length]);
+    }, [state.currentIndex, state.isSessionActive, state.isPersistedSession, state.exercises.length]);
 
     const resumeSession = useCallback(async () => {
         const saved = storage.getActiveSession();
@@ -607,7 +622,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
 
             storage.saveActiveSession({ exercises, currentIndex: 0, levelId, sessionScore: 0, results: [] });
-            dispatch({ type: 'START_SESSION', payload: exercises });
+            dispatch({ type: 'START_SESSION', payload: { exercises, persisted: true } });
         } catch (error) {
             dispatch({
                 type: 'SET_ERROR',
@@ -658,9 +673,12 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         dispatch({ type: 'ANSWER_EXERCISE', payload: { result, progress, stats } });
 
-        // Persist the outcome immediately so a reload during feedback can't re-award it
-        const saved = storage.getActiveSession();
-        if (state.currentIndex >= state.exercises.length - 1) {
+        // Persist the outcome immediately so a reload during feedback can't re-award it.
+        // Level sessions only: a practice session must leave the saved one alone.
+        const saved = state.isPersistedSession ? storage.getActiveSession() : null;
+        if (!state.isPersistedSession) {
+            // nothing is saved for this session
+        } else if (state.currentIndex >= state.exercises.length - 1) {
             // Session complete
             storage.clearActiveSession();
             dispatch({ type: 'SET_ACTIVE_SESSION_LEVEL', payload: null });
@@ -674,7 +692,7 @@ export const LearnProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         return xp;
-    }, [state.exercises, state.currentIndex, state.sessionScore, state.results]);
+    }, [state.exercises, state.currentIndex, state.sessionScore, state.results, state.isPersistedSession]);
 
     const value: LearnContextType = {
         state,

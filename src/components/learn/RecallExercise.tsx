@@ -65,12 +65,6 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
         onAnswer(answer, correct);
     }, [hasAnswered, disabled, inputValue, correctAnswer, onAnswer]);
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSubmit(e);
-        }
-    }, [handleSubmit]);
-
     const getInputClassName = () => {
         let className = 'recall-exercise__input';
         if (hasAnswered) {
@@ -117,7 +111,6 @@ export const RecallExercise: React.FC<RecallExerciseProps> = ({
                         className={getInputClassName()}
                         value={inputValue}
                         onChange={handleInputChange}
-                        onKeyDown={handleKeyDown}
                         placeholder="Type your answer..."
                         disabled={hasAnswered || disabled}
                         autoComplete="off"

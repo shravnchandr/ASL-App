@@ -42,6 +42,12 @@ export function CameraPracticeExercise({
   const lastFrameTimeRef = useRef<number>(0);
   const isMountedRef = useRef(true);
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set at the first match: later results (already in flight) must not complete again
+  const matchedRef = useRef(false);
+  // The parent passes a new onComplete each render; read it through a ref so the
+  // classify effect runs once per detected frame, not again on every re-render
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   const isLoading = handLoading || modelLoading;
   const loadError = cameraError || handError || modelError;
@@ -107,8 +113,10 @@ export function CameraPracticeExercise({
 
   useEffect(() => {
     if (landmarks && !isLoading && status === 'ready') {
+      let isCurrent = true;
       void predict(landmarks).then(result => {
-        if (!result) return;
+        // A newer frame or an unmount superseded this one, or the sign already matched
+        if (!isCurrent || !isMountedRef.current || matchedRef.current || !result) return;
         predictionBufferRef.current.add(result.label, result.confidence);
         const stable = predictionBufferRef.current.getStable();
         if (stable) {
@@ -123,10 +131,11 @@ export function CameraPracticeExercise({
             setMatchProgress(Math.min(held / MATCH_THRESHOLD, 1));
 
             if (held >= MATCH_THRESHOLD) {
+              matchedRef.current = true;
               setIsMatched(true);
               announceToScreenReader(`Correct! You signed ${formatSignName(targetSign)}`);
               completeTimerRef.current = setTimeout(() => {
-                if (isMountedRef.current) onComplete(true);
+                if (isMountedRef.current) onCompleteRef.current(true);
               }, 1000);
             }
           } else {
@@ -139,8 +148,9 @@ export function CameraPracticeExercise({
           setMatchProgress(0);
         }
       });
+      return () => { isCurrent = false; };
     }
-  }, [landmarks, isLoading, predict, isMatch, targetSign, onComplete, status]);
+  }, [landmarks, isLoading, predict, isMatch, targetSign, status]);
 
   useEffect(() => {
     if (!isHandDetected) {

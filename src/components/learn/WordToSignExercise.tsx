@@ -78,7 +78,8 @@ export const WordToSignExercise: React.FC<WordToSignExerciseProps> = ({
                         role="button"
                         tabIndex={hasAnswered || disabled ? -1 : 0}
                         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleSelect(option.sign); }}
-                        aria-label={`Option ${OPTION_LABELS[index]}: ${formatSignName(option.sign)}`}
+                        // Never the sign's name: picking the sign for the word is the exercise
+                        aria-label={`Option ${OPTION_LABELS[index]}`}
                         aria-disabled={hasAnswered || disabled}
                     >
                         <div className="sign-option__label">{OPTION_LABELS[index]}</div>
