@@ -44,6 +44,19 @@ class TestAnalyticsModel:
         assert event.timestamp is not None
 
     @pytest.mark.asyncio
+    async def test_long_values_fit_their_columns(self, test_db: AsyncSession):
+        """PostgreSQL rejects a value longer than its VARCHAR (SQLite doesn't check)."""
+        event = await create_analytics_event(
+            session=test_db,
+            event_type="page_view",
+            ip_address="127.0.0.1",
+            user_agent="A" * 900,
+            endpoint="/" + "x" * 300,  # any unknown path is served the app shell
+        )
+        assert len(event.user_agent) == 500
+        assert len(event.endpoint) == 100
+
+    @pytest.mark.asyncio
     async def test_create_page_view_event(self, test_db: AsyncSession):
         """Test creating a page view event"""
         event = await create_analytics_event(

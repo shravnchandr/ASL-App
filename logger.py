@@ -41,8 +41,9 @@ def setup_logging():
             diagnose=not is_production,
         )
 
-    # Also log to file in production
-    if is_production:
+    # Optional file log. Off by default: hosts like Cloud Run collect stdout, and
+    # their filesystem is in memory, so files would use the container's RAM.
+    if settings.log_to_file:
         logger.add(
             "logs/asl_api_{time:YYYY-MM-DD}.log",
             rotation="00:00",  # Rotate daily

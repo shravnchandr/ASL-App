@@ -16,11 +16,13 @@ settings = get_settings()
 # SQLite with aiosqlite uses StaticPool and does not accept pool_size/max_overflow/
 # pool_timeout. Only connect_args is valid: timeout sets how long SQLite waits
 # (in seconds) when the DB is locked before raising OperationalError.
+# Hosted Postgres closes idle connections (Neon's free plan suspends after ~5 min
+# idle), so pooled connections are checked before use and replaced after 5 min.
 _is_sqlite = "sqlite" in settings.database_url
 _engine_kwargs = (
     dict(connect_args={"timeout": 10})
     if _is_sqlite
-    else dict(pool_size=5, max_overflow=10, pool_timeout=5)
+    else dict(pool_size=5, max_overflow=10, pool_timeout=5, pool_pre_ping=True, pool_recycle=300)
 )
 
 engine = create_async_engine(

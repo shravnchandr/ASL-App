@@ -2,7 +2,6 @@
 
 import asyncio
 import os
-import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -22,8 +21,9 @@ from cache import init_redis, close_redis
 from middleware import add_security_headers, analytics_tracking_middleware
 from routes import translate_router, feedback_router, admin_router
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "python_code"))
-from asl import build_asl_graph  # noqa: E402
+# One import path for the pipeline package: routes/translate.py also imports
+# python_code.asl, and a second name ("asl") would load every module twice
+from python_code.asl import build_asl_graph
 
 settings = get_settings()
 

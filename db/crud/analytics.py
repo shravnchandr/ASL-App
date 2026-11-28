@@ -17,6 +17,13 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _fit(value: Optional[str], column: str) -> Optional[str]:
+    """Cut a value to its column's length. SQLite ignores VARCHAR lengths, but
+    PostgreSQL rejects the insert (user agents and bot paths can be long)."""
+    length = Analytics.__table__.c[column].type.length
+    return value[:length] if value is not None and length else value
+
+
 async def create_analytics_event(
     session: AsyncSession,
     event_type: str,
@@ -30,13 +37,13 @@ async def create_analytics_event(
 ) -> Analytics:
     """Record a new analytics event."""
     event = Analytics(
-        event_type=event_type,
+        event_type=_fit(event_type, "event_type"),
         ip_hash=hash_ip(ip_address),
-        query=query,
+        query=_fit(query, "query"),
         cache_hit=cache_hit,
-        key_type=key_type,
-        user_agent=user_agent,
-        endpoint=endpoint,
+        key_type=_fit(key_type, "key_type"),
+        user_agent=_fit(user_agent, "user_agent"),
+        endpoint=_fit(endpoint, "endpoint"),
         response_time_ms=response_time_ms,
     )
     session.add(event)

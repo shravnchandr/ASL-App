@@ -5,28 +5,30 @@ import { storage } from '../utils/storage';
 import { loadSignData } from '../utils/signDataLoader';
 import { formatSignName } from '../utils/format';
 import { LEVELS } from '../constants/levels';
+import { getSignOfTheDay } from '../utils/signOfTheDay';
+import { share } from '../utils/share';
+import { readCachedResult } from '../utils/resultCache';
 import type { SignData } from '../types';
 import './HomePage.css';
 
-const USER_NAME = 'Alex';
-
+// There are no accounts, so the greeting has no name
 function getGreeting(): string {
     const h = new Date().getHours();
-    if (h < 12) return `Good morning, ${USER_NAME}.`;
-    if (h < 17) return `Good afternoon, ${USER_NAME}.`;
-    return `Good evening, ${USER_NAME}.`;
+    if (h < 12) return 'Good morning.';
+    if (h < 17) return 'Good afternoon.';
+    return 'Good evening.';
 }
 
-function getDateLine(pickupCount: number): string {
+function getDateLine(): string {
     const d = new Date();
     const day = d.toLocaleDateString('en-US', { weekday: 'long' });
     const date = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-    return `${day}, ${date} · pickup #${pickupCount}`;
+    return `${day}, ${date}`;
 }
 
 function getSubtitle(reviewDue: number, totalLearned: number): string {
     if (totalLearned === 0) return 'Start learning ASL today.';
-    if (reviewDue > 0) return `${reviewDue} sign${reviewDue !== 1 ? 's' : ''} picked up from yesterday.`;
+    if (reviewDue > 0) return `${reviewDue} sign${reviewDue !== 1 ? 's' : ''} due for review.`;
     return 'All caught up — keep the streak going.';
 }
 
@@ -111,17 +113,19 @@ const SIGN_SHORT_DESCRIPTIONS: Record<string, string> = {
 
 // ── Sign of the Day Card ───────────────────────────────────────────
 
-const SignOfDayCard: React.FC<{ sotdIndex: number }> = ({ sotdIndex }) => {
-    const [sign] = useState('good');
+const SignOfDayCard: React.FC = () => {
+    // The same sign for everyone on a given day, from the sign library
+    const [sign, setSign] = useState<string | null>(null);
     const [data, setData] = useState<SignData | null>(null);
     const [isPlaying, setIsPlaying] = useState(true);
-    const [saved, setSaved] = useState(false);
     const [currentFrame, setCurrentFrame] = useState(0);
 
     useEffect(() => {
         let cancelled = false;
-        loadSignData('good').then(d => {
-            if (!cancelled) setData(d);
+        getSignOfTheDay().then(s => {
+            if (cancelled || !s) return;
+            setSign(s);
+            return loadSignData(s).then(d => { if (!cancelled) setData(d); });
         });
         return () => { cancelled = true; };
     }, []);
@@ -132,17 +136,16 @@ const SignOfDayCard: React.FC<{ sotdIndex: number }> = ({ sotdIndex }) => {
 
     const displayName = formatSignName(sign).toLowerCase();
     const alsoSeen = SOTD_ALSO_SEEN[sign] ?? [];
-    const desc = SOTD_DESCRIPTIONS[sign] ?? `A common ASL sign for "${displayName}".`;
+    const short = SIGN_SHORT_DESCRIPTIONS[sign];
+    const desc = SOTD_DESCRIPTIONS[sign]
+        ?? (short ? `${short[0].toUpperCase()}${short.slice(1)}.` : `A common ASL sign for "${displayName}".`);
     const totalFrames = data?.frame_count ?? 0;
     const fps = data?.fps ?? 30;
     const duration = totalFrames > 0 ? (totalFrames / fps).toFixed(1) : '0.0';
 
     const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({ title: `ASL Sign: ${displayName}`, url: window.location.href });
-        } else {
-            navigator.clipboard.writeText(window.location.href).catch(() => {});
-        }
+        // Falls back to copying; a dismissed share sheet is not an error
+        void share.shareContent({ title: `ASL Sign: ${displayName}`, text: `Sign of the day: ${displayName}`, url: window.location.href });
     };
 
     return (
@@ -151,13 +154,12 @@ const SignOfDayCard: React.FC<{ sotdIndex: number }> = ({ sotdIndex }) => {
             <div className="sotd-card__left">
                 <div className="sotd-card__eyebrow">
                     <span className="sotd-card__dot" aria-hidden="true" />
-                    SIGN OF THE DAY · #{sotdIndex}
+                    SIGN OF THE DAY
                 </div>
 
                 <div className="sotd-card__word-row">
                     <h2 className="sotd-card__word">{displayName}</h2>
                 </div>
-                <div className="sotd-card__attribution">adj. · <em>verified by Lifeprint</em></div>
 
                 <p className="sotd-card__desc">{desc}</p>
 
@@ -179,19 +181,9 @@ const SignOfDayCard: React.FC<{ sotdIndex: number }> = ({ sotdIndex }) => {
                                     ? <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                                     : <path d="M8 5v14l11-7z" />}
                             </svg>
-                            {isPlaying ? 'Pause' : 'Practice now'}
-                            {!isPlaying && <span aria-hidden="true">→</span>}
+                            {isPlaying ? 'Pause' : 'Play'}
                         </button>
                     )}
-                    <button
-                        className={`sotd-card__btn ${saved ? 'sotd-card__btn--saved' : 'sotd-card__btn--ghost'}`}
-                        onClick={() => setSaved(s => !s)}
-                    >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" strokeLinejoin="round" />
-                        </svg>
-                        {saved ? 'Saved' : 'Save to library'}
-                    </button>
                     <button className="sotd-card__btn sotd-card__btn--ghost" onClick={handleShare}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -255,7 +247,6 @@ const LessonPlanCard: React.FC = () => {
         const m = progress[s]?.mastery ?? 0;
         return m > 0 && m < 70;
     }).length;
-    void (signs.length - masteredCount - startedCount); // unused
     const signsLeft = signs.length - masteredCount;
     const xpAvailable = signsLeft * 10;
     const timeMin = Math.round(signsLeft * 0.5 + startedCount * 0.5);
@@ -266,7 +257,7 @@ const LessonPlanCard: React.FC = () => {
             <div className="plan-card__header">
                 <div className="plan-card__header-left">
                     <div className="plan-card__eyebrow">TODAY'S LESSON PLAN · LEVEL {currentLevel.id}</div>
-                    <div className="plan-card__title">{currentLevel.name} — part {masteredCount + 1} of {signs.length}</div>
+                    <div className="plan-card__title">{currentLevel.name} — {masteredCount} of {signs.length} mastered</div>
                 </div>
                 <Link to="/learn" className="plan-card__btn">
                     Start session
@@ -325,7 +316,7 @@ const StreakCard: React.FC = () => {
         return { label, isActive, intensity };
     });
 
-    const decayHours = 24 - new Date().getHours();
+    const hoursLeftToday = 24 - new Date().getHours();
 
     return (
         <div className="streak-card">
@@ -341,7 +332,7 @@ const StreakCard: React.FC = () => {
             <div className="streak-card__num">{streak} days</div>
             <div className="streak-card__sub">
                 {streak > 0
-                    ? `longest yet — ${decayHours}h until decay`
+                    ? `Practice in the next ${hoursLeftToday}h to keep it`
                     : 'Start your streak today'}
             </div>
 
@@ -369,14 +360,13 @@ const StatsBar: React.FC = () => {
     const currentLevel = levelProgress.currentLevel;
     const totalLevels = LEVELS.length;
     const levelMastery = getLevelMastery(currentLevel);
-    const savedCount = storage.getSearchHistory().length;
+    const recentCount = storage.getSearchHistory().length;
 
     return (
         <div className="stats-bar">
             <div className="stats-tile">
                 <div className="stats-tile__value">{totalLearned}</div>
                 <div className="stats-tile__label">signs learned</div>
-                <div className="stats-tile__delta">+{Math.min(totalLearned, 6)} this week</div>
             </div>
 
             <div className="stats-tile">
@@ -389,14 +379,13 @@ const StatsBar: React.FC = () => {
             </div>
 
             <div className="stats-tile">
-                <div className="stats-tile__value">{Math.round(stats.totalXP / Math.max(totalLearned, 1))}%</div>
-                <div className="stats-tile__label">camera accuracy</div>
-                <div className="stats-tile__delta">↑ 4% last 5</div>
+                <div className="stats-tile__value">{stats.totalXP}</div>
+                <div className="stats-tile__label">total XP</div>
             </div>
 
             <div className="stats-tile">
-                <div className="stats-tile__value">{savedCount}</div>
-                <div className="stats-tile__label">saved phrases</div>
+                <div className="stats-tile__value">{recentCount}</div>
+                <div className="stats-tile__label">recent translations</div>
                 <Link to="/translate" className="stats-tile__link">open translations →</Link>
             </div>
         </div>
@@ -442,12 +431,6 @@ const ReviewSignCard: React.FC<ReviewSignCardProps> = ({ sign, isVerified = true
 
 // ── Recently Saved ─────────────────────────────────────────────────
 
-function getRelativeDate(index: number): string {
-    if (index === 0) return 'Today';
-    if (index === 1) return 'Yesterday';
-    return `${index + 1} days ago`;
-}
-
 const RecentlySaved: React.FC = () => {
     const history = storage.getSearchHistory();
     if (history.length === 0) return null;
@@ -456,7 +439,7 @@ const RecentlySaved: React.FC = () => {
         <section className="home-section">
             <div className="home-section__header">
                 <div>
-                    <div className="home-section__eyebrow">RECENTLY SAVED</div>
+                    <div className="home-section__eyebrow">RECENT TRANSLATIONS</div>
                     <h2 className="home-section__title">Phrases you've translated</h2>
                 </div>
                 <Link to="/translate" className="home-section__link">Open translations</Link>
@@ -464,20 +447,14 @@ const RecentlySaved: React.FC = () => {
 
             <div className="saved-list">
                 {history.slice(0, 5).map((query, i) => {
-                    const cached = (() => {
-                        try {
-                            const raw = sessionStorage.getItem(`asl_result:${query.toLowerCase().trim()}`);
-                            return raw ? JSON.parse(raw) : null;
-                        } catch { return null; }
-                    })();
-                    const signCount = cached?.signs?.length ?? null;
+                    // Known only while this tab still holds the result (the Translate page's cache)
+                    const signCount = readCachedResult(query)?.signs.length ?? null;
 
                     return (
                         <Link key={i} to={`/translate?q=${encodeURIComponent(query)}`} className="saved-item">
                             <span className="saved-item__query">"{query}"</span>
                             <div className="saved-item__meta">
                                 {signCount !== null && <span className="saved-item__count">{signCount} signs</span>}
-                                <span className="saved-item__date">{getRelativeDate(i)}</span>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                                     <path d="M9 18l6-6-6-6"/>
                                 </svg>
@@ -493,26 +470,22 @@ const RecentlySaved: React.FC = () => {
 // ── Main Page ──────────────────────────────────────────────────────
 
 const HomePage: React.FC = () => {
-    void storage.getLearningStats();
     const totalLearned = getTotalSignsLearned();
     const reviewSigns = storage.getSignsDueForReview().slice(0, 4);
-    const pickupCount = Math.max(1, totalLearned);
     const reviewDue = reviewSigns.length;
     const subtitle = getSubtitle(reviewDue, totalLearned);
-
-    const sotdIndex = 42;
 
     return (
         <div className="home-page">
             {/* Greeting */}
             <div className="home-greeting">
-                <div className="home-greeting__date">{getDateLine(pickupCount)}</div>
+                <div className="home-greeting__date">{getDateLine()}</div>
                 <h1 className="home-greeting__headline">{getGreeting()}</h1>
                 <p className="home-greeting__sub">{subtitle}</p>
             </div>
 
             {/* Sign of the Day */}
-            <SignOfDayCard sotdIndex={sotdIndex} />
+            <SignOfDayCard />
 
             {/* Lesson plan + Streak — always visible */}
             <div className="home-mid">

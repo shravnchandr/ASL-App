@@ -158,23 +158,22 @@ export const Layout: React.FC = () => {
                         <button
                             className={`layout__avatar${menuOpen ? ' layout__avatar--open' : ''}`}
                             onClick={() => setMenuOpen(open => !open)}
-                            aria-label="Open user menu"
+                            aria-label="Open menu"
                             aria-expanded={menuOpen}
                         >
-                            AC
+                            {/* No accounts, so a menu icon rather than a person's initials */}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                                <path d="M4 7h16M4 12h16M4 17h16" />
+                            </svg>
                         </button>
                         {menuOpen && (
                             <>
                                 <button
                                     className="layout__menu-scrim"
-                                    aria-label="Close user menu"
+                                    aria-label="Close menu"
                                     onClick={() => setMenuOpen(false)}
                                 />
                                 <div className="layout__profile-menu" role="menu">
-                                    <div className="layout__profile-head">
-                                        <div className="layout__profile-name">Alex Carter</div>
-                                        <div className="layout__profile-email">alex@aslguide.app</div>
-                                    </div>
                                     {[
                                         { label: 'Onboarding', to: '/onboarding' },
                                         { label: 'Admin dashboard', to: '/admin' },
@@ -192,9 +191,6 @@ export const Layout: React.FC = () => {
                                             {item.label}
                                         </button>
                                     ))}
-                                    <button className="layout__profile-item layout__profile-item--muted" role="menuitem">
-                                        Sign out
-                                    </button>
                                 </div>
                             </>
                         )}

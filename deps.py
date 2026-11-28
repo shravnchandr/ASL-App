@@ -47,7 +47,9 @@ def get_real_ip(request: Request) -> str:
     """
     global _warned_untrusted_peer
     peer = (request.client.host if request.client else None) or "unknown"
-    forwarded_for = request.headers.get("X-Forwarded-For")
+    # A proxy may add its own X-Forwarded-For header instead of extending the
+    # client's; read them all, in order, or only the client-supplied one is seen
+    forwarded_for = ",".join(request.headers.getlist("x-forwarded-for"))
     hops = settings.trusted_proxy_hops
     if not forwarded_for or hops <= 0:
         return peer

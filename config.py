@@ -84,6 +84,7 @@ class Settings(BaseSettings):
     cache_ttl: int = 3600  # seconds
     log_level: str = "INFO"
     log_format: str = "pretty"
+    log_to_file: bool = False  # also write daily files under logs/
     host: str = "0.0.0.0"
     port: int = 8000
 

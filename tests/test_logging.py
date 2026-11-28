@@ -23,7 +23,8 @@ def test_production_logs_omit_local_variables(tmp_path, monkeypatch, capsys, log
     monkeypatch.setattr(
         logger_module,
         "settings",
-        SimpleNamespace(environment="production", log_format=log_format, log_level="INFO"),
+        # File logging on, so both kinds of sink are checked
+        SimpleNamespace(environment="production", log_format=log_format, log_level="INFO", log_to_file=True),
     )
     try:
         logger_module.setup_logging()
@@ -31,7 +32,7 @@ def test_production_logs_omit_local_variables(tmp_path, monkeypatch, capsys, log
         logger_module.logger.complete()
         stdout = capsys.readouterr().out
         files = list((tmp_path / "logs").glob("*.log"))
-        assert files, "production file sink was not created"
+        assert files, "file sink was not created"
         file_text = "".join(f.read_text() for f in files)
     finally:
         monkeypatch.undo()
@@ -40,3 +41,21 @@ def test_production_logs_omit_local_variables(tmp_path, monkeypatch, capsys, log
     assert "Synthetic failure" in stdout and "Synthetic failure" in file_text
     assert SECRET not in stdout
     assert SECRET not in file_text
+
+
+def test_no_log_files_unless_asked(tmp_path, monkeypatch):
+    """Cloud Run's filesystem is in memory: by default production logs go to stdout only."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        logger_module,
+        "settings",
+        SimpleNamespace(environment="production", log_format="json", log_level="INFO", log_to_file=False),
+    )
+    try:
+        logger_module.setup_logging()
+        logger_module.logger.info("hello")
+        logger_module.logger.complete()
+    finally:
+        monkeypatch.undo()
+        logger_module.setup_logging()
+    assert not (tmp_path / "logs").exists()

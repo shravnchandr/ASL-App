@@ -3,11 +3,13 @@ Tests for security fixes: static path confinement, client-IP extraction,
 admin brute-force lockout, IP hashing, and translation error handling.
 """
 
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from httpx import AsyncClient
+from starlette.datastructures import Headers
 
 import auth
 from app import app, resolve_spa_path
@@ -62,8 +64,10 @@ class TestResolveSpaPath:
 # ── Client IP extraction ────────────────────────────────────────────────────
 
 
-def _request(xff: str | None, peer: str = "10.0.0.1"):
-    headers = {"X-Forwarded-For": xff} if xff is not None else {}
+def _request(xff: str | list[str] | None, peer: str = "10.0.0.1"):
+    """A request whose X-Forwarded-For is one header, several (a list), or absent."""
+    values = [] if xff is None else [xff] if isinstance(xff, str) else xff
+    headers = Headers(raw=[(b"x-forwarded-for", v.encode()) for v in values])
     return SimpleNamespace(headers=headers, client=SimpleNamespace(host=peer))
 
 
@@ -132,6 +136,18 @@ class TestAdminLockout:
         # Even the right password is refused while locked out
         r = await client.get("/api/admin/stats", headers={"X-Admin-Password": "correct-horse"})
         assert r.status_code == 429
+
+    async def test_simultaneous_guesses_cannot_pass_the_lockout(self, client: AsyncClient):
+        results = await asyncio.gather(*(
+            client.get("/api/admin/stats", headers={"X-Admin-Password": "wrong"}) for _ in range(20)
+        ))
+        codes = [r.status_code for r in results]
+        assert codes.count(401) == auth.MAX_FAILED_ATTEMPTS
+        assert codes.count(429) == 20 - auth.MAX_FAILED_ATTEMPTS
+
+    def test_checking_an_ip_records_nothing(self):
+        auth._recent_failures("198.51.100.1", now=0.0)
+        assert "198.51.100.1" not in auth._failed_attempts
 
     async def test_pagination_params_are_bounded(self, client: AsyncClient):
         headers = {"X-Admin-Password": "correct-horse"}
@@ -247,6 +263,19 @@ class TestDailyQuota:
         ok = await client.post("/api/translate", json={"text": "refund two"})
         assert ok.status_code == 200
 
+    async def test_cancelled_request_is_refunded(self, client: AsyncClient, fake_pipeline, monkeypatch):
+        import routes.translate as translate_routes
+
+        fake_pipeline(_hello_result())
+
+        async def cancelled(*args, **kwargs):
+            raise asyncio.CancelledError  # what a disconnect does to a waiting handler
+
+        monkeypatch.setattr(translate_routes, "_run_pipeline", cancelled)
+        with pytest.raises(BaseException):
+            await client.post("/api/translate", json={"text": "gone away"})
+        assert (await client.get("/api/rate-limit")).json()["remaining"] == 1
+
     async def test_custom_key_is_not_charged(self, client: AsyncClient, fake_pipeline):
         fake_pipeline(_hello_result())
         for i in range(3):
@@ -326,6 +355,11 @@ class TestForwardedTrustBoundary:
 
     def test_garbage_entry_falls_back_to_peer(self):
         assert get_real_ip(_request("not-an-ip", peer="10.1.2.3")) == "10.1.2.3"
+
+    def test_reads_every_header_when_the_proxy_adds_its_own(self, monkeypatch):
+        monkeypatch.setattr(get_settings(), "trusted_proxy_hops", 1)
+        # Client forged the first header; the proxy added a second with the real address
+        assert get_real_ip(_request(["1.2.3.4", "203.0.113.9"])) == "203.0.113.9"
 
     def test_configurable_networks(self, monkeypatch):
         monkeypatch.setattr(get_settings(), "trusted_proxy_networks", ["203.0.113.0/24"])

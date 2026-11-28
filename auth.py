@@ -32,7 +32,9 @@ def _record_failure(ip: str, now: float) -> None:
 
 
 def _recent_failures(ip: str, now: float) -> deque[float]:
-    attempts = _failed_attempts[ip]
+    attempts = _failed_attempts.get(ip)  # .get: a check must not add an entry
+    if attempts is None:
+        return deque()
     while attempts and now - attempts[0] > FAILED_ATTEMPT_WINDOW:
         attempts.popleft()
     if not attempts:
@@ -41,7 +43,10 @@ def _recent_failures(ip: str, now: float) -> deque[float]:
     return attempts
 
 
-def verify_admin_password(
+# async with no awaits: the check and the recording of a failure run on the event
+# loop without interruption. A plain def would run in the threadpool, where
+# simultaneous guesses could all pass the check before any failure is recorded.
+async def verify_admin_password(
     request: Request,
     password: Optional[str] = Header(None, alias="X-Admin-Password"),
 ) -> bool:

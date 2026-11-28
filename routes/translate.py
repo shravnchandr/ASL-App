@@ -309,6 +309,12 @@ async def translate_to_asl(
 
         return response
 
+    except asyncio.CancelledError:
+        # The client disconnected (or the server is stopping) while the request
+        # waited. CancelledError is a BaseException, so the handlers below miss it;
+        # shielded so the refund itself isn't cancelled.
+        await asyncio.shield(_refund_quota(db, quota_reservation))
+        raise
     except HTTPException:
         await _refund_quota(db, quota_reservation)
         raise
