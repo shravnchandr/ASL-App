@@ -471,8 +471,9 @@ const RecentlySaved: React.FC = () => {
 
 const HomePage: React.FC = () => {
     const totalLearned = getTotalSignsLearned();
-    const reviewSigns = storage.getSignsDueForReview().slice(0, 4);
-    const reviewDue = reviewSigns.length;
+    const dueForReview = storage.getSignsDueForReview();
+    const reviewDue = dueForReview.length;       // all of them, for the subtitle
+    const reviewSigns = dueForReview.slice(0, 4); // the cards shown
     const subtitle = getSubtitle(reviewDue, totalLearned);
 
     return (

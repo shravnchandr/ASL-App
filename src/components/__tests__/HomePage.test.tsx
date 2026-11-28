@@ -58,6 +58,15 @@ describe('HomePage', () => {
         expect(text).toMatch(/Good (morning|afternoon|evening)\./);
     });
 
+    it('counts every sign due for review, not only the four shown', async () => {
+        const { storage } = await import('../../utils/storage');
+        storage.updateSignProgress('a', true); // something learned, so reviews are mentioned
+        vi.spyOn(storage, 'getSignsDueForReview').mockReturnValue(['a', 'b', 'c', 'd', 'e', 'f']);
+        const text = await renderHome();
+        expect(text).toContain('6 signs due for review.');
+        vi.restoreAllMocks();
+    });
+
     it("shows today's sign from the sign library", async () => {
         const text = await renderHome();
         expect(text).toContain('SIGN OF THE DAY');

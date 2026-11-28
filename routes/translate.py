@@ -4,6 +4,8 @@ Translation routes: POST /translate and GET /rate-limit.
 
 import asyncio
 import time
+
+import anyio
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
@@ -311,9 +313,14 @@ async def translate_to_asl(
 
     except asyncio.CancelledError:
         # The client disconnected (or the server is stopping) while the request
-        # waited. CancelledError is a BaseException, so the handlers below miss it;
-        # shielded so the refund itself isn't cancelled.
-        await asyncio.shield(_refund_quota(db, quota_reservation))
+        # waited. CancelledError is a BaseException, so the handlers below miss it.
+        # The disconnect cancels an AnyIO scope (BaseHTTPMiddleware), which cancels
+        # every later await too, so asyncio.shield isn't enough: the refund runs in
+        # a shielded scope, on its own session, since get_db is closing this one.
+        if quota_reservation:
+            with anyio.CancelScope(shield=True):
+                async with AsyncSessionLocal() as refund_db:
+                    await _refund_quota(refund_db, quota_reservation)
         raise
     except HTTPException:
         await _refund_quota(db, quota_reservation)

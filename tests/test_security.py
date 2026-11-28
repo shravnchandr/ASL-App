@@ -263,17 +263,34 @@ class TestDailyQuota:
         ok = await client.post("/api/translate", json={"text": "refund two"})
         assert ok.status_code == 200
 
-    async def test_cancelled_request_is_refunded(self, client: AsyncClient, fake_pipeline, monkeypatch):
+    async def test_disconnect_during_translation_is_refunded(
+        self, client: AsyncClient, fake_pipeline, test_engine, monkeypatch
+    ):
+        """A real disconnect cancels the request's AnyIO scope, which keeps cancelling
+        every await inside it: the refund must still finish, on its own session."""
+        import anyio
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
         import routes.translate as translate_routes
 
         fake_pipeline(_hello_result())
+        # The refund opens its own session; point it at the test database
+        monkeypatch.setattr(translate_routes, "AsyncSessionLocal",
+                            async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False))
+        started = asyncio.Event()
 
-        async def cancelled(*args, **kwargs):
-            raise asyncio.CancelledError  # what a disconnect does to a waiting handler
+        async def waits_forever(*args, **kwargs):
+            started.set()
+            await asyncio.Event().wait()
 
-        monkeypatch.setattr(translate_routes, "_run_pipeline", cancelled)
-        with pytest.raises(BaseException):
-            await client.post("/api/translate", json={"text": "gone away"})
+        monkeypatch.setattr(translate_routes, "_run_pipeline", waits_forever)
+        with anyio.CancelScope() as scope:
+            async def disconnect():
+                await started.wait()
+                scope.cancel()
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(disconnect)
+                await client.post("/api/translate", json={"text": "gone away"})
+        assert scope.cancelled_caught
         assert (await client.get("/api/rate-limit")).json()["remaining"] == 1
 
     async def test_custom_key_is_not_charged(self, client: AsyncClient, fake_pipeline):
