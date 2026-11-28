@@ -326,6 +326,37 @@ describe('PhraseSegmenter', () => {
     expect(second.times[0]).toBe(first.times[1]);
   });
 
+  it('ends the segment at the last frame before the stream stalled', () => {
+    const seg = new PhraseSegmenter();
+    for (let t = 0; t < 500; t += 100) expect(seg.push(signing, t)).toBeNull();
+    // The tab was hidden for ten minutes; the next frame arrives with a hand
+    const out = seg.push(signing, 600_400);
+    expect(out!.times).toEqual([0, 100, 200, 300, 400]); // the late frame is not in it
+    expect(resampleFrames(out!.frames, out!.times)).toHaveLength(13);
+    // The late frame starts the next segment on its own
+    expect(seg.isActive).toBe(true);
+    expect(seg.flush()!.times).toEqual([600_400]);
+  });
+
+  it('ends the segment when the clock goes back (the camera restarted)', () => {
+    const seg = new PhraseSegmenter();
+    seg.push(signing, 5000);
+    seg.push(signing, 5100);
+    const out = seg.push(idle, 40);
+    expect(out!.times).toEqual([5000, 5100]);
+    expect(seg.isActive).toBe(false);
+    expect(seg.push(signing, 140)).toBeNull();
+    expect(seg.flush()!.times).toEqual([40, 140]);
+  });
+
+  it('a stall before any hand only drops the stale context', () => {
+    const seg = new PhraseSegmenter();
+    seg.push(idle, 0);
+    expect(seg.push(idle, 60_000)).toBeNull();
+    seg.push(signing, 60_100);
+    expect(seg.flush()!.times).toEqual([60_000, 60_100]);
+  });
+
   it('flush ends the segment immediately', () => {
     const seg = new PhraseSegmenter();
     expect(seg.flush()).toBeNull();

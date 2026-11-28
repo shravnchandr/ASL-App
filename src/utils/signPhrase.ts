@@ -560,6 +560,17 @@ export class PhraseSegmenter {
 
   /** Feed one frame (null = no pose). Returns a segment when one ends. */
   push(frame: PhraseFrame | null, timeMs: number): PhraseSegment | null {
+    // A gap of a second or more (frames stopped: tab hidden, device asleep) or a
+    // clock that went back (camera restarted) ends the segment at the last frame
+    // received. Keeping the late frame would make the 30 fps resample fill the
+    // whole gap: ten minutes in a background tab is 18,000 interpolated frames.
+    const last = this.times[this.times.length - 1];
+    let ended: PhraseSegment | null = null;
+    if (last !== undefined && (timeMs < last || timeMs - last >= SEGMENT_END_GAP_MS)) {
+      ended = this.flush();
+      this.reset();
+    }
+
     this.frames.push(frame ?? NO_POSE_FRAME);
     this.times.push(timeMs);
     if (frame && (frame.left_hand || frame.right_hand)) this.lastHandIndex = this.frames.length - 1;
@@ -571,14 +582,14 @@ export class PhraseSegmenter {
         this.frames.splice(0, stale);
         this.times.splice(0, stale);
       }
-      return null;
+      return ended;
     }
 
     const sinceHand = timeMs - this.times[this.lastHandIndex];
     if (sinceHand >= SEGMENT_END_GAP_MS || this.frames.length >= SEGMENT_MAX_FRAMES) {
       return this.flush();
     }
-    return null;
+    return ended;
   }
 
   /** End the current segment now (null if no hand has been seen). */

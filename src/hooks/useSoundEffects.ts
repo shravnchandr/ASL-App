@@ -55,7 +55,7 @@ export function useSoundEffects() {
       const ctx = getAudioContext();
 
       if (ctx.state === 'suspended') {
-        ctx.resume();
+        void ctx.resume().catch(() => {});
       }
 
       const oscillator = ctx.createOscillator();
@@ -83,7 +83,7 @@ export function useSoundEffects() {
     try {
       const ctx = getAudioContext();
       if (ctx.state === 'suspended') {
-        ctx.resume();
+        void ctx.resume().catch(() => {});
       }
 
       const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
@@ -120,15 +120,23 @@ export function useSoundEffects() {
 
   useEffect(() => {
     return () => {
-      audioContextRef.current?.close();
+      // Cleared so a remount (StrictMode runs this cleanup once) gets a new
+      // context instead of reusing a closed one, which plays nothing
+      void audioContextRef.current?.close().catch(() => {});
+      audioContextRef.current = null;
     };
   }, []);
+
+  // Stable identities: callers list these in effect dependencies (an inline
+  // arrow made a new one every render and re-ran those effects)
+  const playLetterAdded = useCallback(() => playSound('letterAdded'), [playSound]);
+  const playError = useCallback(() => playSound('error'), [playSound]);
 
   return {
     isEnabled,
     toggleSounds,
-    playLetterAdded: () => playSound('letterAdded'),
+    playLetterAdded,
     playSuccess,
-    playError: () => playSound('error'),
+    playError,
   };
 }

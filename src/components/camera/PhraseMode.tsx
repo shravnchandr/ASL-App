@@ -178,7 +178,7 @@ function downloadJson(filename: string, data: unknown) {
  * view, then runs the sign-phrase CTC model on it. Everything stays on-device.
  */
 export default function PhraseMode({ onBack }: PhraseModeProps) {
-  const { videoRef, isReady: cameraReady, isLoading: cameraLoading, error: cameraError, facingMode, flipCamera, startCamera } = useCamera();
+  const { videoRef, isReady: cameraReady, isLoading: cameraLoading, error: cameraError, facingMode, flipCamera, startCamera, stopCamera } = useCamera();
   const { detect, isLoading: landmarksLoading, error: landmarksError } = useHolisticLandmarks();
   const [model, setModel] = useState<PhraseBundleId>(savedModel);
   const { recognize, isLoading: modelLoading, error: modelError, contractVersion } = useSignPhraseModel(model);
@@ -204,11 +204,25 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     return () => { isMountedRef.current = false; };
   }, []);
 
+  // Read by the auto-start effect, not one of its dependencies: a camera flip
+  // makes useCamera restart itself, dropping isReady on the way, and an effect
+  // keyed on it would open a second request that cancels the first
+  const cameraActiveRef = useRef(false);
+  useEffect(() => { cameraActiveRef.current = cameraReady || cameraLoading; }, [cameraReady, cameraLoading]);
+
   useEffect(() => {
-    if (!isLoading && !error) {
+    // Not keyed on cameraError either: "Try Again" calls startCamera, which
+    // clears it. Skipped when the camera is already on: a model switch keeps
+    // the same stream.
+    if (!isLoading && !landmarksError && !modelError && !cameraActiveRef.current) {
       startCamera();
     }
-  }, [isLoading, error, startCamera]);
+  }, [isLoading, landmarksError, modelError, startCamera]);
+
+  useEffect(() => {
+    // The error view has no <video>: don't leave the camera on behind it
+    if (landmarksError || modelError) stopCamera();
+  }, [landmarksError, modelError, stopCamera]);
 
   const handleSegment = useCallback(async (segment: PhraseSegment) => {
     if (!contractVersion) return;
@@ -273,6 +287,7 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     if (!cameraReady || isLoading) return;
 
     const segmenter = segmenterRef.current;
+    const overlay = canvasRef.current;
     let animationFrame = 0;
     let lastVideoTime = -1;
 
@@ -310,6 +325,8 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     return () => {
       cancelAnimationFrame(animationFrame);
       segmenter.reset();
+      // No frozen skeleton over the live video while the loop is paused (model switch)
+      overlay?.getContext('2d')?.clearRect(0, 0, overlay.width, overlay.height);
     };
   }, [cameraReady, isLoading, videoRef, detect, facingMode, handleSegment]);
 
@@ -376,7 +393,13 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
   const latest = attempts[0] ?? null;
   const shortCount = attempts.filter(a => a.tooShort).length;
 
+  // The full-screen loader is for the first load only. A model switch keeps the
+  // camera view (and its stream) on screen; the frame loop waits for the model.
+  // (or restarting: a flip mid-load must keep the <video> the restart attaches to)
+  const switchingModel = modelLoading && !landmarksLoading && (cameraReady || cameraLoading);
+
   const heading = (() => {
+    if (switchingModel) return 'Loading model…';
     if (isRecognizing) return 'Reading…';
     if (status.signing) return 'Signing…';
     if (!status.body) return 'Step into view';
@@ -388,7 +411,7 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
     return 'Raise your hands and sign a word or a short phrase, then lower them.';
   })();
 
-  if (isLoading) {
+  if (isLoading && !switchingModel) {
     return (
       <div className="camera-page">
         <div className="camera-page__loading">
@@ -506,6 +529,11 @@ export default function PhraseMode({ onBack }: PhraseModeProps) {
               </button>
             ))}
           </div>
+          {switchingModel && (
+            <p className="phrase-mode__model-loading" role="status">
+              Loading {PHRASE_BUNDLES[model].name}…
+            </p>
+          )}
 
           <div className="phrase-mode__hand-choice" role="group" aria-label="Hands the model reads">
             <span className="phrase-mode__hand-choice-label">Hands</span>

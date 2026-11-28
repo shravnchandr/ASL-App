@@ -102,10 +102,17 @@ function SpellingMode({ onBack: handleBack }: { onBack: () => void }) {
   })();
 
   useEffect(() => {
-    if (!isLoading && !error) {
+    // Not keyed on cameraError: "Try Again" calls startCamera, which clears it,
+    // and this effect would then open a second camera request alongside
+    if (!isLoading && !handError && !modelError) {
       startCamera();
     }
-  }, [isLoading, error, startCamera]);
+  }, [isLoading, handError, modelError, startCamera]);
+
+  // Read through a ref so a new sound callback (sounds toggled) doesn't re-run
+  // recognition on a frame that has already been classified
+  const playLetterAddedRef = useRef(playLetterAdded);
+  useEffect(() => { playLetterAddedRef.current = playLetterAdded; }, [playLetterAdded]);
 
   useEffect(() => {
     // The first detection compiles GPU shaders and blocks the main thread for
@@ -175,7 +182,7 @@ function SpellingMode({ onBack: handleBack }: { onBack: () => void }) {
               letterHoldStartRef.current = null;
               setHoldProgress(0);
               announceToScreenReader(`Added ${stablePrediction.toUpperCase()} to spelling`);
-              playLetterAdded();
+              playLetterAddedRef.current();
             }
           }
         } else {
@@ -186,7 +193,8 @@ function SpellingMode({ onBack: handleBack }: { onBack: () => void }) {
       });
       return () => { isCurrent = false; };
     }
-  }, [landmarks, isLoading, predict, playLetterAdded]);
+    // Once per new set of landmarks (each detected frame), never again for the same one
+  }, [landmarks, isLoading, predict]);
 
   useEffect(() => {
     if (!isHandDetected) {
